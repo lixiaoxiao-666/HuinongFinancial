@@ -102,7 +102,7 @@ const resetForm = (formEl: FormInstance | undefined) => {
   /* 设置垂直居中 */
   align-items: center;
   /* 设置背景颜色 */
-  background: linear-gradient(to bottom, #12aa9c, #8025e7);
+  background: linear-gradient(to bottom, #16293f, rgb(128, 167, 211));
 }
 .box {
   width: 400px;
