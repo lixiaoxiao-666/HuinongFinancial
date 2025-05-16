@@ -20,6 +20,12 @@ const router = createRouter({
       name: 'index',
       component: () => import('../views/IndexPage.vue'),
     },
+    // 我的
+    {
+      path: '/me',
+      name: 'me',
+      component: () => import('../views/MePage.vue'),
+    },
   ],
 })
 
