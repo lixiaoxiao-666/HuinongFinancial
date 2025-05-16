@@ -1,25 +1,38 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes: [
-    // 登录页
     {
       path: '/',
-      name: 'login',
-      component: () => import('../views/LoginPage.vue'),
-    },
-    // 访问 '/login' 重定向到登录页
-    {
-      path: '/login',
-      redirect: '/',
-    },
-    // 首页
-    {
-      path: '/index',
-      name: 'index',
+      name: 'home',
       component: () => import('../views/IndexPage.vue'),
     },
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('../views/login/LoginPage.vue'),
+    },
+    {
+      path: '/finance',
+      name: 'finance',
+      component: () => import('../views/FinancePage.vue'),
+    },
+    {
+      path: '/machinery',
+      name: 'machinery',
+      component: () => import('../views/MachineryPage.vue'),
+    },
+    {
+      path: '/mine',
+      name: 'mine',
+      component: () => import('../views/MinePage.vue'),
+    },
+    {
+      path: '/news',
+      name: 'news',
+      component: () => import('../views/NewsPage.vue'),
+    }
   ],
 })
 
