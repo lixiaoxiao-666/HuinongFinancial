@@ -78,6 +78,22 @@ const shopItems = ref([
     originalPrice: '128.0',
     sales: '325',
     image: new URL('../assets/images/农产品2.png', import.meta.url).href
+  },
+  {
+    id: 3,
+    title: '东北优质大米',
+    price: '39.9',
+    originalPrice: '49.9',
+    sales: '658',
+    image: new URL('../assets/images/农产品3.png', import.meta.url).href
+  },
+  {
+    id: 4,
+    title: '山地红苹果',
+    price: '25.8',
+    originalPrice: '32.0',
+    sales: '789',
+    image: new URL('../assets/images/农产品4.jpg', import.meta.url).href
   }
 ])
 
@@ -101,19 +117,19 @@ const onSearch = () => {
     <!-- 顶部导航区域 -->
     <div class="header">
       <div class="nav-bar">
-        <!-- 搜索框 -->
-        <div class="search-container">
-          <el-input 
-            v-model="searchValue" 
-            placeholder="搜索农业政策、金融产品" 
-            prefix-icon="el-icon-search"
-            class="search-input"
-            @keyup.enter="onSearch"
-          >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
+      <!-- 搜索框 -->
+      <div class="search-container">
+        <el-input 
+          v-model="searchValue" 
+          placeholder="搜索农业政策、金融产品" 
+          prefix-icon="el-icon-search"
+          class="search-input"
+          @keyup.enter="onSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
         </div>
         
         <div class="notification">

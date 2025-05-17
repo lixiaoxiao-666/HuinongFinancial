@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, defineEmits } from 'vue'
 import { useRouter } from 'vue-router'
+import { HomeFilled, Money, Van, User } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const emit = defineEmits(['update:activeTab'])
@@ -17,7 +18,7 @@ const navItems: NavItem[] = [
   { id: 'home', icon: 'HomeFilled', name: '首页', path: '/' },
   { id: 'finance', icon: 'Money', name: '理财', path: '/finance' },
   { id: 'machinery', icon: 'Van', name: '农机租赁', path: '/machinery' },
-  { id: 'mine', icon: 'User', name: '我的', path: '/me' }
+  { id: 'me', icon: 'User', name: '我的', path: '/me' }
 ]
 
 // 当前活跃的导航标签
