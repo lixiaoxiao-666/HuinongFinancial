@@ -72,7 +72,7 @@ const register = () => {
   <div class="login-container">
     <div class="login-box">
       <div class="logo">
-        <img src="../../public/favicon.ico" alt="数字惠农" />
+        <img src="../../assets/images/logo.png" alt="数字惠农" />
       </div>
       
       <h1 class="system-title">数字惠农</h1>
@@ -140,61 +140,104 @@ const register = () => {
   justify-content: center;
   /* 垂直居中 */
   align-items: center;
-  /* 背景 */
-  background: #f0d080;
-  /* 背景图片 */
-  background-image: url('../assets/images/background.png');
+  /* 渐变背景 */
+  background: linear-gradient(to bottom, #f0d080, #D4AF37);
+  /* 背景图片 - 麦浪效果 */
+  background-image: url('../../assets/images/wheat-field.svg');
   /* 背景图片大小 */
   background-size: cover;
   /* 背景图片位置 */
   background-position: center;
+  /* 保持固定 */
+  background-attachment: fixed;
+  /* 添加过渡效果 */
+  animation: bgShimmer 10s infinite alternate;
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes bgShimmer {
+  0% {
+    background-color: #f0d080;
+  }
+  50% {
+    background-color: #e6a23c;
+  }
+  100% {
+    background-color: #D4AF37;
+  }
 }
 
 .login-box {
   /* 宽度 */
   width: 500px;
-  /* 背景颜色 */
-  background-color: rgba(255, 255, 255, 0.95);
+  /* 背景颜色 - 半透明 */
+  background-color: rgba(255, 255, 255, 0.92);
   /* 圆角 */
   border-radius: 10px;
   /* 内边距 */
   padding: 40px;
   /* 文本居中 */
   text-align: center;
-  /* 阴影 */
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
+  /* 高级阴影效果 */
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 2px 10px rgba(0, 0, 0, 0.05);
+  /* 边框效果 */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  /* 玻璃态模糊效果 */
+  backdrop-filter: blur(5px);
+  /* 动画效果 */
+  animation: float 5s infinite ease-in-out;
+  /* 相对定位 */
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .logo {
   /* 下边距 */
   margin-bottom: 20px;
+  /* 放大 */
+  transform: scale(1.5);
 }
 
 .logo img {
   /* 宽度 */
-  width: 80px;
+  width: 100px;
   /* 高度 */
-  height: 80px;
-  /* 背景颜色 */
-  background-color: #e6a23c;
-  /* 圆角 */
-  border-radius: 50%;
-  /* 内边距 */
-  padding: 10px;
+  height: 100px;
+  /* 移除背景色以显示原始图片 */
+  background-color: transparent;
+  /* 保留原始图片形状 */
+  border-radius: 0;
+  /* 移除内边距 */
+  padding: 0;
 }
 
 .system-title {
-  /* 颜色 */
-  color: #333;
+  /* 金色渐变 */
+  background-image: linear-gradient(to right, #D4AF37, #FBD341, #D4AF37);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   /* 字体大小 */
   font-size: 28px;
   /* 下边距 */
   margin-bottom: 10px;
+  /* 加粗显示更明显 */
+  font-weight: bold;
 }
 
 .system-subtitle {
   color: #666;
-  font-size: 16px;
+  font-size: 20px;
   margin-bottom: 30px;
 }
 
@@ -209,7 +252,7 @@ const register = () => {
 
 .form-label {
   color: #333;
-  font-size: 16px;
+  font-size: 20px;
   margin-bottom: 5px;
 }
 
@@ -226,43 +269,58 @@ const register = () => {
 
 .remember :deep(.el-checkbox__label) {
   color: #333;
+  font-size: 20px;
 }
 
 .forgot-link {
-  color: #e6a23c;
+  background-image: linear-gradient(to right, #e6a23c, #f5c069, #e6a23c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   cursor: pointer;
   text-decoration: none;
+  font-weight: bold;
+  font-size: 20px;
 }
 
 .login-button {
   width: 100%;
   height: 45px;
-  background-color: #e6a23c;
+  background-image: linear-gradient(to right, #e6a23c, #f5c069, #e6a23c);
   color: white;
   border: none;
   border-radius: 4px;
   font-size: 18px;
   font-weight: bold;
+  transition: all 0.3s ease;
 }
 
 .login-button:hover {
-  background-color: #d39531;
+  background-image: linear-gradient(to right, #d39531, #e6a23c, #d39531);
   border: none;
+  box-shadow: 0 4px 8px rgba(214, 146, 32, 0.3);
 }
 
 .register-button {
   width: 100%;
   height: 45px;
-  background-color: white;
+  background: linear-gradient(to right, #ffffff, #fdf6ec, #ffffff);
   color: #e6a23c;
   border: 1px solid #e6a23c;
   border-radius: 4px;
   font-size: 18px;
   font-weight: bold;
   margin-top: 15px;
+  transition: all 0.3s ease;
 }
 
 .register-button:hover {
-  background-color: #fdf6ec;
+  background: linear-gradient(to right, #fdf6ec, #ffeed8, #fdf6ec);
+  border: 1px solid #d39531;  
+}
+
+:deep(.el-input__wrapper) {
+  /* 增大 */
+  height: 60px;
 }
 </style>
