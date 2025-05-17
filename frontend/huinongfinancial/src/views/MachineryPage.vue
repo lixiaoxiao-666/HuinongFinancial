@@ -173,7 +173,7 @@ const initPage = () => {
       
       <!-- 农机轮播图 -->
       <div class="machine-carousel">
-        <machinery-carousel :images="carouselImages" height="240px" :autoplay-delay="3000" />
+        <machinery-carousel :images="carouselImages" height="180px" :autoplay-delay="3000" />
       </div>
       
       <!-- 农机基本信息 -->
@@ -369,6 +369,7 @@ const initPage = () => {
 .machine-carousel {
   margin-bottom: 10px;
   width: 100%;
+  height: 180px;
 }
 
 /* 农机基本信息 */
@@ -718,8 +719,8 @@ const initPage = () => {
 }
 
 .type-item .machinery-icon {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   margin-bottom: 5px;
 }
 
@@ -763,13 +764,13 @@ const initPage = () => {
 
 .machine-card-image {
   width: 100%;
-  height: 140px;
+  height: 100px;
   object-fit: cover;
 }
 
 @media screen and (min-width: 480px) {
   .machine-card-image {
-    height: 160px;
+    height: 120px;
   }
 }
 

@@ -74,17 +74,9 @@ const agriProducts = [
     minPeriod: '1年',
     riskLevel: '低',
     agriTag: '种植专享',
-    isRecommended: false
-  },
-  {
-    type: '基金组合',
-    name: '惠农优选平衡型基金组合',
-    annualReturn: '8.50%',
-    minPeriod: '无固定期限',
-    riskLevel: '中',
-    agriTag: '乡村振兴',
     isRecommended: true
   },
+
   {
     type: '保险',
     name: '农业生产保障保险',
@@ -92,7 +84,7 @@ const agriProducts = [
     minPeriod: '5年',
     riskLevel: '低',
     agriTag: '灾害保障',
-    isRecommended: false
+    isRecommended: true
   }
 ]
 
@@ -110,11 +102,15 @@ const switchCategory = (category: string) => {
     <!-- 顶部导航栏 -->
     <div class="top-nav">
       <div class="nav-left">
-        <!-- 删除返回图标 -->
+        <div class="nav-icon nav-back">
+          <i class="back-icon"></i>
+        </div>
       </div>
       <div class="nav-title">理财</div>
       <div class="nav-right">
-        <!-- 删除筛选图标 -->
+        <div class="nav-icon nav-share">
+          <i class="share-icon"></i>
+        </div>
       </div>
     </div>
 
@@ -273,16 +269,43 @@ const switchCategory = (category: string) => {
 }
 
 .nav-title {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 500;
 }
 
-.nav-back, .nav-filter {
+.nav-left, .nav-right {
   width: 30px;
   height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.nav-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.back-icon {
+  width: 20px;
+  height: 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23333' d='M20,11H7.83l5.59-5.59L12,4l-8,8l8,8l1.41-1.41L7.83,13H20V11z'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.share-icon {
+  width: 20px;
+  height: 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23333' d='M18,16.08c-0.76,0-1.44,0.3-1.96,0.77L8.91,12.7C8.96,12.47,9,12.24,9,12s-0.04-0.47-0.09-0.7l7.05-4.11C16.5,7.69,17.21,8,18,8c1.66,0,3-1.34,3-3s-1.34-3-3-3s-3,1.34-3,3c0,0.24,0.04,0.47,0.09,0.7L8.04,9.81C7.5,9.31,6.79,9,6,9c-1.66,0-3,1.34-3,3s1.34,3,3,3c0.79,0,1.5-0.31,2.04-0.81l7.12,4.16c-0.05,0.21-0.08,0.43-0.08,0.65c0,1.61,1.31,2.92,2.92,2.92c1.61,0,2.92-1.31,2.92-2.92S19.61,16.08,18,16.08z'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
 /* 产品分类 */
@@ -451,15 +474,18 @@ const switchCategory = (category: string) => {
 .top-performers {
   background-color: #fff;
   padding: 10px 12px;
-  margin: 0 8px 8px;
+  margin: 0 auto 8px;
   border-radius: 8px;
-  width: calc(100% - 16px);
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
 @media screen and (max-width: 375px) {
   .top-performers {
     padding: 10px;
-    margin: 0 10px 6px;
+    margin: 0 auto 6px;
+    width: 92%;
   }
 }
 
@@ -471,13 +497,13 @@ const switchCategory = (category: string) => {
 }
 
 .section-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 500;
 }
 
 .more-link {
   color: #999;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .fund-list {
@@ -536,8 +562,18 @@ const switchCategory = (category: string) => {
 }
 
 .fund-name {
-  font-size: 15px;
+  font-size: 14px;
   margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media screen and (max-width: 375px) {
+  .fund-name {
+    font-size: 13px;
+  }
 }
 
 .fund-details {
@@ -565,15 +601,18 @@ const switchCategory = (category: string) => {
 .agri-products {
   background-color: #fff;
   padding: 10px 12px;
-  margin: 0 8px 60px;
+  margin: 0 auto 60px;
   border-radius: 8px;
-  width: calc(100% - 16px);
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
 @media screen and (max-width: 375px) {
   .agri-products {
     padding: 10px;
-    margin: 0 10px 60px;
+    margin: 0 auto 60px;
+    width: 92%;
   }
 }
 
@@ -583,7 +622,7 @@ const switchCategory = (category: string) => {
 }
 
 .category-tab {
-  font-size: 14px;
+  font-size: 13px;
   color: #666;
   position: relative;
 }

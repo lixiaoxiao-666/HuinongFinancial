@@ -128,7 +128,7 @@ const onSearch = () => {
     <div class="content">
       <!-- 轮播广告区 -->
       <div class="swiper-container">
-        <el-carousel height="200px" indicator-position="none" :interval="4000">
+        <el-carousel height="180px" indicator-position="none" :interval="4000">
           <el-carousel-item v-for="item in swiperImages" :key="item.id">
             <div class="carousel-item">
               <img :src="item.url" alt="轮播图" class="carousel-img"/>
@@ -263,6 +263,7 @@ const onSearch = () => {
 
 /* 轮播图 */
 .swiper-container {
+  margin-top: 10px;
   margin-bottom: 8px;
 }
 
@@ -306,17 +307,18 @@ const onSearch = () => {
 .services-section {
   background-color: white;
   padding: 15px 15px;
-  margin: 0 12px 12px;
+  margin: 0 auto;
   border-radius: 8px;
-  width: calc(100% - 24px);
+  width: 90%;
+  max-width: 500px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
 @media screen and (max-width: 375px) {
   .services-section {
     padding: 12px;
-    margin: 0 8px 10px;
-    width: calc(100% - 16px);
+    margin: 0 auto 10px;
+    width: 92%;
   }
 }
 
@@ -351,7 +353,7 @@ const onSearch = () => {
 }
 
 .service-name {
-  font-size: 13px;
+  font-size: 12px;
   color: #333;
   margin-top: 6px;
   text-align: center;
@@ -363,7 +365,7 @@ const onSearch = () => {
 
 @media screen and (max-width: 375px) {
   .service-name {
-    font-size: 12px;
+    font-size: 11px;
   }
 }
 
@@ -371,17 +373,18 @@ const onSearch = () => {
 .news-section {
   background-color: white;
   padding: 15px 15px;
-  margin: 0 12px 12px;
+  margin: 12px auto;
   border-radius: 8px;
-  width: calc(100% - 24px);
+  width: 90%;
+  max-width: 500px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
 @media screen and (max-width: 375px) {
   .news-section {
     padding: 12px;
-    margin: 0 8px 10px;
-    width: calc(100% - 16px);
+    margin: 10px auto;
+    width: 92%;
   }
 }
 
@@ -393,20 +396,20 @@ const onSearch = () => {
 }
 
 .section-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #333;
 }
 
 @media screen and (max-width: 375px) {
   .section-title {
-    font-size: 16px;
+    font-size: 15px;
   }
 }
 
 .section-more {
   color: #999;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
 }
 
@@ -442,7 +445,7 @@ const onSearch = () => {
 }
 
 .news-title {
-  font-size: 15px;
+  font-size: 14px;
   color: #333;
   margin-bottom: 6px;
   display: -webkit-box;
@@ -454,12 +457,12 @@ const onSearch = () => {
 
 @media screen and (max-width: 375px) {
   .news-title {
-    font-size: 14px;
+    font-size: 13px;
   }
 }
 
 .news-intro {
-  font-size: 13px;
+  font-size: 12px;
   color: #666;
   margin-bottom: 6px;
   display: -webkit-box;
@@ -471,7 +474,7 @@ const onSearch = () => {
 
 @media screen and (max-width: 375px) {
   .news-intro {
-    font-size: 12px;
+    font-size: 11px;
     -webkit-line-clamp: 1;
   }
 }
@@ -485,7 +488,7 @@ const onSearch = () => {
 
 .news-image {
   width: 100px;
-  height: 70px;
+  height: 60px;
   border-radius: 4px;
   overflow: hidden;
   flex-shrink: 0;
@@ -494,14 +497,14 @@ const onSearch = () => {
 @media screen and (max-width: 375px) {
   .news-image {
     width: 90px;
-    height: 65px;
+    height: 55px;
   }
 }
 
 @media screen and (min-width: 480px) {
   .news-image {
     width: 120px;
-    height: 80px;
+    height: 70px;
   }
 }
 
@@ -515,17 +518,18 @@ const onSearch = () => {
 .shop-section {
   background-color: white;
   padding: 15px 15px;
-  margin: 0 12px 12px;
+  margin: 0 auto 12px;
   border-radius: 8px;
-  width: calc(100% - 24px);
+  width: 90%;
+  max-width: 500px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
 @media screen and (max-width: 375px) {
   .shop-section {
     padding: 12px;
-    margin: 0 8px 10px;
-    width: calc(100% - 16px);
+    margin: 0 auto 10px;
+    width: 92%;
   }
 }
 
@@ -567,19 +571,19 @@ const onSearch = () => {
 }
 
 .shop-image {
-  height: 100px;
+  height: 90px;
   overflow: hidden;
 }
 
 @media screen and (max-width: 375px) {
   .shop-image {
-    height: 90px;
+    height: 80px;
   }
 }
 
 @media screen and (min-width: 480px) {
   .shop-image {
-    height: 110px;
+    height: 100px;
   }
 }
 
