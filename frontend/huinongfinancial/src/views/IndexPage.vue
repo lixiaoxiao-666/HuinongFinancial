@@ -10,11 +10,15 @@ const router = useRouter()
 const swiperImages = ref([
   { 
     id: 1, 
-    url: '/src/assets/images/banner1.png', 
+    url: '/src/assets/images/banner1.png',
+    title: '惠农金融服务', 
+    subtitle: '助力乡村振兴'
   },
   { 
     id: 2, 
-    url: '/src/assets/images/banner2.png', 
+    url: '/src/assets/images/banner2.png',
+    title: '农业补贴政策', 
+    subtitle: '一键查询'
   }
 ])
 
@@ -61,6 +65,26 @@ const newsItems = ref([
   }
 ])
 
+// 惠农商城数据
+const shopItems = ref([
+  {
+    id: 1,
+    title: '农场直供新鲜鸡蛋',
+    price: '28.8',
+    originalPrice: '32.5',
+    sales: '862',
+    image: new URL('../assets/images/农产品.png', import.meta.url).href
+  },
+  {
+    id: 2,
+    title: '有机蔬菜套餐',
+    price: '98.0',
+    originalPrice: '128.0',
+    sales: '325',
+    image: new URL('../assets/images/农产品2.png', import.meta.url).href
+  }
+])
+
 // 当前选中的导航栏
 const activeTab = ref('home')
 
@@ -81,9 +105,6 @@ const onSearch = () => {
     <!-- 顶部导航区域 -->
     <div class="header">
       <div class="nav-bar">
-        <div class="logo">
-          <img src="../assets/images/logo.png" alt="惠农金融" class="logo-img"/>
-        </div>
         <div class="notification">
           <el-badge :value="2" class="notification-badge">
             <el-icon><Bell /></el-icon>
@@ -164,6 +185,30 @@ const onSearch = () => {
       </div>
     </div>
     
+    <!-- 惠农商城板块 -->
+    <div class="shop-section">
+      <div class="section-header">
+        <div class="section-title">惠农商城</div>
+        <div class="section-more" @click="navigateTo('/shop')">更多</div>
+      </div>
+      
+      <div class="shop-list">
+        <div class="shop-item" v-for="item in shopItems" :key="item.id" @click="navigateTo(`/shop/product/${item.id}`)">
+          <div class="shop-image">
+            <img :src="item.image" alt="商品图片" class="shop-img"/>
+          </div>
+          <div class="shop-content">
+            <div class="shop-title">{{ item.title }}</div>
+            <div class="shop-price-info">
+              <span class="shop-price">¥{{ item.price }}</span>
+              <span class="shop-original-price">¥{{ item.originalPrice }}</span>
+            </div>
+            <div class="shop-sales">销量: {{ item.sales }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <!-- 底部导航栏 -->
     <app-footer v-model:active-tab="activeTab" />
   </div>
@@ -192,18 +237,9 @@ const onSearch = () => {
 
 .nav-bar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   height: 30px;
-}
-
-.logo {
-  height: 25px;
-}
-
-.logo-img {
-  height: 100%;
-  object-fit: contain;
 }
 
 .notification {
@@ -402,5 +438,81 @@ const onSearch = () => {
   height: 100%;
   object-fit: cover;
   border-radius: 3px;
+}
+
+/* 惠农商城样式 */
+.shop-section {
+  background-color: white;
+  padding: 15px;
+  margin: 15px 15px 0;
+  border-radius: 10px;
+}
+
+.shop-list {
+  display: flex;
+  gap: 15px;
+  overflow-x: auto;
+  padding: 10px 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.shop-item {
+  flex: 0 0 auto;
+  width: 160px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  background: white;
+  cursor: pointer;
+}
+
+.shop-image {
+  height: 160px;
+  width: 100%;
+}
+
+.shop-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shop-content {
+  padding: 10px;
+}
+
+.shop-title {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  height: 40px;
+}
+
+.shop-price-info {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.shop-price {
+  color: #f44336;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.shop-original-price {
+  color: #999;
+  font-size: 12px;
+  text-decoration: line-through;
+}
+
+.shop-sales {
+  font-size: 12px;
+  color: #999;
 }
 </style>
