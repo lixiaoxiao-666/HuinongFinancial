@@ -1,0 +1,10 @@
+database:
+  host: localhost
+  port: 3306
+  user: root
+  password: root
+  database: go_api
+server:
+  port: 8080
+  read_timeout: 10s
+  write_timeout: 10s
