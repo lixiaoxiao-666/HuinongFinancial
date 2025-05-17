@@ -250,6 +250,13 @@ const switchCategory = (category: string) => {
   padding-bottom: 60px; /* 为底部导航栏留出空间 */
   background-color: #f5f5f5;
   color: #333;
+  font-size: 13px;
+}
+
+@media screen and (max-width: 375px) {
+  .finance-container {
+    font-size: 12px;
+  }
 }
 
 /* 顶部导航栏 */
@@ -257,9 +264,9 @@ const switchCategory = (category: string) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 50px;
+  height: 44px;
   background-color: #fff;
-  padding: 0 15px;
+  padding: 0 12px;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -282,10 +289,20 @@ const switchCategory = (category: string) => {
 .product-categories {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  padding: 15px;
+  padding: 10px;
   background-color: #fff;
-  margin-bottom: 10px;
-  gap: 10px;
+  margin: 0 8px 8px;
+  gap: 6px;
+  border-radius: 8px;
+  width: calc(100% - 16px);
+}
+
+@media screen and (max-width: 375px) {
+  .product-categories {
+    padding: 10px;
+    margin: 0 10px 6px;
+    gap: 6px;
+  }
 }
 
 .category-item {
@@ -296,8 +313,8 @@ const switchCategory = (category: string) => {
 }
 
 .category-icon {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background-color: rgba(76, 175, 80, 0.1);
   display: flex;
@@ -307,21 +324,31 @@ const switchCategory = (category: string) => {
 }
 
 .agri-icon {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
 }
 
 .category-name {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 /* 市场指数 */
 .market-indices {
   display: flex;
   background-color: #fff;
-  padding: 15px;
-  gap: 20px;
-  margin-bottom: 10px;
+  padding: 10px 12px;
+  gap: 15px;
+  margin: 0 8px 8px;
+  border-radius: 8px;
+  width: calc(100% - 16px);
+}
+
+@media screen and (max-width: 375px) {
+  .market-indices {
+    padding: 10px;
+    gap: 12px;
+    margin: 0 10px 6px;
+  }
 }
 
 .market-index-item {
@@ -355,20 +382,30 @@ const switchCategory = (category: string) => {
 /* 推荐卡片 */
 .recommendation-cards {
   display: flex;
-  gap: 10px;
-  padding: 0 15px;
-  margin-bottom: 15px;
+  gap: 8px;
+  padding: 0;
+  margin: 0 8px 8px;
+  width: calc(100% - 16px);
+}
+
+@media screen and (max-width: 375px) {
+  .recommendation-cards {
+    gap: 6px;
+    padding: 0 10px;
+    margin: 0 10px 6px;
+  }
 }
 
 .card {
   flex: 1;
-  border-radius: 10px;
-  padding: 15px;
+  border-radius: 8px;
+  padding: 12px;
   color: #fff;
-  min-height: 120px;
+  min-height: 100px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  margin: 0;
 }
 
 .red-card {
@@ -391,30 +428,39 @@ const switchCategory = (category: string) => {
 }
 
 .card-title {
-  margin-top: 10px;
-  font-size: 16px;
+  margin-top: 8px;
+  font-size: 14px;
   font-weight: 500;
 }
 
 .card-subtitle {
-  font-size: 14px;
+  font-size: 13px;
   opacity: 0.8;
 }
 
 .card-button {
   background-color: rgba(255, 255, 255, 0.3);
   width: fit-content;
-  padding: 5px 15px;
-  border-radius: 15px;
-  margin-top: 10px;
-  font-size: 14px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  margin-top: 8px;
+  font-size: 13px;
 }
 
 /* 表现最佳 */
 .top-performers {
   background-color: #fff;
-  padding: 15px;
-  margin-bottom: 10px;
+  padding: 10px 12px;
+  margin: 0 8px 8px;
+  border-radius: 8px;
+  width: calc(100% - 16px);
+}
+
+@media screen and (max-width: 375px) {
+  .top-performers {
+    padding: 10px;
+    margin: 0 10px 6px;
+  }
 }
 
 .section-header {
@@ -443,19 +489,19 @@ const switchCategory = (category: string) => {
 .fund-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .fund-rank {
-  width: 40px;
-  height: 40px;
+  width: 35px;
+  height: 35px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .crown {
-  font-size: 24px;
+  font-size: 20px;
 }
 
 .rank-1 {
@@ -475,7 +521,7 @@ const switchCategory = (category: string) => {
 }
 
 .return-rate {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
   color: #f44336;
 }
@@ -518,8 +564,17 @@ const switchCategory = (category: string) => {
 /* 农村金融产品 */
 .agri-products {
   background-color: #fff;
-  padding: 15px;
-  margin-bottom: 60px;
+  padding: 10px 12px;
+  margin: 0 8px 60px;
+  border-radius: 8px;
+  width: calc(100% - 16px);
+}
+
+@media screen and (max-width: 375px) {
+  .agri-products {
+    padding: 10px;
+    margin: 0 10px 60px;
+  }
 }
 
 .category-tabs {
@@ -550,5 +605,8 @@ const switchCategory = (category: string) => {
 
 .product-list {
   margin-top: 15px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
 }
 </style> 

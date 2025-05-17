@@ -1,6 +1,10 @@
 <!-- vue3 element-plus -->
 <script setup lang="ts">
 import { ref } from 'vue'
+import AppFooter from './components/footer.vue'
+// 当前选中的导航栏
+const activeTab = ref('me')
+
 import {
   User,
   Service,
@@ -33,9 +37,6 @@ const userLevel = ref('普通会员')
   <div class="me-page">
     <!-- Header with User Info -->
     <div class="user-header">
-      <div class="logo-container">
-        <img src="/images/logo.png" alt="数字惠农" class="logo-image" />
-      </div>
       
       <div class="user-details">
         <el-avatar :size="70" class="user-avatar">{{ userName.charAt(0) }}</el-avatar>
@@ -204,6 +205,7 @@ const userLevel = ref('普通会员')
       </div>
     </div>
   </div>
+  <app-footer v-model:active-tab="activeTab" />
 </template>
 
 <style scoped>

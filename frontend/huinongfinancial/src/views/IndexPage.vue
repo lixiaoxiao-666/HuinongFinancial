@@ -11,14 +11,10 @@ const swiperImages = ref([
   { 
     id: 1, 
     url: '/src/assets/images/banner1.png',
-    title: '惠农金融服务', 
-    subtitle: '助力乡村振兴'
   },
   { 
     id: 2, 
     url: '/src/assets/images/banner2.png',
-    title: '农业补贴政策', 
-    subtitle: '一键查询'
   }
 ])
 
@@ -38,10 +34,10 @@ const services = ref([
 const newsItems = ref([
   {
     id: 1, 
-    title: '2023年农业补贴政策解读',
+    title: '2025年农业补贴政策解读',
     intro: '农业农村部最新发布的农业补贴政策，种粮农民有望获得更多支持...',
     image: '/src/assets/images/news1.png',
-    date: '2023-05-01',
+    date: '2025-05-01',
     reads: '2456',
     url: '/news/1'
   },
@@ -50,7 +46,7 @@ const newsItems = ref([
     title: '夏粮增产增收 农业"半年报"亮眼',
     intro: '今年夏粮再获丰收，全国夏粮总产量比上年增加60多亿斤...',
     image: '/src/assets/images/news2.png',
-    date: '2023-05-15',
+    date: '2025-05-15',
     reads: '3782',
     url: '/news/2'
   },
@@ -59,7 +55,7 @@ const newsItems = ref([
     title: '数字技术助力乡村振兴',
     intro: '各地积极推动数字技术与农业生产深度融合，助力乡村产业振兴...',
     image: '/src/assets/images/news3.png',
-    date: '2023-05-20',
+    date: '2025-05-20',
     reads: '1845',
     url: '/news/3'
   }
@@ -105,26 +101,26 @@ const onSearch = () => {
     <!-- 顶部导航区域 -->
     <div class="header">
       <div class="nav-bar">
+        <!-- 搜索框 -->
+        <div class="search-container">
+          <el-input 
+            v-model="searchValue" 
+            placeholder="搜索农业政策、金融产品" 
+            prefix-icon="el-icon-search"
+            class="search-input"
+            @keyup.enter="onSearch"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+        </div>
+        
         <div class="notification">
           <el-badge :value="2" class="notification-badge">
             <el-icon><Bell /></el-icon>
           </el-badge>
         </div>
-      </div>
-      
-      <!-- 搜索框 -->
-      <div class="search-container">
-        <el-input 
-          v-model="searchValue" 
-          placeholder="搜索农业政策、金融产品" 
-          prefix-icon="el-icon-search"
-          class="search-input"
-          @keyup.enter="onSearch"
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
       </div>
     </div>
     
@@ -136,22 +132,18 @@ const onSearch = () => {
           <el-carousel-item v-for="item in swiperImages" :key="item.id">
             <div class="carousel-item">
               <img :src="item.url" alt="轮播图" class="carousel-img"/>
-              <div class="carousel-text">
-                <div class="carousel-subtitle">{{ item.subtitle }}</div>
-                <div class="carousel-title">{{ item.title }}</div>
-              </div>
             </div>
           </el-carousel-item>
         </el-carousel>
       </div>
       
-      <!-- 惠农服务标题 -->
-      <div class="section-title-container">
-        <h2 class="section-title">惠农服务</h2>
-      </div>
-      
       <!-- 主要服务入口 -->
-      <div class="services-container">
+      <div class="services-section">
+        <div class="section-header">
+          <div class="section-title">惠农服务</div>
+          <div class="section-more" @click="navigateTo('/services')">更多</div>
+        </div>
+        
         <div class="services-grid">
           <div class="service-item" v-for="service in services" :key="service.id" @click="navigateTo(service.path)">
             <service-icon :type="service.icon" />
@@ -237,19 +229,19 @@ const onSearch = () => {
 
 .nav-bar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
-  height: 30px;
 }
 
 .notification {
   color: white;
   font-size: 22px;
+  margin-left: 10px;
 }
 
 /* 搜索框 */
 .search-container {
-  padding: 8px 0 5px;
+  flex: 1;
 }
 
 .search-input {
@@ -258,9 +250,9 @@ const onSearch = () => {
 }
 
 .search-input :deep(.el-input__inner) {
-  height: 36px;
-  border-radius: 20px;
-  padding-left: 40px;
+  height: 32px;
+  border-radius: 16px;
+  padding-left: 36px;
 }
 
 /* 内容区域 */
@@ -271,13 +263,15 @@ const onSearch = () => {
 
 /* 轮播图 */
 .swiper-container {
-  margin-bottom: 15px;
+  margin-bottom: 8px;
 }
 
 .carousel-item {
   width: 100%;
   height: 100%;
   position: relative;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .carousel-img {
@@ -308,29 +302,40 @@ const onSearch = () => {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-/* 服务区域标题 */
-.section-title-container {
-  padding: 10px 15px 5px;
-}
-
-.section-title-container h2 {
-  font-size: 16px;
-  margin: 0;
-  color: #333;
-  font-weight: 500;
-}
-
 /* 服务入口 */
-.services-container {
+.services-section {
   background-color: white;
-  padding: 15px;
-  margin-bottom: 15px;
+  padding: 15px 15px;
+  margin: 0 12px 12px;
+  border-radius: 8px;
+  width: calc(100% - 24px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+@media screen and (max-width: 375px) {
+  .services-section {
+    padding: 12px;
+    margin: 0 8px 10px;
+    width: calc(100% - 16px);
+  }
 }
 
 .services-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 15px 10px;
+  gap: 16px 12px;
+}
+
+@media screen and (max-width: 375px) {
+  .services-grid {
+    gap: 12px 8px;
+  }
+}
+
+@media screen and (min-width: 480px) {
+  .services-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
 }
 
 .service-item {
@@ -338,57 +343,94 @@ const onSearch = () => {
   flex-direction: column;
   align-items: center;
   cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.service-item:active {
+  transform: scale(0.95);
 }
 
 .service-name {
   font-size: 13px;
   color: #333;
   margin-top: 6px;
+  text-align: center;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media screen and (max-width: 375px) {
+  .service-name {
+    font-size: 12px;
+  }
 }
 
 /* 农业资讯 */
 .news-section {
   background-color: white;
-  padding: 15px;
-  margin: 0 15px;
-  border-radius: 10px;
+  padding: 15px 15px;
+  margin: 0 12px 12px;
+  border-radius: 8px;
+  width: calc(100% - 24px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+@media screen and (max-width: 375px) {
+  .news-section {
+    padding: 12px;
+    margin: 0 8px 10px;
+    width: calc(100% - 16px);
+  }
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .section-title {
-  font-size: 16px;
-  font-weight: bold;
+  font-size: 18px;
+  font-weight: 600;
   color: #333;
+}
+
+@media screen and (max-width: 375px) {
+  .section-title {
+    font-size: 16px;
+  }
 }
 
 .section-more {
   color: #999;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
+}
+
+@media screen and (max-width: 375px) {
+  .section-more {
+    font-size: 12px;
+  }
 }
 
 .news-list {
   display: flex;
   flex-direction: column;
+  gap: 12px;
 }
 
 .news-item {
   display: flex;
   cursor: pointer;
-  padding-bottom: 15px;
-  margin-bottom: 15px;
+  padding-bottom: 12px;
   border-bottom: 1px solid #eee;
 }
 
 .news-item:last-child {
   border-bottom: none;
-  margin-bottom: 0;
   padding-bottom: 0;
 }
 
@@ -402,73 +444,143 @@ const onSearch = () => {
 .news-title {
   font-size: 15px;
   color: #333;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  line-height: 1.4;
+}
+
+@media screen and (max-width: 375px) {
+  .news-title {
+    font-size: 14px;
+  }
 }
 
 .news-intro {
-  font-size: 12px;
-  color: #999;
-  margin-bottom: 5px;
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 6px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  flex: 1;
+  line-height: 1.4;
+}
+
+@media screen and (max-width: 375px) {
+  .news-intro {
+    font-size: 12px;
+    -webkit-line-clamp: 1;
+  }
 }
 
 .news-meta {
   font-size: 12px;
   color: #999;
   display: flex;
-  justify-content: space-between;
+  gap: 10px;
 }
 
 .news-image {
-  width: 90px;
+  width: 100px;
   height: 70px;
+  border-radius: 4px;
+  overflow: hidden;
   flex-shrink: 0;
+}
+
+@media screen and (max-width: 375px) {
+  .news-image {
+    width: 90px;
+    height: 65px;
+  }
+}
+
+@media screen and (min-width: 480px) {
+  .news-image {
+    width: 120px;
+    height: 80px;
+  }
 }
 
 .news-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 3px;
 }
 
-/* 惠农商城样式 */
+/* 惠农商城板块 */
 .shop-section {
   background-color: white;
-  padding: 15px;
-  margin: 15px 15px 0;
-  border-radius: 10px;
+  padding: 15px 15px;
+  margin: 0 12px 12px;
+  border-radius: 8px;
+  width: calc(100% - 24px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+@media screen and (max-width: 375px) {
+  .shop-section {
+    padding: 12px;
+    margin: 0 8px 10px;
+    width: calc(100% - 16px);
+  }
 }
 
 .shop-list {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 15px;
-  overflow-x: auto;
-  padding: 10px 0;
-  -webkit-overflow-scrolling: touch;
+  margin-top: 10px;
+}
+
+@media screen and (max-width: 375px) {
+  .shop-list {
+    gap: 10px;
+  }
+}
+
+@media screen and (min-width: 480px) {
+  .shop-list {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media screen and (min-width: 768px) {
+  .shop-list {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 .shop-item {
-  flex: 0 0 auto;
-  width: 160px;
+  background-color: #fff;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  background: white;
-  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  transition: transform 0.2s;
+}
+
+.shop-item:active {
+  transform: scale(0.98);
 }
 
 .shop-image {
-  height: 160px;
-  width: 100%;
+  height: 100px;
+  overflow: hidden;
+}
+
+@media screen and (max-width: 375px) {
+  .shop-image {
+    height: 90px;
+  }
+}
+
+@media screen and (min-width: 480px) {
+  .shop-image {
+    height: 110px;
+  }
 }
 
 .shop-img {
@@ -478,31 +590,43 @@ const onSearch = () => {
 }
 
 .shop-content {
-  padding: 10px;
+  padding: 8px;
 }
 
 .shop-title {
   font-size: 14px;
-  color: #333;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  height: 40px;
+  line-height: 1.4;
+  height: 38px;
+}
+
+@media screen and (max-width: 375px) {
+  .shop-title {
+    font-size: 13px;
+  }
 }
 
 .shop-price-info {
   display: flex;
   align-items: baseline;
-  gap: 5px;
-  margin-bottom: 5px;
+  gap: 6px;
+  margin-bottom: 4px;
 }
 
 .shop-price {
   color: #f44336;
-  font-weight: bold;
   font-size: 16px;
+  font-weight: bold;
+}
+
+@media screen and (max-width: 375px) {
+  .shop-price {
+    font-size: 15px;
+  }
 }
 
 .shop-original-price {

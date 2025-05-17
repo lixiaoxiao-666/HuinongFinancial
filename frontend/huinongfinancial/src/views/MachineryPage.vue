@@ -305,7 +305,13 @@ const initPage = () => {
   padding-bottom: 60px; /* 为底部导航栏留出空间 */
   background-color: #f5f5f5;
   color: #333;
-  font-size: 14px;
+  font-size: 13px;
+}
+
+@media screen and (max-width: 375px) {
+  .machinery-container {
+    font-size: 12px;
+  }
 }
 
 /* 顶部导航栏 */
@@ -361,26 +367,63 @@ const initPage = () => {
 
 /* 农机轮播图样式 */
 .machine-carousel {
+  margin-bottom: 10px;
   width: 100%;
-  margin-bottom: 0;
 }
 
-/* 农机信息 */
+/* 农机基本信息 */
 .machine-info {
   background-color: #fff;
-  padding: 15px;
+  padding: 12px 15px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media screen and (max-width: 375px) {
+  .machine-info {
+    padding: 10px;
+  }
+}
+
+@media screen and (min-width: 480px) {
+  .machine-info {
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin: 0 12px;
+    width: calc(100% - 24px);
+  }
 }
 
 .machine-name {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
-  margin: 0 0 10px 0;
+  margin: 0 0 8px 0;
+}
+
+@media screen and (max-width: 375px) {
+  .machine-name {
+    font-size: 15px;
+    margin: 0 0 6px 0;
+  }
+}
+
+@media screen and (min-width: 480px) {
+  .machine-name {
+    font-size: 18px;
+    margin: 0 0 10px 0;
+  }
 }
 
 .machine-specs {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
+}
+
+@media screen and (max-width: 375px) {
+  .machine-specs {
+    gap: 6px;
+  }
 }
 
 .spec-tag {
@@ -389,6 +432,11 @@ const initPage = () => {
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 12px;
+  transition: background-color 0.2s;
+}
+
+.spec-tag:hover {
+  background-color: #d5ecd8;
 }
 
 /* 农机描述 */
@@ -399,11 +447,36 @@ const initPage = () => {
   line-height: 1.5;
 }
 
+@media screen and (max-width: 375px) {
+  .machine-description {
+    font-size: 13px;
+  }
+}
+
 /* 租赁信息 */
 .rental-info {
   background-color: #fff;
-  margin-top: 10px;
-  padding: 10px 15px;
+  margin-top: 6px;
+  padding: 6px 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media screen and (max-width: 375px) {
+  .rental-info {
+    margin-top: 6px;
+    padding: 6px 10px;
+  }
+}
+
+@media screen and (min-width: 480px) {
+  .rental-info {
+    padding: 15px;
+    border-radius: 8px;
+    margin: 10px 12px;
+    width: calc(100% - 24px);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
 }
 
 .info-item {
@@ -423,11 +496,6 @@ const initPage = () => {
   margin-right: 10px;
 }
 
-/* 移除旧的图标样式 */
-.pickup-icon, .return-icon, .time-icon {
-  background-image: none;
-}
-
 .info-label {
   width: 70px;
   color: #666;
@@ -441,8 +509,27 @@ const initPage = () => {
 /* 费用信息 */
 .fee-section {
   background-color: #fff;
-  margin-top: 10px;
-  padding: 15px;
+  margin-top: 6px;
+  padding: 10px 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media screen and (max-width: 375px) {
+  .fee-section {
+    margin-top: 6px;
+    padding: 10px;
+  }
+}
+
+@media screen and (min-width: 480px) {
+  .fee-section {
+    padding: 15px;
+    border-radius: 8px;
+    margin: 10px 12px;
+    width: calc(100% - 24px);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
 }
 
 .fee-header {
@@ -484,15 +571,36 @@ const initPage = () => {
   background-color: #f5f5f5;
   padding: 10px;
   border-radius: 4px;
+  font-size: 14px;
 }
 
 /* 服务说明 */
 .service-info {
   background-color: #fff;
-  margin-top: 10px;
-  padding: 15px;
+  margin-top: 6px;
+  padding: 10px 12px;
   border-radius: 4px;
   border: 1px solid #e0f2f1;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media screen and (max-width: 375px) {
+  .service-info {
+    margin-top: 6px;
+    padding: 10px;
+  }
+}
+
+@media screen and (min-width: 480px) {
+  .service-info {
+    padding: 15px;
+    border-radius: 8px;
+    margin: 10px 12px;
+    width: calc(100% - 24px);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    border: none;
+  }
 }
 
 .service-header {
@@ -508,8 +616,23 @@ const initPage = () => {
 
 /* 提交订单 */
 .submit-section {
-  padding: 15px;
-  margin-top: 20px;
+  padding: 12px;
+  margin-top: 16px;
+}
+
+@media screen and (max-width: 375px) {
+  .submit-section {
+    padding: 10px;
+    margin-top: 12px;
+  }
+}
+
+@media screen and (min-width: 480px) {
+  .submit-section {
+    padding: 0 12px;
+    margin: 20px auto;
+    max-width: 400px;
+  }
 }
 
 .submit-btn {
@@ -521,6 +644,12 @@ const initPage = () => {
   padding: 12px 0;
   font-size: 16px;
   font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.submit-btn:hover {
+  background-color: #3e8e41;
 }
 
 /* 用户协议 */
@@ -528,6 +657,7 @@ const initPage = () => {
   padding: 0 15px;
   display: flex;
   justify-content: center;
+  margin-bottom: 20px;
 }
 
 .agreement-label {
@@ -543,7 +673,21 @@ const initPage = () => {
 
 /* 农机列表页样式 */
 .machine-list-page {
-  padding: 15px;
+  padding: 12px;
+}
+
+@media screen and (max-width: 375px) {
+  .machine-list-page {
+    padding: 10px;
+  }
+}
+
+@media screen and (min-width: 480px) {
+  .machine-list-page {
+    padding: 15px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
 }
 
 .machine-types {
@@ -551,6 +695,12 @@ const initPage = () => {
   overflow-x: auto;
   padding-bottom: 10px;
   margin-bottom: 15px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+}
+
+.machine-types::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
 }
 
 .type-item {
@@ -560,6 +710,11 @@ const initPage = () => {
   padding: 8px 12px;
   margin-right: 15px;
   white-space: nowrap;
+  transition: transform 0.2s;
+}
+
+.type-item:active {
+  transform: scale(0.95);
 }
 
 .type-item .machinery-icon {
@@ -585,17 +740,37 @@ const initPage = () => {
   gap: 15px;
 }
 
+@media screen and (min-width: 768px) {
+  .machines-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+}
+
 .machine-card {
   background-color: #fff;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.machine-card:active {
+  transform: scale(0.98);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .machine-card-image {
   width: 100%;
   height: 140px;
   object-fit: cover;
+}
+
+@media screen and (min-width: 480px) {
+  .machine-card-image {
+    height: 160px;
+  }
 }
 
 .machine-card-info {
@@ -605,14 +780,26 @@ const initPage = () => {
 .machine-card-name {
   margin: 0 0 8px 0;
   font-size: 16px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .machine-card-specs {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   color: #666;
   font-size: 13px;
   margin-bottom: 10px;
+}
+
+.machine-card-specs span {
+  background-color: #f5f5f5;
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 .machine-card-price {
@@ -624,6 +811,7 @@ const initPage = () => {
 .price-value {
   color: #f44336;
   font-weight: bold;
+  font-size: 16px;
 }
 
 .availability {

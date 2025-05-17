@@ -17,7 +17,7 @@ const navItems: NavItem[] = [
   { id: 'home', icon: 'HomeFilled', name: '首页', path: '/' },
   { id: 'finance', icon: 'Money', name: '理财', path: '/finance' },
   { id: 'machinery', icon: 'Van', name: '农机租赁', path: '/machinery' },
-  { id: 'mine', icon: 'User', name: '我的', path: '/mine' }
+  { id: 'mine', icon: 'User', name: '我的', path: '/me' }
 ]
 
 // 当前活跃的导航标签
