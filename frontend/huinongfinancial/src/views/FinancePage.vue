@@ -314,16 +314,16 @@ const switchCategory = (category: string) => {
   grid-template-columns: repeat(4, 1fr);
   padding: 10px;
   background-color: #fff;
-  margin: 0 8px 8px;
+  margin: 10px;
   gap: 6px;
-  border-radius: 8px;
-  width: calc(100% - 16px);
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 @media screen and (max-width: 375px) {
   .product-categories {
     padding: 10px;
-    margin: 0 10px 6px;
+    margin: 8px;
     gap: 6px;
   }
 }
@@ -359,18 +359,21 @@ const switchCategory = (category: string) => {
 .market-indices {
   display: flex;
   background-color: #fff;
-  padding: 10px 12px;
+  padding: 12px 15px;
   gap: 15px;
-  margin: 0 8px 8px;
-  border-radius: 8px;
-  width: calc(100% - 16px);
+  margin: 10px auto;
+  border-radius: 12px;
+  width: 95%;
+  max-width: 550px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 @media screen and (max-width: 375px) {
   .market-indices {
-    padding: 10px;
+    padding: 10px 12px;
     gap: 12px;
-    margin: 0 10px 6px;
+    margin: 8px auto;
+    width: 96%;
   }
 }
 
@@ -405,22 +408,26 @@ const switchCategory = (category: string) => {
 /* 推荐卡片 */
 .recommendation-cards {
   display: flex;
+  justify-content: center;
   gap: 8px;
   padding: 0;
-  margin: 0 8px 8px;
-  width: calc(100% - 16px);
+  margin: 0 auto 8px;
+  width: 95%;
+  max-width: 550px;
 }
 
 @media screen and (max-width: 375px) {
   .recommendation-cards {
     gap: 6px;
-    padding: 0 10px;
-    margin: 0 10px 6px;
+    padding: 0;
+    margin: 0 auto 6px;
+    width: 96%;
   }
 }
 
 .card {
   flex: 1;
+  max-width: 49%;
   border-radius: 8px;
   padding: 12px;
   color: #fff;
