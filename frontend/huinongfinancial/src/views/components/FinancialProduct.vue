@@ -79,10 +79,48 @@ const props = defineProps({
   padding: 15px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   margin-bottom: 15px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* 响应式布局 */
+@media screen and (min-width: 480px) {
+  .financial-product-card {
+    width: calc(50% - 10px);
+  }
+}
+
+@media screen and (min-width: 768px) {
+  .financial-product-card {
+    width: calc(33.333% - 10px);
+  }
+}
+
+@media screen and (max-width: 375px) {
+  .financial-product-card {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+}
+
+.financial-product-card:active {
+  transform: scale(0.98);
 }
 
 .is-recommended {
   border: 1px solid #4CAF50;
+  position: relative;
+}
+
+.is-recommended::after {
+  content: '推荐';
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: #4CAF50;
+  color: white;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 0 10px 0 10px;
 }
 
 .product-header {
@@ -92,18 +130,18 @@ const props = defineProps({
 }
 
 .product-type {
-  background-color: #f0f0f0;
+  background-color: #f5f5f5;
   color: #666;
-  border-radius: 4px;
   padding: 2px 8px;
+  border-radius: 4px;
   font-size: 12px;
 }
 
 .product-tag {
-  background-color: #4CAF50;
-  color: #fff;
-  border-radius: 4px;
+  background-color: #e8f5e9;
+  color: #4CAF50;
   padding: 2px 8px;
+  border-radius: 4px;
   font-size: 12px;
 }
 
@@ -111,26 +149,58 @@ const props = defineProps({
   font-size: 16px;
   font-weight: 500;
   margin-bottom: 15px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media screen and (max-width: 375px) {
+  .product-name {
+    font-size: 15px;
+    margin-bottom: 12px;
+  }
 }
 
 .product-info {
   display: flex;
+  justify-content: space-between;
   margin-bottom: 15px;
 }
 
+@media screen and (max-width: 375px) {
+  .product-info {
+    margin-bottom: 12px;
+  }
+}
+
 .return-info, .period-info {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .return-rate {
-  color: #f44336;
-  font-size: 22px;
+  font-size: 18px;
   font-weight: bold;
+  color: #f44336;
+}
+
+@media screen and (max-width: 375px) {
+  .return-rate {
+    font-size: 16px;
+  }
 }
 
 .period {
   font-size: 16px;
-  font-weight: bold;
+  font-weight: 500;
+}
+
+@media screen and (max-width: 375px) {
+  .period {
+    font-size: 14px;
+  }
 }
 
 .return-label, .period-label {
@@ -140,8 +210,9 @@ const props = defineProps({
 }
 
 .risk-level {
-  font-size: 12px;
   margin-bottom: 15px;
+  font-size: 12px;
+  padding: 3px 0;
 }
 
 .risk-低 {
@@ -149,7 +220,7 @@ const props = defineProps({
 }
 
 .risk-中 {
-  color: #FF9800;
+  color: #ff9800;
 }
 
 .risk-高 {
@@ -160,8 +231,15 @@ const props = defineProps({
   background-color: #4CAF50;
   color: white;
   text-align: center;
-  padding: 10px;
-  border-radius: 20px;
+  padding: 8px 0;
+  border-radius: 4px;
   font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.product-button:active {
+  background-color: #3e8e41;
 }
 </style>

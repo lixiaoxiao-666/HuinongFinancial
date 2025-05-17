@@ -5,6 +5,11 @@ const router = createRouter({
   routes: [
     {
       path: '/',
+      name: 'splash',
+      component: () => import('../views/SplashScreen.vue'),
+    },
+    {
+      path: '/home',
       name: 'home',
       component: () => import('../views/IndexPage.vue'),
     },
@@ -24,9 +29,9 @@ const router = createRouter({
       component: () => import('../views/MachineryPage.vue'),
     },
     {
-      path: '/mine',
-      name: 'mine',
-      component: () => import('../views/MinePage.vue'),
+      path: '/me',
+      name: 'me',
+      component: () => import('../views/MePage.vue'),
     },
     {
       path: '/news',

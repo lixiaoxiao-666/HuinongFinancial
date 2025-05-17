@@ -1,6 +1,10 @@
 <!-- vue3 element-plus -->
 <script setup lang="ts">
 import { ref } from 'vue'
+import AppFooter from './components/footer.vue'
+// 当前选中的导航栏
+const activeTab = ref('me')
+
 import {
   User,
   Service,
@@ -21,24 +25,31 @@ import {
   Clock,
   Present,
   Discount,
-  Bell
+  Bell,
+  Check
 } from '@element-plus/icons-vue'
 
 const userName = ref('张三')
 const userPhone = ref('138****1234')
 const userLevel = ref('普通会员')
+const userPoints = ref(520)
+const growthValue = ref(120)
+const hasSignedToday = ref(false)
+
+// 签到
+const signIn = () => {
+  hasSignedToday.value = true
+  userPoints.value += 5
+  // 提示用户签到成功
+}
 </script>
 
 <template>
   <div class="me-page">
     <!-- Header with User Info -->
     <div class="user-header">
-      <div class="logo-container">
-        <img src="/images/logo.png" alt="数字惠农" class="logo-image" />
-      </div>
-      
       <div class="user-details">
-        <el-avatar :size="70" class="user-avatar">{{ userName.charAt(0) }}</el-avatar>
+        <el-avatar :size="55" class="user-avatar">{{ userName.charAt(0) }}</el-avatar>
         <div class="user-info">
           <div class="user-name">{{ userName }}</div>
           <div class="user-phone">{{ userPhone }}</div>
@@ -46,11 +57,35 @@ const userLevel = ref('普通会员')
             <el-tag size="small" type="warning">{{ userLevel }}</el-tag>
           </div>
         </div>
+        <el-button class="settings-btn" text>
+          <el-icon><Setting /></el-icon>
+        </el-button>
       </div>
       
-      <el-button class="settings-btn" text>
-        <el-icon><Setting /></el-icon>
-      </el-button>
+      <!-- 用户积分和签到 -->
+      <div class="user-stats">
+        <div class="stats-item">
+          <div class="stats-value">{{ userPoints }}</div>
+          <div class="stats-label">积分</div>
+        </div>
+        <div class="stats-item">
+          <div class="stats-value">{{ growthValue }}</div>
+          <div class="stats-label">成长值</div>
+        </div>
+        <div class="sign-in-container">
+          <el-button 
+            type="success" 
+            :disabled="hasSignedToday" 
+            size="small" 
+            @click="signIn"
+            class="sign-in-btn"
+          >
+            <el-icon v-if="hasSignedToday"><Check /></el-icon>
+            {{ hasSignedToday ? '已签到' : '签到' }}
+          </el-button>
+          <div class="sign-in-tip">每日签到得5积分</div>
+        </div>
+      </div>
     </div>
 
     <!-- Module Sections -->
@@ -204,6 +239,7 @@ const userLevel = ref('普通会员')
       </div>
     </div>
   </div>
+  <app-footer v-model:active-tab="activeTab" />
 </template>
 
 <style scoped>
@@ -216,62 +252,54 @@ const userLevel = ref('普通会员')
 .user-header {
   background: linear-gradient(135deg, #2e8b57, #4CAF50);
   color: white;
-  padding: 0;
+  padding: 8px;
+  margin: 8px;
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-}
-
-.logo-container {
-  width: 100%;
-  background-color: white;
-  padding: 10px 0;
-  display: flex;
-  justify-content: center;
-}
-
-.logo-image {
-  height: 60px;
-  width: auto;
+  align-items: stretch;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .user-details {
   width: 100%;
-  padding: 20px;
+  padding: 0;
   display: flex;
   align-items: center;
+  position: relative;
 }
 
 .user-avatar {
   background-color: #fff;
   color: #2e8b57;
   font-weight: bold;
+  flex-shrink: 0;
 }
 
 .user-info {
-  margin-left: 15px;
+  margin-left: 12px;
   flex: 1;
 }
 
 .user-name {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
-  margin-bottom: 5px;
+  margin-bottom: 3px;
 }
 
 .user-phone {
-  font-size: 14px;
+  font-size: 12px;
   opacity: 0.8;
-  margin-bottom: 5px;
+  margin-bottom: 3px;
 }
 
 .settings-btn {
   color: white;
-  font-size: 20px;
+  font-size: 18px;
   position: absolute;
-  top: 70px;
-  right: 15px;
+  top: 0;
+  right: 0;
 }
 
 .modules-container {
@@ -354,5 +382,48 @@ const userLevel = ref('普通会员')
 
 .my-divider {
   margin: 15px 0;
+}
+
+.user-stats {
+  display: flex;
+  width: 100%;
+  justify-content: space-around;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.stats-item {
+  text-align: center;
+}
+
+.stats-value {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.stats-label {
+  font-size: 11px;
+  opacity: 0.8;
+  margin-top: 1px;
+}
+
+.sign-in-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sign-in-btn {
+  background-color: rgba(255, 255, 255, 0.2);
+  border: none;
+  padding: 3px 12px;
+  font-size: 12px;
+}
+
+.sign-in-tip {
+  font-size: 10px;
+  margin-top: 5px;
+  opacity: 0.7;
 }
 </style>

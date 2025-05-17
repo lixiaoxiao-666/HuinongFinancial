@@ -74,17 +74,9 @@ const agriProducts = [
     minPeriod: '1年',
     riskLevel: '低',
     agriTag: '种植专享',
-    isRecommended: false
-  },
-  {
-    type: '基金组合',
-    name: '惠农优选平衡型基金组合',
-    annualReturn: '8.50%',
-    minPeriod: '无固定期限',
-    riskLevel: '中',
-    agriTag: '乡村振兴',
     isRecommended: true
   },
+
   {
     type: '保险',
     name: '农业生产保障保险',
@@ -92,7 +84,7 @@ const agriProducts = [
     minPeriod: '5年',
     riskLevel: '低',
     agriTag: '灾害保障',
-    isRecommended: false
+    isRecommended: true
   }
 ]
 
@@ -110,11 +102,15 @@ const switchCategory = (category: string) => {
     <!-- 顶部导航栏 -->
     <div class="top-nav">
       <div class="nav-left">
-        <!-- 删除返回图标 -->
+        <div class="nav-icon nav-back">
+          <i class="back-icon"></i>
+        </div>
       </div>
       <div class="nav-title">理财</div>
       <div class="nav-right">
-        <!-- 删除筛选图标 -->
+        <div class="nav-icon nav-share">
+          <i class="share-icon"></i>
+        </div>
       </div>
     </div>
 
@@ -250,6 +246,13 @@ const switchCategory = (category: string) => {
   padding-bottom: 60px; /* 为底部导航栏留出空间 */
   background-color: #f5f5f5;
   color: #333;
+  font-size: 13px;
+}
+
+@media screen and (max-width: 375px) {
+  .finance-container {
+    font-size: 12px;
+  }
 }
 
 /* 顶部导航栏 */
@@ -257,20 +260,20 @@ const switchCategory = (category: string) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 50px;
+  height: 44px;
   background-color: #fff;
-  padding: 0 15px;
+  padding: 0 12px;
   position: sticky;
   top: 0;
   z-index: 100;
 }
 
 .nav-title {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 500;
 }
 
-.nav-back, .nav-filter {
+.nav-left, .nav-right {
   width: 30px;
   height: 30px;
   display: flex;
@@ -278,14 +281,51 @@ const switchCategory = (category: string) => {
   justify-content: center;
 }
 
+.nav-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.back-icon {
+  width: 20px;
+  height: 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23333' d='M20,11H7.83l5.59-5.59L12,4l-8,8l8,8l1.41-1.41L7.83,13H20V11z'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.share-icon {
+  width: 20px;
+  height: 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23333' d='M18,16.08c-0.76,0-1.44,0.3-1.96,0.77L8.91,12.7C8.96,12.47,9,12.24,9,12s-0.04-0.47-0.09-0.7l7.05-4.11C16.5,7.69,17.21,8,18,8c1.66,0,3-1.34,3-3s-1.34-3-3-3s-3,1.34-3,3c0,0.24,0.04,0.47,0.09,0.7L8.04,9.81C7.5,9.31,6.79,9,6,9c-1.66,0-3,1.34-3,3s1.34,3,3,3c0.79,0,1.5-0.31,2.04-0.81l7.12,4.16c-0.05,0.21-0.08,0.43-0.08,0.65c0,1.61,1.31,2.92,2.92,2.92c1.61,0,2.92-1.31,2.92-2.92S19.61,16.08,18,16.08z'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
 /* 产品分类 */
 .product-categories {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  padding: 15px;
+  padding: 10px;
   background-color: #fff;
-  margin-bottom: 10px;
-  gap: 10px;
+  margin: 10px;
+  gap: 6px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+@media screen and (max-width: 375px) {
+  .product-categories {
+    padding: 10px;
+    margin: 8px;
+    gap: 6px;
+  }
 }
 
 .category-item {
@@ -296,8 +336,8 @@ const switchCategory = (category: string) => {
 }
 
 .category-icon {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background-color: rgba(76, 175, 80, 0.1);
   display: flex;
@@ -307,21 +347,34 @@ const switchCategory = (category: string) => {
 }
 
 .agri-icon {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
 }
 
 .category-name {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 /* 市场指数 */
 .market-indices {
   display: flex;
   background-color: #fff;
-  padding: 15px;
-  gap: 20px;
-  margin-bottom: 10px;
+  padding: 12px 15px;
+  gap: 15px;
+  margin: 10px auto;
+  border-radius: 12px;
+  width: 95%;
+  max-width: 550px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+@media screen and (max-width: 375px) {
+  .market-indices {
+    padding: 10px 12px;
+    gap: 12px;
+    margin: 8px auto;
+    width: 96%;
+  }
 }
 
 .market-index-item {
@@ -355,20 +408,34 @@ const switchCategory = (category: string) => {
 /* 推荐卡片 */
 .recommendation-cards {
   display: flex;
-  gap: 10px;
-  padding: 0 15px;
-  margin-bottom: 15px;
+  justify-content: center;
+  gap: 8px;
+  padding: 0;
+  margin: 0 auto 8px;
+  width: 95%;
+  max-width: 550px;
+}
+
+@media screen and (max-width: 375px) {
+  .recommendation-cards {
+    gap: 6px;
+    padding: 0;
+    margin: 0 auto 6px;
+    width: 96%;
+  }
 }
 
 .card {
   flex: 1;
-  border-radius: 10px;
-  padding: 15px;
+  max-width: 49%;
+  border-radius: 8px;
+  padding: 12px;
   color: #fff;
-  min-height: 120px;
+  min-height: 100px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  margin: 0;
 }
 
 .red-card {
@@ -391,30 +458,42 @@ const switchCategory = (category: string) => {
 }
 
 .card-title {
-  margin-top: 10px;
-  font-size: 16px;
+  margin-top: 8px;
+  font-size: 14px;
   font-weight: 500;
 }
 
 .card-subtitle {
-  font-size: 14px;
+  font-size: 13px;
   opacity: 0.8;
 }
 
 .card-button {
   background-color: rgba(255, 255, 255, 0.3);
   width: fit-content;
-  padding: 5px 15px;
-  border-radius: 15px;
-  margin-top: 10px;
-  font-size: 14px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  margin-top: 8px;
+  font-size: 13px;
 }
 
 /* 表现最佳 */
 .top-performers {
   background-color: #fff;
-  padding: 15px;
-  margin-bottom: 10px;
+  padding: 10px 12px;
+  margin: 0 auto 8px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+@media screen and (max-width: 375px) {
+  .top-performers {
+    padding: 10px;
+    margin: 0 auto 6px;
+    width: 92%;
+  }
 }
 
 .section-header {
@@ -425,13 +504,13 @@ const switchCategory = (category: string) => {
 }
 
 .section-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 500;
 }
 
 .more-link {
   color: #999;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .fund-list {
@@ -443,19 +522,19 @@ const switchCategory = (category: string) => {
 .fund-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .fund-rank {
-  width: 40px;
-  height: 40px;
+  width: 35px;
+  height: 35px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .crown {
-  font-size: 24px;
+  font-size: 20px;
 }
 
 .rank-1 {
@@ -475,7 +554,7 @@ const switchCategory = (category: string) => {
 }
 
 .return-rate {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
   color: #f44336;
 }
@@ -490,8 +569,18 @@ const switchCategory = (category: string) => {
 }
 
 .fund-name {
-  font-size: 15px;
+  font-size: 14px;
   margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media screen and (max-width: 375px) {
+  .fund-name {
+    font-size: 13px;
+  }
 }
 
 .fund-details {
@@ -518,8 +607,20 @@ const switchCategory = (category: string) => {
 /* 农村金融产品 */
 .agri-products {
   background-color: #fff;
-  padding: 15px;
-  margin-bottom: 60px;
+  padding: 10px 12px;
+  margin: 0 auto 60px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+@media screen and (max-width: 375px) {
+  .agri-products {
+    padding: 10px;
+    margin: 0 auto 60px;
+    width: 92%;
+  }
 }
 
 .category-tabs {
@@ -528,7 +629,7 @@ const switchCategory = (category: string) => {
 }
 
 .category-tab {
-  font-size: 14px;
+  font-size: 13px;
   color: #666;
   position: relative;
 }
@@ -550,5 +651,8 @@ const switchCategory = (category: string) => {
 
 .product-list {
   margin-top: 15px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
 }
 </style> 
