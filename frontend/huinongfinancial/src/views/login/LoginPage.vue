@@ -140,37 +140,23 @@ const register = () => {
   justify-content: center;
   /* 垂直居中 */
   align-items: center;
-  /* 渐变背景 */
-  background: linear-gradient(to bottom, #f0d080, #D4AF37);
-  /* 背景图片 - 麦浪效果 */
-  background-image: url('../../assets/images/wheat-field.svg');
-  /* 背景图片大小 */
-  background-size: cover;
-  /* 背景图片位置 */
-  background-position: center;
-  /* 保持固定 */
-  background-attachment: fixed;
-  /* 添加过渡效果 */
-  animation: bgShimmer 10s infinite alternate;
+  /* 白色背景 */
+  background: #ffffff;
   position: relative;
   overflow: hidden;
 }
 
+/* 删除不需要的背景动画 */
 @keyframes bgShimmer {
-  0% {
-    background-color: #f0d080;
-  }
-  50% {
-    background-color: #e6a23c;
-  }
-  100% {
-    background-color: #D4AF37;
+  0%, 50%, 100% {
+    background-color: #ffffff;
   }
 }
 
 .login-box {
   /* 宽度 */
-  width: 500px;
+  width: 85%;
+  max-width: 450px;
   /* 背景颜色 - 半透明 */
   background-color: rgba(255, 255, 255, 0.92);
   /* 圆角 */
@@ -228,7 +214,7 @@ const register = () => {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   /* 字体大小 */
-  font-size: 28px;
+  font-size: clamp(24px, 5vw, 28px);
   /* 下边距 */
   margin-bottom: 10px;
   /* 加粗显示更明显 */
@@ -237,7 +223,7 @@ const register = () => {
 
 .system-subtitle {
   color: #666;
-  font-size: 20px;
+  font-size: clamp(16px, 4vw, 20px);
   margin-bottom: 30px;
 }
 
@@ -252,7 +238,7 @@ const register = () => {
 
 .form-label {
   color: #333;
-  font-size: 20px;
+  font-size: clamp(16px, 4vw, 20px);
   margin-bottom: 5px;
 }
 
@@ -269,7 +255,7 @@ const register = () => {
 
 .remember :deep(.el-checkbox__label) {
   color: #333;
-  font-size: 20px;
+  font-size: clamp(16px, 4vw, 20px);
 }
 
 .forgot-link {
@@ -280,7 +266,7 @@ const register = () => {
   cursor: pointer;
   text-decoration: none;
   font-weight: bold;
-  font-size: 20px;
+  font-size: clamp(16px, 4vw, 20px);
 }
 
 .login-button {
@@ -322,5 +308,69 @@ const register = () => {
 :deep(.el-input__wrapper) {
   /* 增大 */
   height: 60px;
+}
+
+/* 媒体查询 - 响应式设计 */
+@media screen and (max-width: 768px) {
+  .login-box {
+    padding: 30px 20px;
+  }
+  
+  .logo {
+    transform: scale(1.2);
+  }
+  
+  .logo img {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .form-container {
+    margin: 20px 0;
+  }
+  
+  .form-item {
+    margin-bottom: 20px;
+  }
+  
+  :deep(.el-input__wrapper) {
+    height: 50px;
+  }
+  
+  .login-button, .register-button {
+    height: 40px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .login-box {
+    padding: 25px 15px;
+  }
+  
+  .logo {
+    transform: scale(1);
+    margin-bottom: 15px;
+  }
+  
+  .logo img {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .form-container {
+    margin: 15px 0;
+  }
+  
+  .form-item {
+    margin-bottom: 15px;
+  }
+  
+  .remember-forgot {
+    margin-bottom: 20px;
+  }
+  
+  :deep(.el-input__wrapper) {
+    height: 45px;
+  }
 }
 </style>
