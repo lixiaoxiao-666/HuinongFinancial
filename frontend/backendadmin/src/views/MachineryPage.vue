@@ -113,6 +113,14 @@
 <script setup>
 import { ref } from 'vue'
 
+// 导入本地图片
+import X100Image from '../assets/images/X100.png'
+import Y200Image from '../assets/images/Y200.png'
+import Z300Image from '../assets/images/Z300.png'
+import A400Image from '../assets/images/A400.png'
+import B500Image from '../assets/images/B500.png'
+import C600Image from '../assets/images/C600.webp'
+
 // 农机设备数据
 const machineryList = ref([
   {
@@ -120,56 +128,56 @@ const machineryList = ref([
     name: '拖拉机X100',
     status: '可用',
     createDate: '2023-05-10',
-    imageUrl: '/assets/machinery/tractor.jpg'
+    imageUrl: X100Image
   },
   {
     id: 'SG-Y200',
     name: '收割机Y200',
     status: '使用中',
     createDate: '2023-06-15',
-    imageUrl: '/assets/machinery/harvester.jpg'
+    imageUrl: Y200Image
   },
   {
     id: 'BZ-Z300',
     name: '播种机Z300',
     status: '可用',
     createDate: '2023-07-20',
-    imageUrl: '/assets/machinery/seeder.jpg'
+    imageUrl: Z300Image
   },
   {
     id: 'PS-A400',
     name: '喷洒机A400',
     status: '维修中',
     createDate: '2023-08-25',
-    imageUrl: '/assets/machinery/sprayer.jpg'
+    imageUrl: A400Image
   },
   {
     id: 'HG-B500',
     name: '粮食烘干机B500',
     status: '可用',
     createDate: '2023-09-30',
-    imageUrl: '/assets/machinery/dryer.jpg'
+    imageUrl: B500Image
   },
   {
     id: 'QL-C600',
     name: '起垄机C600',
     status: '使用中',
     createDate: '2023-10-05',
-    imageUrl: '/assets/machinery/ridger.jpg'
+    imageUrl: C600Image
   },
   {
     id: 'NY-D700',
     name: '农药喷雾机D700',
     status: '可用',
     createDate: '2023-11-10',
-    imageUrl: '/assets/machinery/pesticide_sprayer.jpg'
+    imageUrl: A400Image // 使用喷洒机图片代替
   },
   {
     id: 'GW-E800',
     name: '耕田机E800',
     status: '可用',
     createDate: '2023-12-15',
-    imageUrl: '/assets/machinery/plough.jpg'
+    imageUrl: Z300Image // 使用播种机图片代替
   }
 ])
 

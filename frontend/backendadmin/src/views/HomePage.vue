@@ -63,6 +63,15 @@ const recentLoans = ref([
   }
 ])
 
+// 用户反馈数据
+const userFeedback = ref([
+  { category: "服务好评", value: 62 },
+  { category: "服务投诉", value: 8 },
+  { category: "功能建议", value: 15 },
+  { category: "系统问题", value: 10 },
+  { category: "其他", value: 5 }
+])
+
 // 惠农项目数据
 const projectSales = ref([
   {
@@ -182,8 +191,8 @@ const handleLogout = () => {
       </div>
     </div>
     
-    <!-- 中间数据卡片区域 -->
-    <div class="data-cards-row">
+    <!-- 近期贷款申请 - 独占一行 -->
+    <div class="data-cards-row full-width-card">
       <!-- 最近贷款申请 -->
       <div class="data-card">
         <div class="card-header">
@@ -240,7 +249,10 @@ const handleLogout = () => {
           </table>
         </div>
       </div>
-
+    </div>
+    
+    <!-- 中间数据卡片区域 -->
+    <div class="data-cards-row">
       <!-- 预订状态 -->
       <div class="data-card">
         <div class="card-header">
@@ -282,6 +294,95 @@ const handleLogout = () => {
               <div class="bar-column primary" style="height: 100%;"></div>
               <div class="bar-column secondary" style="height: 50%;"></div>
               <div class="bar-label">6月</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 用户反馈模块 -->
+      <div class="data-card">
+        <div class="card-header">
+          <h3>用户反馈统计</h3>
+          <div class="card-actions">
+            <button class="card-action"><i class="action-icon refresh"></i></button>
+            <button class="card-action"><i class="action-icon minimize"></i></button>
+            <button class="card-action"><i class="action-icon close"></i></button>
+          </div>
+        </div>
+        <div class="card-body chart-container">
+          <div class="pie-chart-wrapper">
+            <svg viewBox="0 0 200 200" class="pie-chart">
+              <!-- 饼图扇区 - 动态计算位置 -->
+              <g transform="translate(100, 100)">
+                <!-- 服务好评 - 62% -->
+                <path 
+                  d="M0,0 L0,-80 A80,80 0 0,1 61.95,50.32 z" 
+                  fill="#A5D6A7"
+                />
+                <!-- 服务投诉 - 8% -->
+                <path 
+                  d="M0,0 L61.95,50.32 A80,80 0 0,1 29.28,74.08 z" 
+                  fill="#FFCDD2"
+                />
+                <!-- 功能建议 - 15% -->
+                <path 
+                  d="M0,0 L29.28,74.08 A80,80 0 0,1 -20.80,77.12 z" 
+                  fill="#90CAF9"
+                />
+                <!-- 系统问题 - 10% -->
+                <path 
+                  d="M0,0 L-20.80,77.12 A80,80 0 0,1 -61.95,50.32 z" 
+                  fill="#FFCC80"
+                />
+                <!-- 其他 - 5% -->
+                <path 
+                  d="M0,0 L-61.95,50.32 A80,80 0 0,1 -77.76,19.84 z" 
+                  fill="#CE93D8"
+                />
+                <path 
+                  d="M0,0 L-77.76,19.84 A80,80 0 0,1 0,-80 z" 
+                  fill="#B0BEC5"
+                />
+              </g>
+            </svg>
+
+            <!-- 饼图图例 -->
+            <div class="pie-chart-legend">
+              <div class="legend-item">
+                <div class="legend-color" style="background-color: #A5D6A7;"></div>
+                <div class="legend-text">
+                  <div class="legend-title">服务好评</div>
+                  <div class="legend-value">62%</div>
+                </div>
+              </div>
+              <div class="legend-item">
+                <div class="legend-color" style="background-color: #FFCDD2;"></div>
+                <div class="legend-text">
+                  <div class="legend-title">服务投诉</div>
+                  <div class="legend-value">8%</div>
+                </div>
+              </div>
+              <div class="legend-item">
+                <div class="legend-color" style="background-color: #90CAF9;"></div>
+                <div class="legend-text">
+                  <div class="legend-title">功能建议</div>
+                  <div class="legend-value">15%</div>
+                </div>
+              </div>
+              <div class="legend-item">
+                <div class="legend-color" style="background-color: #FFCC80;"></div>
+                <div class="legend-text">
+                  <div class="legend-title">系统问题</div>
+                  <div class="legend-value">10%</div>
+                </div>
+              </div>
+              <div class="legend-item">
+                <div class="legend-color" style="background-color: #CE93D8;"></div>
+                <div class="legend-text">
+                  <div class="legend-title">其他</div>
+                  <div class="legend-value">5%</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -475,46 +576,6 @@ const handleLogout = () => {
             <div class="stat-item">
               <div class="stat-label">目标(万元)</div>
               <div class="stat-value red">{{ topAgent.target }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- 直接聊天 -->
-      <div class="data-card chat-card">
-        <div class="card-header">
-          <h3>农户咨询</h3>
-          <div class="card-actions">
-            <button class="card-action"><i class="action-icon refresh"></i></button>
-            <button class="card-action"><i class="action-icon minimize"></i></button>
-            <button class="card-action"><i class="action-icon close"></i></button>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="chat-window">
-            <div class="chat-header">
-              <div class="chat-user">
-                <div class="user-avatar"></div>
-                <div class="user-info">
-                  <div class="user-name">李农户</div>
-                  <div class="user-status">4月15日, 2024</div>
-                </div>
-              </div>
-            </div>
-            <div class="chat-messages">
-              <div class="message">
-                <div class="message-content">您好，我想了解一下种植惠农贷款的申请条件，我种了20亩水稻。</div>
-              </div>
-              <div class="message-time">2024-04-15</div>
-              
-              <div class="message response">
-                <div class="message-content">您好！种植惠农贷款需要您提供身份证、户口本、土地承包合同、近期水稻种植面积证明等材料，最高可贷50万元。</div>
-              </div>
-              <div class="message-time you">您</div>
-            </div>
-            <div class="chat-input">
-              <input type="text" placeholder="输入消息..." class="message-input" />
-              <button class="send-btn">发送</button>
             </div>
           </div>
         </div>
@@ -935,100 +996,6 @@ const handleLogout = () => {
   color: #f44336;
 }
 
-/* 聊天卡片样式 */
-.chat-window {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.chat-header {
-  padding: 10px;
-  border-bottom: 1px solid #f1f1f1;
-}
-
-.chat-user {
-  display: flex;
-  align-items: center;
-}
-
-.user-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: #f1f1f1;
-  margin-right: 10px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23999' d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E");
-  background-position: center;
-  background-size: 80%;
-  background-repeat: no-repeat;
-}
-
-.user-name {
-  font-weight: 500;
-}
-
-.user-status {
-  font-size: 12px;
-  color: #999;
-}
-
-.chat-messages {
-  padding: 10px;
-  flex: 1;
-  overflow-y: auto;
-}
-
-.message {
-  margin-bottom: 10px;
-  max-width: 80%;
-}
-
-.message-content {
-  background-color: #f1f1f1;
-  padding: 8px 12px;
-  border-radius: 18px;
-  font-size: 14px;
-}
-
-.message.response .message-content {
-  background-color: #e3f2fd;
-  margin-left: auto;
-}
-
-.message-time {
-  font-size: 11px;
-  color: #999;
-  margin: 5px 0 15px;
-}
-
-.message-time.you {
-  text-align: right;
-}
-
-.chat-input {
-  padding: 10px;
-  display: flex;
-  border-top: 1px solid #f1f1f1;
-}
-
-.message-input {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 20px;
-  margin-right: 10px;
-}
-
-.send-btn {
-  background-color: #1890ff;
-  color: white;
-  border: none;
-  border-radius: 20px;
-  padding: 0 15px;
-  cursor: pointer;
-}
-
 /* 环形图样式 */
 .donut-chart {
   width: 100%;
@@ -1104,5 +1071,62 @@ const handleLogout = () => {
   .stats-value {
     font-size: 36px;
   }
+}
+
+/* 新增：全宽卡片样式 */
+.full-width-card {
+  grid-template-columns: 1fr;
+}
+
+/* 饼图样式 */
+.pie-chart-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.pie-chart {
+  width: 50%;
+  height: auto;
+}
+
+.pie-chart-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-left: 20px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+}
+
+.legend-color {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.legend-text {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  width: 100%;
+  min-width: 120px;
+}
+
+.legend-title {
+  font-size: 13px;
+  color: #333;
+}
+
+.legend-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
 }
 </style>

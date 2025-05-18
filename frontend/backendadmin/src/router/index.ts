@@ -24,15 +24,21 @@ const routes: Array<RouteRecordRaw> = [
         meta: { requiresAuth: true }
       },
       {
-        path: '/loan',
-        name: 'loan',
-        component: () => import('../views/LoanManagementPage.vue'),
+        path: '/rent/application',
+        name: 'rent-application',
+        component: () => import('../views/RentApplicationPage.vue'),
         meta: { requiresAuth: true }
       },
       {
         path: '/machinery',
         name: 'machinery',
-        redirect: '/rent',
+        component: () => import('../views/MachineryPage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: '/loan',
+        name: 'loan',
+        component: () => import('../views/LoanManagementPage.vue'),
         meta: { requiresAuth: true }
       },
       {
@@ -45,6 +51,24 @@ const routes: Array<RouteRecordRaw> = [
         path: '/loan/status',
         name: 'loan-status',
         component: () => import('../views/LoanManagementPage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: '/orders',
+        name: 'orders',
+        component: () => import('../views/OrdersPage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: '/users',
+        name: 'users',
+        component: () => import('../views/UsersPage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: '/settings',
+        name: 'settings',
+        component: () => import('../views/SystemSettingsPage.vue'),
         meta: { requiresAuth: true }
       }
     ]

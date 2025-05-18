@@ -1,61 +1,81 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 
-// 农机租赁申请列表数据
-const rentApplications = ref([
+// 导入图片
+import X100Image from '../assets/images/X100.png'
+import Y200Image from '../assets/images/Y200.png'
+import Z300Image from '../assets/images/Z300.png'
+import A400Image from '../assets/images/A400.png'
+import B500Image from '../assets/images/B500.png'
+import C600Image from '../assets/images/C600.webp'
+
+// 农机设备租赁情况数据
+const equipmentRentals = ref([
   {
-    id: 1,
-    subject: '拖拉机X100',
-    startDate: '2024-04-10 00:00:00',
-    endDate: '2024-04-20 00:00:00',
-    equipmentId: '推拉机X100',
-    applicantId: 'xiaofeifei',
-    status: '待审核'
+    id: 'TL-X100',
+    name: '拖拉机X100',
+    totalCount: 5,
+    rentedCount: 3,
+    availableCount: 2,
+    monthlyRentalRate: 85,
+    rentHistory: 26,
+    status: '可租赁',
+    imageUrl: X100Image
   },
   {
-    id: 2,
-    subject: '收割机Y200',
-    startDate: '2024-04-15 00:00:00',
-    endDate: '2024-04-25 00:00:00',
-    equipmentId: '收割机Y200',
-    applicantId: 'wanglei',
-    status: '申请通过'
+    id: 'SG-Y200',
+    name: '收割机Y200',
+    totalCount: 8,
+    rentedCount: 5,
+    availableCount: 3,
+    monthlyRentalRate: 92,
+    rentHistory: 34,
+    status: '可租赁',
+    imageUrl: Y200Image
   },
   {
-    id: 3,
-    subject: '播种机Z300',
-    startDate: '2024-04-05 00:00:00',
-    endDate: '2024-04-10 00:00:00',
-    equipmentId: '播种机Z300',
-    applicantId: 'zhanghua',
-    status: '申请拒绝'
+    id: 'BZ-Z300',
+    name: '播种机Z300',
+    totalCount: 6,
+    rentedCount: 6,
+    availableCount: 0,
+    monthlyRentalRate: 98,
+    rentHistory: 21,
+    status: '全部租出',
+    imageUrl: Z300Image
   },
   {
-    id: 4,
-    subject: '喷洒机A400',
-    startDate: '2024-04-12 00:00:00',
-    endDate: '2024-04-18 00:00:00',
-    equipmentId: '喷洒机A400',
-    applicantId: 'chenqiang',
-    status: '待审核'
+    id: 'PS-A400',
+    name: '喷洒机A400',
+    totalCount: 10,
+    rentedCount: 4,
+    availableCount: 6,
+    monthlyRentalRate: 76,
+    rentHistory: 18,
+    status: '可租赁',
+    imageUrl: A400Image
   },
   {
-    id: 5,
-    subject: '粮食烘干机B500',
-    startDate: '2024-04-20 00:00:00',
-    endDate: '2024-04-30 00:00:00',
-    equipmentId: '粮食烘干机B500',
-    applicantId: 'sunting',
-    status: '申请通过'
+    id: 'HG-B500',
+    name: '粮食烘干机B500',
+    totalCount: 3,
+    rentedCount: 2,
+    availableCount: 1,
+    monthlyRentalRate: 95,
+    rentHistory: 15,
+    status: '可租赁',
+    imageUrl: B500Image
   },
   {
-    id: 6,
-    subject: '起垄机C600',
-    startDate: '2024-04-22 00:00:00',
-    endDate: '2024-05-02 00:00:00',
-    equipmentId: '起垄机C600',
-    applicantId: 'liuxin',
-    status: '待审核'
+    id: 'QL-C600',
+    name: '起垄机C600',
+    totalCount: 4,
+    rentedCount: 1,
+    availableCount: 3,
+    monthlyRentalRate: 65,
+    rentHistory: 12,
+    status: '可租赁',
+    imageUrl: C600Image
   }
 ])
 
@@ -90,18 +110,18 @@ const downloadTemplate = () => {
 
 // 查看详情
 const viewDetails = (id) => {
-  alert(`查看申请ID: ${id} 的详情`)
+  alert(`查看设备ID: ${id} 的详情`)
 }
 
-// 编辑申请
-const editApplication = (id) => {
-  alert(`编辑申请ID: ${id}`)
+// 编辑设备
+const editEquipment = (id) => {
+  alert(`编辑设备ID: ${id}`)
 }
 
-// 删除申请
-const deleteApplication = (id) => {
-  if (confirm(`确定要删除ID: ${id} 的申请吗？`)) {
-    rentApplications.value = rentApplications.value.filter(app => app.id !== id)
+// 删除设备
+const deleteEquipment = (id) => {
+  if (confirm(`确定要删除ID: ${id} 的设备记录吗？`)) {
+    equipmentRentals.value = equipmentRentals.value.filter(equipment => equipment.id !== id)
     total.value--
   }
 }
@@ -110,8 +130,8 @@ const deleteApplication = (id) => {
 <template>
   <div class="rent-management">
     <div class="page-header">
-      <h1 class="page-title">农机租赁申请</h1>
-      <div class="header-desc">主题、设备ID、申请用户ID、租赁开始日期、租赁结束日期、申请状态。</div>
+      <h1 class="page-title">农机设备租赁情况</h1>
+      <div class="header-desc">设备ID、设备总量、已租赁数量、可用数量、月租赁率、历史租赁次数、状态</div>
     </div>
 
     <div class="page-content">
@@ -119,7 +139,7 @@ const deleteApplication = (id) => {
         <div class="left-actions">
           <button class="action-btn" @click="exportToExcel">
             <i class="icon-add"></i>
-            <span>添加</span>
+            <span>添加设备</span>
           </button>
           <button class="action-btn" @click="importExcel">
             <i class="icon-upload"></i>
@@ -129,14 +149,10 @@ const deleteApplication = (id) => {
             <i class="icon-export"></i>
             <span>导出Excel</span>
           </button>
-          <button class="action-btn" @click="downloadTemplate">
-            <i class="icon-download"></i>
-            <span>下载Excel模板</span>
-          </button>
         </div>
         <div class="right-actions">
           <div class="search-box">
-            <input type="text" placeholder="高级搜索" class="search-input" />
+            <input type="text" placeholder="搜索设备..." class="search-input" />
             <button class="search-btn">
               <i class="icon-search"></i>
             </button>
@@ -148,29 +164,39 @@ const deleteApplication = (id) => {
         <table class="data-table">
           <thead>
             <tr>
-              <th>主题</th>
-              <th>租赁开始日期</th>
-              <th>租赁结束日期</th>
+              <th>设备</th>
               <th>设备ID</th>
-              <th>申请用户ID</th>
-              <th>申请状态</th>
+              <th>设备总量</th>
+              <th>已租赁数量</th>
+              <th>可用数量</th>
+              <th>月租赁率</th>
+              <th>历史租赁次数</th>
+              <th>状态</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in rentApplications" :key="item.id">
-              <td>{{ item.subject }}</td>
-              <td>{{ item.startDate }}</td>
-              <td>{{ item.endDate }}</td>
-              <td>{{ item.equipmentId }}</td>
-              <td>{{ item.applicantId }}</td>
+            <tr v-for="item in equipmentRentals" :key="item.id">
+              <td>
+                <div class="equipment-info">
+                  <div class="equipment-image">
+                    <img :src="item.imageUrl" :alt="item.name" />
+                  </div>
+                </div>
+              </td>
+              <td>{{ item.id }}</td>
+              <td>{{ item.totalCount }}</td>
+              <td>{{ item.rentedCount }}</td>
+              <td>{{ item.availableCount }}</td>
+              <td>{{ item.monthlyRentalRate }}%</td>
+              <td>{{ item.rentHistory }}</td>
               <td>
                 <span 
                   class="status-tag"
                   :class="{
-                    'status-pending': item.status === '待审核',
-                    'status-approved': item.status === '申请通过',
-                    'status-rejected': item.status === '申请拒绝'
+                    'status-available': item.status === '可租赁',
+                    'status-unavailable': item.status === '全部租出',
+                    'status-maintenance': item.status === '维修中'
                   }"
                 >
                   {{ item.status }}
@@ -178,8 +204,8 @@ const deleteApplication = (id) => {
               </td>
               <td class="action-column">
                 <button class="table-btn view-btn" @click="viewDetails(item.id)">详情</button>
-                <button class="table-btn edit-btn" @click="editApplication(item.id)">编辑</button>
-                <button class="table-btn delete-btn" @click="deleteApplication(item.id)">删除</button>
+                <button class="table-btn edit-btn" @click="editEquipment(item.id)">编辑</button>
+                <button class="table-btn delete-btn" @click="deleteEquipment(item.id)">删除</button>
               </td>
             </tr>
           </tbody>
@@ -235,6 +261,31 @@ const deleteApplication = (id) => {
   background-color: #ffffff;
   border-radius: 4px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* 设备信息样式 */
+.equipment-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.equipment-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.equipment-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.equipment-name {
+  font-weight: 500;
 }
 
 .page-header {
@@ -351,17 +402,17 @@ const deleteApplication = (id) => {
   font-size: 12px;
 }
 
-.status-pending {
-  background-color: #e6f7ff;
-  color: #1890ff;
-}
-
-.status-approved {
+.status-available {
   background-color: #f6ffed;
   color: #52c41a;
 }
 
-.status-rejected {
+.status-unavailable {
+  background-color: #fff7e6;
+  color: #fa8c16;
+}
+
+.status-maintenance {
   background-color: #fff2f0;
   color: #ff4d4f;
 }
