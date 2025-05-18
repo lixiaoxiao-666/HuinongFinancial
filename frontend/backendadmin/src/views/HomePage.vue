@@ -191,8 +191,8 @@ const handleLogout = () => {
       </div>
     </div>
     
-    <!-- 近期贷款申请 - 独占一行 -->
-    <div class="data-cards-row full-width-card">
+    <!-- 中间数据卡片区域 -->
+    <div class="data-cards-row">
       <!-- 最近贷款申请 -->
       <div class="data-card">
         <div class="card-header">
@@ -249,10 +249,7 @@ const handleLogout = () => {
           </table>
         </div>
       </div>
-    </div>
-    
-    <!-- 中间数据卡片区域 -->
-    <div class="data-cards-row">
+
       <!-- 预订状态 -->
       <div class="data-card">
         <div class="card-header">
@@ -294,95 +291,6 @@ const handleLogout = () => {
               <div class="bar-column primary" style="height: 100%;"></div>
               <div class="bar-column secondary" style="height: 50%;"></div>
               <div class="bar-label">6月</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 用户反馈模块 -->
-      <div class="data-card">
-        <div class="card-header">
-          <h3>用户反馈统计</h3>
-          <div class="card-actions">
-            <button class="card-action"><i class="action-icon refresh"></i></button>
-            <button class="card-action"><i class="action-icon minimize"></i></button>
-            <button class="card-action"><i class="action-icon close"></i></button>
-          </div>
-        </div>
-        <div class="card-body chart-container">
-          <div class="pie-chart-wrapper">
-            <svg viewBox="0 0 200 200" class="pie-chart">
-              <!-- 饼图扇区 - 动态计算位置 -->
-              <g transform="translate(100, 100)">
-                <!-- 服务好评 - 62% -->
-                <path 
-                  d="M0,0 L0,-80 A80,80 0 0,1 61.95,50.32 z" 
-                  fill="#A5D6A7"
-                />
-                <!-- 服务投诉 - 8% -->
-                <path 
-                  d="M0,0 L61.95,50.32 A80,80 0 0,1 29.28,74.08 z" 
-                  fill="#FFCDD2"
-                />
-                <!-- 功能建议 - 15% -->
-                <path 
-                  d="M0,0 L29.28,74.08 A80,80 0 0,1 -20.80,77.12 z" 
-                  fill="#90CAF9"
-                />
-                <!-- 系统问题 - 10% -->
-                <path 
-                  d="M0,0 L-20.80,77.12 A80,80 0 0,1 -61.95,50.32 z" 
-                  fill="#FFCC80"
-                />
-                <!-- 其他 - 5% -->
-                <path 
-                  d="M0,0 L-61.95,50.32 A80,80 0 0,1 -77.76,19.84 z" 
-                  fill="#CE93D8"
-                />
-                <path 
-                  d="M0,0 L-77.76,19.84 A80,80 0 0,1 0,-80 z" 
-                  fill="#B0BEC5"
-                />
-              </g>
-            </svg>
-
-            <!-- 饼图图例 -->
-            <div class="pie-chart-legend">
-              <div class="legend-item">
-                <div class="legend-color" style="background-color: #A5D6A7;"></div>
-                <div class="legend-text">
-                  <div class="legend-title">服务好评</div>
-                  <div class="legend-value">62%</div>
-                </div>
-              </div>
-              <div class="legend-item">
-                <div class="legend-color" style="background-color: #FFCDD2;"></div>
-                <div class="legend-text">
-                  <div class="legend-title">服务投诉</div>
-                  <div class="legend-value">8%</div>
-                </div>
-              </div>
-              <div class="legend-item">
-                <div class="legend-color" style="background-color: #90CAF9;"></div>
-                <div class="legend-text">
-                  <div class="legend-title">功能建议</div>
-                  <div class="legend-value">15%</div>
-                </div>
-              </div>
-              <div class="legend-item">
-                <div class="legend-color" style="background-color: #FFCC80;"></div>
-                <div class="legend-text">
-                  <div class="legend-title">系统问题</div>
-                  <div class="legend-value">10%</div>
-                </div>
-              </div>
-              <div class="legend-item">
-                <div class="legend-color" style="background-color: #CE93D8;"></div>
-                <div class="legend-text">
-                  <div class="legend-title">其他</div>
-                  <div class="legend-value">5%</div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -581,6 +489,46 @@ const handleLogout = () => {
         </div>
       </div>
       
+      <!-- 直接聊天 -->
+      <div class="data-card chat-card">
+        <div class="card-header">
+          <h3>农户咨询</h3>
+          <div class="card-actions">
+            <button class="card-action"><i class="action-icon refresh"></i></button>
+            <button class="card-action"><i class="action-icon minimize"></i></button>
+            <button class="card-action"><i class="action-icon close"></i></button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="chat-window">
+            <div class="chat-header">
+              <div class="chat-user">
+                <div class="user-avatar"></div>
+                <div class="user-info">
+                  <div class="user-name">李农户</div>
+                  <div class="user-status">4月15日, 2024</div>
+                </div>
+              </div>
+            </div>
+            <div class="chat-messages">
+              <div class="message">
+                <div class="message-content">您好，我想了解一下种植惠农贷款的申请条件，我种了20亩水稻。</div>
+              </div>
+              <div class="message-time">2024-04-15</div>
+              
+              <div class="message response">
+                <div class="message-content">您好！种植惠农贷款需要您提供身份证、户口本、土地承包合同、近期水稻种植面积证明等材料，最高可贷50万元。</div>
+              </div>
+              <div class="message-time you">您</div>
+            </div>
+            <div class="chat-input">
+              <input type="text" placeholder="输入消息..." class="message-input" />
+              <button class="send-btn">发送</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <!-- 每日查询 -->
       <div class="data-card inquiry-card">
         <div class="card-header">
@@ -592,29 +540,27 @@ const handleLogout = () => {
           </div>
         </div>
         <div class="card-body">
-          <div class="chart-container">
-            <div class="donut-chart">
-              <div class="loan-reception-wrapper">
-                <div class="loan-reception-label">今日受理</div>
-                <div class="loan-reception-value">38</div>
-                <svg viewBox="0 0 200 200" class="loan-reception-circle">
-                  <!-- 背景圆 -->
-                  <circle cx="100" cy="100" r="90" fill="none" stroke="#f1f1f1" stroke-width="15" />
-                  
-                  <!-- 进度圆 - 75%完成 -->
-                  <circle 
-                    cx="100" 
-                    cy="100" 
-                    r="90" 
-                    fill="none" 
-                    stroke="#6c5ce7" 
-                    stroke-width="15" 
-                    stroke-dasharray="565.5"
-                    stroke-dashoffset="141.4"
-                    transform="rotate(-90 100 100)"
-                  />
-                </svg>
-              </div>
+          <div class="donut-chart">
+            <div class="loan-reception-wrapper">
+              <div class="loan-reception-label">今日受理</div>
+              <div class="loan-reception-value">38</div>
+              <svg viewBox="0 0 200 200" class="loan-reception-circle">
+                <!-- 背景圆 -->
+                <circle cx="100" cy="100" r="90" fill="none" stroke="#f1f1f1" stroke-width="15" />
+                
+                <!-- 进度圆 - 75%完成 -->
+                <circle 
+                  cx="100" 
+                  cy="100" 
+                  r="90" 
+                  fill="none" 
+                  stroke="#6c5ce7" 
+                  stroke-width="15" 
+                  stroke-dasharray="565.5"
+                  stroke-dashoffset="141.4"
+                  transform="rotate(-90 100 100)"
+                />
+              </svg>
             </div>
           </div>
         </div>
@@ -1005,55 +951,98 @@ const handleLogout = () => {
   align-items: center;
 }
 
-/* 惠农贷款受理模块样式更新 */
-.inquiry-card .card-body {
-  padding: 0;
-}
-
-.loan-reception-wrapper {
-  position: relative;
-  width: 100%;
-  height: 100%;
+/* 聊天卡片样式 */
+.chat-window {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  height: 100%;
+}
+
+.chat-header {
+  padding: 10px;
+  border-bottom: 1px solid #f1f1f1;
+}
+
+.chat-user {
+  display: flex;
   align-items: center;
 }
 
-.loan-reception-circle {
-  width: 80%;
-  height: auto;
-  max-width: 280px;
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #f1f1f1;
+  margin-right: 10px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23999' d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E");
+  background-position: center;
+  background-size: 80%;
+  background-repeat: no-repeat;
 }
 
-.loan-reception-label {
-  font-size: 24px;
-  font-weight: bold;
-  color: #333;
-  position: absolute;
-  top: 40%;
-  left: 50%;
-  transform: translate(-50%, -100%);
+.user-name {
+  font-weight: 500;
 }
 
-.loan-reception-value {
-  font-size: 72px;
-  font-weight: bold;
-  color: #6c5ce7;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -20%);
+.user-status {
+  font-size: 12px;
+  color: #999;
 }
 
-/* 调整卡片头部样式 */
-.inquiry-card .card-header {
-  background-color: #f5f5f5;
+.chat-messages {
+  padding: 10px;
+  flex: 1;
+  overflow-y: auto;
 }
 
-.inquiry-card .card-header h3 {
-  font-size: 18px;
-  color: #333;
+.message {
+  margin-bottom: 10px;
+  max-width: 80%;
+}
+
+.message-content {
+  background-color: #f1f1f1;
+  padding: 8px 12px;
+  border-radius: 18px;
+  font-size: 14px;
+}
+
+.message.response .message-content {
+  background-color: #e3f2fd;
+  margin-left: auto;
+}
+
+.message-time {
+  font-size: 11px;
+  color: #999;
+  margin: 5px 0 15px;
+}
+
+.message-time.you {
+  text-align: right;
+}
+
+.chat-input {
+  padding: 10px;
+  display: flex;
+  border-top: 1px solid #f1f1f1;
+}
+
+.message-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  margin-right: 10px;
+}
+
+.send-btn {
+  background-color: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 0 15px;
+  cursor: pointer;
 }
 
 /* 响应式布局调整 */
