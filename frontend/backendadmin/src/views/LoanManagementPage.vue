@@ -5,7 +5,7 @@ import { ref } from 'vue'
 const loanApplications = ref([
   {
     id: 1,
-    applicantName: '张三',
+    applicantName: '张*',
     applicantId: 'zhangsan123',
     amount: 50000,
     term: 12,
@@ -15,7 +15,7 @@ const loanApplications = ref([
   },
   {
     id: 2,
-    applicantName: '李四',
+    applicantName: '李*',
     applicantId: 'lisi456',
     amount: 100000,
     term: 24,
@@ -25,7 +25,7 @@ const loanApplications = ref([
   },
   {
     id: 3,
-    applicantName: '王五',
+    applicantName: '王*',
     applicantId: 'wangwu789',
     amount: 30000,
     term: 6,
@@ -35,7 +35,7 @@ const loanApplications = ref([
   },
   {
     id: 4,
-    applicantName: '赵六',
+    applicantName: '赵*',
     applicantId: 'zhaoliu012',
     amount: 200000,
     term: 36,
@@ -45,7 +45,7 @@ const loanApplications = ref([
   },
   {
     id: 5,
-    applicantName: '钱七',
+    applicantName: '钱*',
     applicantId: 'qianqi345',
     amount: 80000,
     term: 18,

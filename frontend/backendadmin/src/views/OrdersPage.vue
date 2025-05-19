@@ -5,7 +5,7 @@ import { ref, onMounted } from 'vue'
 const orderList = ref([
   {
     id: 'ORD-2024-001',
-    customerName: '张三',
+    customerName: '张*',
     product: '拖拉机X100租赁',
     amount: 2500,
     status: '已完成',
@@ -13,7 +13,7 @@ const orderList = ref([
   },
   {
     id: 'ORD-2024-002',
-    customerName: '李四',
+    customerName: '李*',
     product: '收割机Y200租赁',
     amount: 3200,
     status: '进行中',
@@ -21,7 +21,7 @@ const orderList = ref([
   },
   {
     id: 'ORD-2024-003',
-    customerName: '王五',
+    customerName: '王*',
     product: '播种机Z300租赁',
     amount: 1800,
     status: '已取消',
@@ -29,7 +29,7 @@ const orderList = ref([
   },
   {
     id: 'ORD-2024-004',
-    customerName: '赵六',
+    customerName: '赵*',
     product: '喷洒机A400租赁',
     amount: 1200,
     status: '进行中',
@@ -37,7 +37,7 @@ const orderList = ref([
   },
   {
     id: 'ORD-2024-005',
-    customerName: '钱七',
+    customerName: '钱*',
     product: '粮食烘干机B500租赁',
     amount: 5000,
     status: '已完成',
@@ -45,7 +45,7 @@ const orderList = ref([
   },
   {
     id: 'ORD-2024-006',
-    customerName: '孙八',
+    customerName: '孙*',
     product: '起垄机C600租赁',
     amount: 1500,
     status: '待支付',

@@ -8,7 +8,7 @@ const activeTab = ref('user')
 
 // 用户信息
 const userInfo = ref({
-  name: '张三',
+  name: '张*',
   avatar: '',
   level: '普通会员',
   points: 1254,
