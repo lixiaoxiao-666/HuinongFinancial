@@ -125,7 +125,8 @@ onMounted(() => {
 }
 
 .app-slogan {
-  font-size: clamp(32px, 8vw, 44px);
+  /* 字体调小 */
+  font-size: clamp(28px, 8vw, 36px);
   color: #666;
   text-align: center;
   transition: opacity 0.8s ease;

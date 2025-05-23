@@ -1,18 +1,10 @@
 package main
 
 import (
-	"fmt"
-	"log"
-
-	"github.com/gin-gonic/gin"
+	"huinongfinancial/router"
 )
 
 func main() {
-	router := gin.Default()
-	router.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "Hello, World!",
-		})
-	})
+	router := router.InitRouter()
 	router.Run(":8080")
 }
