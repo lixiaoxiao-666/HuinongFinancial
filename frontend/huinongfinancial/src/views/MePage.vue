@@ -29,7 +29,7 @@ import {
   Check
 } from '@element-plus/icons-vue'
 
-const userName = ref('张三')
+const userName = ref('张*')
 const userPhone = ref('138****1234')
 const userLevel = ref('普通会员')
 const userPoints = ref(520)
