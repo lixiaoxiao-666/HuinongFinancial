@@ -1,0 +1,54 @@
+# 数字惠农APP后端服务配置
+app:
+  name: "digital-agriculture-backend"
+  version: "1.0.0"
+  env: "development"
+  
+server:
+  port: 8080
+  mode: "debug"  # debug, release, test
+  
+database:
+  driver: "mysql"
+  host: "10.10.10.10"
+  port: 4000
+  username: "root"
+  password: ""
+  database: "app"
+  charset: "utf8mb4"
+  parseTime: true
+  loc: "Local"
+  maxIdleConns: 10
+  maxOpenConns: 100
+  connMaxLifetime: "1h"
+  
+redis:
+  host: "10.10.10.10"
+  port: 6379
+  password: ""
+  db: 0
+  poolSize: 10
+  minIdleConns: 5
+  
+jwt:
+  secret: "digital-agriculture-jwt-secret-key-2024"
+  expire: "24h"
+  
+log:
+  level: "debug"
+  format: "json"
+  filename: "logs/app.log"
+  maxSize: 100
+  maxAge: 30
+  maxBackups: 3
+  compress: true
+  
+file:
+  uploadPath: "uploads/"
+  maxSize: "10MB"
+  allowedTypes: ["jpg", "jpeg", "png", "pdf", "doc", "docx"]
+  
+ai:
+  difyApiUrl: "http://localhost:8001"
+  difyApiKey: "your-dify-api-key"
+  higressGatewayUrl: "http://localhost:8002" 

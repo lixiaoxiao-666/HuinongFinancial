@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字惠农OA管理系统 - 智能审批详情</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .browser-frame {
+            width: 1400px;
+            height: 900px;
+            border-radius: 12px 12px 0 0;
+            overflow: hidden;
+            background: #f5f5f5;
+            margin: 20px auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        .browser-header {
+            height: 40px;
+            background: #e5e5e5;
+            border-bottom: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+        }
+        .traffic-lights {
+            display: flex;
+            gap: 8px;
+        }
+        .traffic-light {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .traffic-light.red { background: #ff5f56; }
+        .traffic-light.yellow { background: #ffbd2e; }
+        .traffic-light.green { background: #27ca3f; }
+        .address-bar {
+            flex: 1;
+            margin: 0 20px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 4px 12px;
+            font-size: 13px;
+            color: #666;
+        }
+        .browser-content {
+            height: calc(100% - 40px);
+            background: #f8fafc;
+            display: flex;
+        }
+        .sidebar-nav {
+            width: 240px;
+            background: white;
+            border-right: 1px solid #e5e7eb;
+        }
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+        .risk-score {
+            background: conic-gradient(from 0deg, #ef4444 0%, #f97316 35%, #eab308 70%, #22c55e 100%);
+            border-radius: 50%;
+            padding: 4px;
+        }
+        .risk-score-inner {
+            background: white;
+            border-radius: 50%;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-200 flex items-center justify-center min-h-screen">
+    <div class="browser-frame">
+        <!-- Browser Header -->
+        <div class="browser-header">
+            <div class="traffic-lights">
+                <div class="traffic-light red"></div>
+                <div class="traffic-light yellow"></div>
+                <div class="traffic-light green"></div>
+            </div>
+            <div class="address-bar">
+                <i class="fas fa-lock text-green-600 mr-2"></i>
+                https://oa.digital-agriculture.com/approval/NH202400312002
+            </div>
+            <div class="flex items-center gap-4 text-gray-600">
+                <i class="fas fa-bookmark"></i>
+                <i class="fas fa-user-circle"></i>
+                <i class="fas fa-ellipsis-h"></i>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="browser-content">
+            <!-- Sidebar -->
+            <div class="sidebar-nav">
+                <!-- Header -->
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg mr-3 flex items-center justify-center">
+                            <i class="fas fa-cogs text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-semibold text-gray-800">数字惠农OA</h2>
+                            <p class="text-xs text-gray-600">v2.1.0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <nav class="p-4">
+                    <div class="space-y-1">
+                        <a href="#" class="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg">
+                            <i class="fas fa-chart-bar mr-3"></i>
+                            审批看板
+                        </a>
+                        <a href="#" class="flex items-center px-3 py-2 bg-blue-50 text-blue-600 rounded-lg font-medium">
+                            <i class="fas fa-robot mr-3"></i>
+                            智能审批
+                        </a>
+                        <a href="#" class="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg">
+                            <i class="fas fa-cog mr-3"></i>
+                            控制面板
+                        </a>
+                        <a href="#" class="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg">
+                            <i class="fas fa-chart-line mr-3"></i>
+                            数据报表
+                        </a>
+                    </div>
+                </nav>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="main-content">
+                <!-- Header Bar -->
+                <div class="bg-white border-b border-gray-200 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <button class="text-gray-600 hover:text-gray-800 mr-4">
+                                <i class="fas fa-arrow-left text-xl"></i>
+                            </button>
+                            <div>
+                                <h1 class="text-xl font-bold text-gray-900">智能审批详情</h1>
+                                <p class="text-sm text-gray-600">申请编号：NH202400312002</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <span class="bg-purple-100 text-purple-600 px-3 py-1.5 rounded-lg text-sm font-medium">
+                                <i class="fas fa-user mr-1"></i>待人工复核
+                            </span>
+                            <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                                <i class="fas fa-print mr-2"></i>打印
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content Grid -->
+                <div class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left Column - Application Info & AI Analysis -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <!-- Application Basic Info -->
+                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                            <h3 class="font-bold text-lg text-gray-800 mb-4">申请基本信息</h3>
+                            <div class="grid grid-cols-2 gap-6">
+                                <div>
+                                    <label class="text-sm font-medium text-gray-600">申请人</label>
+                                    <p class="font-semibold text-gray-900">王强</p>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-medium text-gray-600">身份证号</label>
+                                    <p class="font-semibold text-gray-900">320***********4567</p>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-medium text-gray-600">联系电话</label>
+                                    <p class="font-semibold text-gray-900">138****8899</p>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-medium text-gray-600">申请金额</label>
+                                    <p class="font-semibold text-red-600 text-lg">¥50,000</p>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-medium text-gray-600">贷款期限</label>
+                                    <p class="font-semibold text-gray-900">24个月</p>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-medium text-gray-600">贷款用途</label>
+                                    <p class="font-semibold text-gray-900">农机设备购买</p>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <label class="text-sm font-medium text-gray-600">详细说明</label>
+                                <p class="text-gray-800 mt-1">计划购买一台新型拖拉机用于合作社作业，预计可提高作业效率30%，年增收预期15万元。</p>
+                            </div>
+                        </div>
+
+                        <!-- AI Analysis Results -->
+                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                            <h3 class="font-bold text-lg text-gray-800 mb-4 flex items-center">
+                                <i class="fas fa-robot text-blue-600 mr-2"></i>AI智能分析结果
+                            </h3>
+                            
+                            <!-- Data Verification -->
+                            <div class="mb-6">
+                                <h4 class="font-semibold text-gray-800 mb-3">数据验证结果</h4>
+                                <div class="space-y-3">
+                                    <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-check-circle text-green-600 mr-3"></i>
+                                            <span class="text-gray-800">身份证信息验证</span>
+                                        </div>
+                                        <span class="text-green-600 font-medium">通过</span>
+                                    </div>
+                                    <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-check-circle text-green-600 mr-3"></i>
+                                            <span class="text-gray-800">手机号归属验证</span>
+                                        </div>
+                                        <span class="text-green-600 font-medium">通过</span>
+                                    </div>
+                                    <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-exclamation-triangle text-yellow-600 mr-3"></i>
+                                            <span class="text-gray-800">土地承包证验证</span>
+                                        </div>
+                                        <span class="text-yellow-600 font-medium">需人工核实</span>
+                                    </div>
+                                    <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-check-circle text-green-600 mr-3"></i>
+                                            <span class="text-gray-800">银行流水分析</span>
+                                        </div>
+                                        <span class="text-green-600 font-medium">通过</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Risk Assessment -->
+                            <div class="mb-6">
+                                <h4 class="font-semibold text-gray-800 mb-3">风险评估报告</h4>
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p class="text-sm text-gray-600 mb-1">还款能力评分</p>
+                                            <div class="flex items-center">
+                                                <div class="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                                                    <div class="bg-green-500 h-2 rounded-full" style="width: 75%"></div>
+                                                </div>
+                                                <span class="text-sm font-medium">75分</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-600 mb-1">信用历史评分</p>
+                                            <div class="flex items-center">
+                                                <div class="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                                                    <div class="bg-yellow-500 h-2 rounded-full" style="width: 60%"></div>
+                                                </div>
+                                                <span class="text-sm font-medium">60分</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-600 mb-1">资产状况评分</p>
+                                            <div class="flex items-center">
+                                                <div class="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                                                    <div class="bg-green-500 h-2 rounded-full" style="width: 80%"></div>
+                                                </div>
+                                                <span class="text-sm font-medium">80分</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-600 mb-1">行业风险评分</p>
+                                            <div class="flex items-center">
+                                                <div class="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                                                    <div class="bg-yellow-500 h-2 rounded-full" style="width: 65%"></div>
+                                                </div>
+                                                <span class="text-sm font-medium">65分</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- AI Recommendations -->
+                            <div>
+                                <h4 class="font-semibold text-gray-800 mb-3">AI建议</h4>
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                    <div class="flex items-start">
+                                        <i class="fas fa-lightbulb text-blue-600 mt-1 mr-3"></i>
+                                        <div>
+                                            <p class="font-medium text-blue-800 mb-2">建议人工复核</p>
+                                            <p class="text-blue-700 text-sm">
+                                                申请人资产状况良好，但信用历史评分偏低，建议审批员重点关注：
+                                                <br/>1. 核实土地承包证真实性
+                                                <br/>2. 评估农机投资的合理性和收益预期
+                                                <br/>3. 考虑适当调整贷款金额或增加担保措施
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Uploaded Documents -->
+                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                            <h3 class="font-bold text-lg text-gray-800 mb-4">上传材料</h3>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="border border-gray-200 rounded-lg p-3">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm font-medium text-gray-800">身份证正面</span>
+                                        <i class="fas fa-check-circle text-green-600"></i>
+                                    </div>
+                                    <img src="https://images.unsplash.com/photo-1589123367161-d9dbec1c1e65?w=200&h=120&fit=crop" 
+                                         alt="身份证正面" class="w-full h-24 object-cover rounded">
+                                    <!-- 图片来源: Unsplash - ID Card concept -->
+                                </div>
+                                <div class="border border-gray-200 rounded-lg p-3">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm font-medium text-gray-800">身份证反面</span>
+                                        <i class="fas fa-check-circle text-green-600"></i>
+                                    </div>
+                                    <img src="https://images.unsplash.com/photo-1589123367161-d9dbec1c1e65?w=200&h=120&fit=crop" 
+                                         alt="身份证反面" class="w-full h-24 object-cover rounded">
+                                    <!-- 图片来源: Unsplash - ID Card concept -->
+                                </div>
+                                <div class="border border-gray-200 rounded-lg p-3">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm font-medium text-gray-800">土地承包证</span>
+                                        <i class="fas fa-exclamation-triangle text-yellow-600"></i>
+                                    </div>
+                                    <img src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=200&h=120&fit=crop" 
+                                         alt="土地承包证" class="w-full h-24 object-cover rounded">
+                                    <!-- 图片来源: Unsplash - Document concept -->
+                                </div>
+                                <div class="border border-gray-200 rounded-lg p-3">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm font-medium text-gray-800">银行流水</span>
+                                        <i class="fas fa-check-circle text-green-600"></i>
+                                    </div>
+                                    <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=200&h=120&fit=crop" 
+                                         alt="银行流水" class="w-full h-24 object-cover rounded">
+                                    <!-- 图片来源: Unsplash - Financial document -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column - Risk Score & Manual Review -->
+                    <div class="space-y-6">
+                        <!-- Risk Score Display -->
+                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 text-center">
+                            <h3 class="font-bold text-lg text-gray-800 mb-4">综合风险评分</h3>
+                            <div class="w-32 h-32 mx-auto mb-4">
+                                <div class="risk-score w-full h-full">
+                                    <div class="risk-score-inner">
+                                        <div class="text-center">
+                                            <div class="text-3xl font-bold text-orange-600">68</div>
+                                            <div class="text-sm text-gray-600">分</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">风险等级</span>
+                                    <span class="font-medium text-orange-600">中等风险</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">建议操作</span>
+                                    <span class="font-medium text-purple-600">人工复核</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Manual Review Panel -->
+                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                            <h3 class="font-bold text-lg text-gray-800 mb-4">人工审批操作</h3>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">审批决策</label>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center">
+                                            <input type="radio" name="decision" value="approve" class="mr-2">
+                                            <span class="text-green-600">通过申请</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="decision" value="reject" class="mr-2">
+                                            <span class="text-red-600">拒绝申请</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="decision" value="modify" class="mr-2">
+                                            <span class="text-yellow-600">条件通过</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="decision" value="supplement" class="mr-2">
+                                            <span class="text-blue-600">补充材料</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">调整金额（如需要）</label>
+                                    <div class="relative">
+                                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">¥</span>
+                                        <input type="number" placeholder="50000" 
+                                               class="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 outline-none">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">审批意见</label>
+                                    <textarea rows="4" placeholder="请输入详细的审批意见和理由..."
+                                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 outline-none resize-none"></textarea>
+                                </div>
+
+                                <div class="pt-4 space-y-2">
+                                    <button class="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700">
+                                        <i class="fas fa-check mr-2"></i>提交审批结果
+                                    </button>
+                                    <button class="w-full bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700">
+                                        <i class="fas fa-save mr-2"></i>保存草稿
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Process Timeline -->
+                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                            <h3 class="font-bold text-lg text-gray-800 mb-4">处理历史</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-start">
+                                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                                        <i class="fas fa-check text-green-600 text-sm"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-medium text-gray-800">申请提交</p>
+                                        <p class="text-sm text-gray-600">2024-03-12 08:45:22</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-start">
+                                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                                        <i class="fas fa-robot text-green-600 text-sm"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-medium text-gray-800">AI初步审批</p>
+                                        <p class="text-sm text-gray-600">2024-03-12 08:46:15</p>
+                                        <p class="text-xs text-gray-500">建议人工复核</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-start">
+                                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                                        <i class="fas fa-user text-blue-600 text-sm"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-medium text-gray-800">转入人工审批</p>
+                                        <p class="text-sm text-gray-600">2024-03-12 08:46:18</p>
+                                        <p class="text-xs text-blue-600">当前状态</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

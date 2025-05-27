@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字惠农OA管理系统 - 审批看板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .browser-frame {
+            width: 1400px;
+            height: 900px;
+            border-radius: 12px 12px 0 0;
+            overflow: hidden;
+            background: #f5f5f5;
+            margin: 20px auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        .browser-header {
+            height: 40px;
+            background: #e5e5e5;
+            border-bottom: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+        }
+        .traffic-lights {
+            display: flex;
+            gap: 8px;
+        }
+        .traffic-light {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .traffic-light.red { background: #ff5f56; }
+        .traffic-light.yellow { background: #ffbd2e; }
+        .traffic-light.green { background: #27ca3f; }
+        .address-bar {
+            flex: 1;
+            margin: 0 20px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 4px 12px;
+            font-size: 13px;
+            color: #666;
+        }
+        .browser-content {
+            height: calc(100% - 40px);
+            background: #f8fafc;
+        }
+        .sidebar-nav {
+            width: 240px;
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            position: fixed;
+            top: 40px;
+            left: 0;
+            height: calc(100% - 40px);
+            overflow-y: auto;
+        }
+        .main-content {
+            margin-left: 240px;
+            padding: 24px;
+            height: 100%;
+            overflow-y: auto;
+        }
+        .stat-card {
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-processing { background: #dbeafe; color: #1e40af; }
+        .status-manual { background: #f3e8ff; color: #7c3aed; }
+        .status-approved { background: #d1fae5; color: #065f46; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body class="bg-gray-200 flex items-center justify-center min-h-screen">
+    <div class="browser-frame">
+        <!-- Browser Header -->
+        <div class="browser-header">
+            <div class="traffic-lights">
+                <div class="traffic-light red"></div>
+                <div class="traffic-light yellow"></div>
+                <div class="traffic-light green"></div>
+            </div>
+            <div class="address-bar">
+                <i class="fas fa-lock text-green-600 mr-2"></i>
+                https://oa.digital-agriculture.com/dashboard
+            </div>
+            <div class="flex items-center gap-4 text-gray-600">
+                <i class="fas fa-bookmark"></i>
+                <i class="fas fa-user-circle"></i>
+                <i class="fas fa-ellipsis-h"></i>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="browser-content relative">
+            <!-- Sidebar -->
+            <div class="sidebar-nav">
+                <!-- Header -->
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg mr-3 flex items-center justify-center">
+                            <i class="fas fa-cogs text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-semibold text-gray-800">数字惠农OA</h2>
+                            <p class="text-xs text-gray-600">v2.1.0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <nav class="p-4">
+                    <div class="space-y-1">
+                        <a href="#" class="flex items-center px-3 py-2 bg-blue-50 text-blue-600 rounded-lg font-medium">
+                            <i class="fas fa-chart-bar mr-3"></i>
+                            审批看板
+                        </a>
+                        <a href="#" class="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg">
+                            <i class="fas fa-robot mr-3"></i>
+                            智能审批
+                        </a>
+                        <a href="#" class="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg">
+                            <i class="fas fa-cog mr-3"></i>
+                            控制面板
+                        </a>
+                        <a href="#" class="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg">
+                            <i class="fas fa-chart-line mr-3"></i>
+                            数据报表
+                        </a>
+                        <a href="#" class="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg">
+                            <i class="fas fa-users mr-3"></i>
+                            用户管理
+                        </a>
+                        <a href="#" class="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg">
+                            <i class="fas fa-cogs mr-3"></i>
+                            系统设置
+                        </a>
+                    </div>
+                </nav>
+
+                <!-- User Info -->
+                <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 bg-gray-300 rounded-full mr-3 flex items-center justify-center">
+                            <i class="fas fa-user text-gray-600 text-sm"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-800">张伟</p>
+                            <p class="text-xs text-gray-600">审批员</p>
+                        </div>
+                        <i class="fas fa-sign-out-alt text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="main-content">
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">审批看板</h1>
+                        <p class="text-gray-600">实时监控和处理贷款申请</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                            <i class="fas fa-refresh mr-2"></i>刷新数据
+                        </button>
+                        <div class="text-sm text-gray-600">
+                            最后更新：<span class="font-medium">2024-03-12 14:35</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="stat-card bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">待处理申请</p>
+                                <p class="text-3xl font-bold text-gray-900">23</p>
+                                <p class="text-sm text-orange-600 mt-1">
+                                    <i class="fas fa-clock mr-1"></i>需要关注
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-hourglass-half text-orange-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">AI审批中</p>
+                                <p class="text-3xl font-bold text-gray-900">8</p>
+                                <p class="text-sm text-blue-600 mt-1">
+                                    <i class="fas fa-robot mr-1"></i>自动处理中
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-robot text-blue-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">今日完成</p>
+                                <p class="text-3xl font-bold text-gray-900">45</p>
+                                <p class="text-sm text-green-600 mt-1">
+                                    <i class="fas fa-arrow-up mr-1"></i>+15% vs 昨日
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">AI准确率</p>
+                                <p class="text-3xl font-bold text-gray-900">94.5%</p>
+                                <p class="text-sm text-purple-600 mt-1">
+                                    <i class="fas fa-brain mr-1"></i>持续优化
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-brain text-purple-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters and Controls -->
+                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <h3 class="font-semibold text-gray-800">申请列表</h3>
+                            <div class="flex space-x-2">
+                                <button class="px-3 py-1.5 bg-blue-100 text-blue-600 rounded-lg text-sm font-medium">全部</button>
+                                <button class="px-3 py-1.5 text-gray-600 hover:bg-gray-100 rounded-lg text-sm">待AI审批</button>
+                                <button class="px-3 py-1.5 text-gray-600 hover:bg-gray-100 rounded-lg text-sm">待人工复核</button>
+                                <button class="px-3 py-1.5 text-gray-600 hover:bg-gray-100 rounded-lg text-sm">已完成</button>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="relative">
+                                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                <input type="text" placeholder="搜索申请编号、姓名..." 
+                                       class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 outline-none">
+                            </div>
+                            <button class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
+                                <i class="fas fa-filter mr-2"></i>筛选
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Application List Table -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">申请信息</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">金额/期限</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">AI评分</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">提交时间</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                                <span class="text-blue-600 font-medium text-sm">李</span>
+                                            </div>
+                                            <div>
+                                                <p class="font-medium text-gray-900">李明</p>
+                                                <p class="text-sm text-gray-600">NH202400312001</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <p class="font-medium text-gray-900">¥10,000</p>
+                                        <p class="text-sm text-gray-600">12个月</p>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center">
+                                            <div class="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                                                <div class="bg-green-500 h-2 rounded-full" style="width: 85%"></div>
+                                            </div>
+                                            <span class="text-sm font-medium text-green-600">85分</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span class="status-badge status-processing">
+                                            <i class="fas fa-robot mr-1"></i>AI审批中
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-600">
+                                        2024-03-12<br/>09:30:15
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <button class="text-blue-600 hover:text-blue-800 font-medium text-sm">
+                                            查看详情
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                                                <span class="text-purple-600 font-medium text-sm">王</span>
+                                            </div>
+                                            <div>
+                                                <p class="font-medium text-gray-900">王强</p>
+                                                <p class="text-sm text-gray-600">NH202400312002</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <p class="font-medium text-gray-900">¥50,000</p>
+                                        <p class="text-sm text-gray-600">24个月</p>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center">
+                                            <div class="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                                                <div class="bg-orange-500 h-2 rounded-full" style="width: 68%"></div>
+                                            </div>
+                                            <span class="text-sm font-medium text-orange-600">68分</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span class="status-badge status-manual">
+                                            <i class="fas fa-user mr-1"></i>待人工复核
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-600">
+                                        2024-03-12<br/>08:45:22
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <button class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700">
+                                            立即审批
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                                <span class="text-green-600 font-medium text-sm">张</span>
+                                            </div>
+                                            <div>
+                                                <p class="font-medium text-gray-900">张华</p>
+                                                <p class="text-sm text-gray-600">NH202400312003</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <p class="font-medium text-gray-900">¥15,000</p>
+                                        <p class="text-sm text-gray-600">18个月</p>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center">
+                                            <div class="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                                                <div class="bg-green-500 h-2 rounded-full" style="width: 92%"></div>
+                                            </div>
+                                            <span class="text-sm font-medium text-green-600">92分</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span class="status-badge status-approved">
+                                            <i class="fas fa-check mr-1"></i>AI自动通过
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-600">
+                                        2024-03-12<br/>07:20:45
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <button class="text-green-600 hover:text-green-800 font-medium text-sm">
+                                            查看结果
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                                                <span class="text-red-600 font-medium text-sm">刘</span>
+                                            </div>
+                                            <div>
+                                                <p class="font-medium text-gray-900">刘德华</p>
+                                                <p class="text-sm text-gray-600">NH202400312004</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <p class="font-medium text-gray-900">¥30,000</p>
+                                        <p class="text-sm text-gray-600">36个月</p>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center">
+                                            <div class="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                                                <div class="bg-red-500 h-2 rounded-full" style="width: 35%"></div>
+                                            </div>
+                                            <span class="text-sm font-medium text-red-600">35分</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span class="status-badge status-rejected">
+                                            <i class="fas fa-times mr-1"></i>AI自动拒绝
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-600">
+                                        2024-03-12<br/>06:15:30
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <button class="text-gray-600 hover:text-gray-800 font-medium text-sm">
+                                            查看原因
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="bg-white px-6 py-3 border-t border-gray-200 flex items-center justify-between">
+                        <div class="text-sm text-gray-700">
+                            显示 <span class="font-medium">1</span> 到 <span class="font-medium">10</span> 条，共 <span class="font-medium">156</span> 条记录
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="px-3 py-1 border border-gray-300 rounded text-sm text-gray-500">上一页</button>
+                            <button class="px-3 py-1 bg-blue-600 text-white rounded text-sm">1</button>
+                            <button class="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700">2</button>
+                            <button class="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700">3</button>
+                            <button class="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700">下一页</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字惠农 - 农机租赁</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .ios-frame {
+            width: 375px;
+            height: 812px;
+            border: 8px solid #1d1d1f;
+            border-radius: 40px;
+            position: relative;
+            background: #000;
+            margin: 20px auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .screen-content {
+            width: 100%;
+            height: 100%;
+            border-radius: 32px;
+            overflow: hidden;
+            background: #f8f9fa;
+        }
+        .notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 30px;
+            background: #1d1d1f;
+            border-radius: 0 0 20px 20px;
+            z-index: 10;
+        }
+        .status-bar {
+            height: 44px;
+            background: transparent;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 0 20px 8px 20px;
+            color: #1d1d1f;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .home-indicator {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 134px;
+            height: 5px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 3px;
+        }
+        .filter-chip {
+            transition: all 0.2s ease;
+        }
+        .filter-chip.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="ios-frame">
+        <div class="notch"></div>
+        <div class="screen-content">
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div>9:41</div>
+                <div class="flex items-center gap-1">
+                    <i class="fas fa-signal text-xs"></i>
+                    <i class="fas fa-wifi text-xs"></i>
+                    <i class="fas fa-battery-three-quarters text-xs"></i>
+                </div>
+            </div>
+
+            <!-- Header -->
+            <div class="bg-white border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-arrow-left text-xl text-gray-600 mr-4"></i>
+                        <h1 class="text-lg font-semibold text-gray-800">农机租赁</h1>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-map-marker-alt text-xl text-gray-400"></i>
+                        <i class="fas fa-search text-xl text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <!-- Search Bar -->
+                <div class="relative mb-4">
+                    <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" placeholder="搜索农机类型、品牌..." 
+                           class="w-full pl-12 pr-4 py-3 bg-gray-100 rounded-2xl focus:bg-white focus:border-2 focus:border-blue-500 outline-none transition-all">
+                </div>
+                
+                <!-- Filter Chips -->
+                <div class="flex space-x-3 overflow-x-auto">
+                    <span class="filter-chip active px-4 py-2 bg-gray-100 rounded-full text-sm font-medium whitespace-nowrap">全部</span>
+                    <span class="filter-chip px-4 py-2 bg-gray-100 rounded-full text-sm font-medium whitespace-nowrap">拖拉机</span>
+                    <span class="filter-chip px-4 py-2 bg-gray-100 rounded-full text-sm font-medium whitespace-nowrap">收割机</span>
+                    <span class="filter-chip px-4 py-2 bg-gray-100 rounded-full text-sm font-medium whitespace-nowrap">播种机</span>
+                    <span class="filter-chip px-4 py-2 bg-gray-100 rounded-full text-sm font-medium whitespace-nowrap">喷药机</span>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="h-full overflow-y-auto pb-20">
+                <div class="px-6 py-4">
+                    <!-- Sort Bar -->
+                    <div class="flex justify-between items-center mb-4">
+                        <p class="text-sm text-gray-600">共找到 <span class="font-semibold text-gray-800">23</span> 台农机</p>
+                        <div class="flex items-center text-sm text-gray-600">
+                            <i class="fas fa-sort mr-2"></i>
+                            <span>按距离排序</span>
+                        </div>
+                    </div>
+
+                    <!-- Machinery List -->
+                    <div class="space-y-4">
+                        <!-- Machinery Item 1 -->
+                        <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                            <div class="flex">
+                                <img src="https://images.unsplash.com/photo-1581090700227-1e37b190418e?w=120&h=90&fit=crop&crop=center" 
+                                     alt="约翰迪尔拖拉机" class="w-24 h-18 rounded-xl object-cover mr-4">
+                                <!-- 图片来源: Unsplash - 拖拉机 -->
+                                <div class="flex-1">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <h3 class="font-semibold text-gray-800 text-sm">约翰迪尔 6M系列拖拉机</h3>
+                                        <span class="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full">可租</span>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mb-2">160马力 • 2020年 • 王强农机合作社</p>
+                                    <div class="flex items-center text-xs text-gray-500 mb-3">
+                                        <i class="fas fa-map-marker-alt mr-1"></i>
+                                        <span>距离您 2.3km</span>
+                                        <span class="mx-2">•</span>
+                                        <i class="fas fa-star text-yellow-400 mr-1"></i>
+                                        <span>4.8分 (15评价)</span>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <span class="text-lg font-bold text-red-500">¥350</span>
+                                            <span class="text-xs text-gray-500">/天</span>
+                                        </div>
+                                        <button class="bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-medium">
+                                            立即租赁
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Machinery Item 2 -->
+                        <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                            <div class="flex">
+                                <img src="https://images.unsplash.com/photo-1586771107391-2dbab88ac4ba?w=120&h=90&fit=crop&crop=center" 
+                                     alt="久保田收割机" class="w-24 h-18 rounded-xl object-cover mr-4">
+                                <!-- 图片来源: Unsplash - 收割机 -->
+                                <div class="flex-1">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <h3 class="font-semibold text-gray-800 text-sm">久保田 PRO588联合收割机</h3>
+                                        <span class="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full">可租</span>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mb-2">履带式 • 2021年 • 丰收农机服务</p>
+                                    <div class="flex items-center text-xs text-gray-500 mb-3">
+                                        <i class="fas fa-map-marker-alt mr-1"></i>
+                                        <span>距离您 5.1km</span>
+                                        <span class="mx-2">•</span>
+                                        <i class="fas fa-star text-yellow-400 mr-1"></i>
+                                        <span>4.9分 (28评价)</span>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <span class="text-lg font-bold text-red-500">¥480</span>
+                                            <span class="text-xs text-gray-500">/天</span>
+                                        </div>
+                                        <button class="bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-medium">
+                                            立即租赁
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Machinery Item 3 -->
+                        <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                            <div class="flex">
+                                <img src="https://images.unsplash.com/photo-1595278069441-5d80462d5823?w=120&h=90&fit=crop&crop=center" 
+                                     alt="播种机" class="w-24 h-18 rounded-xl object-cover mr-4">
+                                <!-- 图片来源: Unsplash - 播种机 -->
+                                <div class="flex-1">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <h3 class="font-semibold text-gray-800 text-sm">大华种业 12行气吸播种机</h3>
+                                        <span class="bg-orange-100 text-orange-600 text-xs px-2 py-1 rounded-full">预约中</span>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mb-2">精播 • 2019年 • 绿野农机</p>
+                                    <div class="flex items-center text-xs text-gray-500 mb-3">
+                                        <i class="fas fa-map-marker-alt mr-1"></i>
+                                        <span>距离您 3.7km</span>
+                                        <span class="mx-2">•</span>
+                                        <i class="fas fa-star text-yellow-400 mr-1"></i>
+                                        <span>4.6分 (12评价)</span>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <span class="text-lg font-bold text-red-500">¥280</span>
+                                            <span class="text-xs text-gray-500">/天</span>
+                                        </div>
+                                        <button class="bg-gray-300 text-gray-600 px-4 py-2 rounded-lg text-xs font-medium">
+                                            预约排队
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Machinery Item 4 -->
+                        <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                            <div class="flex">
+                                <img src="https://images.unsplash.com/photo-1560472354-92dce7e8bc70?w=120&h=90&fit=crop&crop=center" 
+                                     alt="喷药机" class="w-24 h-18 rounded-xl object-cover mr-4">
+                                <!-- 图片来源: Unsplash - 农业喷洒设备 -->
+                                <div class="flex-1">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <h3 class="font-semibold text-gray-800 text-sm">雷沃重工 自走式喷药机</h3>
+                                        <span class="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full">可租</span>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mb-2">高地隙 • 2022年 • 现代农机</p>
+                                    <div class="flex items-center text-xs text-gray-500 mb-3">
+                                        <i class="fas fa-map-marker-alt mr-1"></i>
+                                        <span>距离您 7.2km</span>
+                                        <span class="mx-2">•</span>
+                                        <i class="fas fa-star text-yellow-400 mr-1"></i>
+                                        <span>4.7分 (9评价)</span>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <span class="text-lg font-bold text-red-500">¥220</span>
+                                            <span class="text-xs text-gray-500">/天</span>
+                                        </div>
+                                        <button class="bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-medium">
+                                            立即租赁
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Load More -->
+                    <div class="text-center mt-6">
+                        <button class="bg-gray-100 text-gray-600 px-6 py-3 rounded-xl font-medium">
+                            加载更多
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating Action Button -->
+            <div class="fixed bottom-20 right-6">
+                <button class="w-14 h-14 bg-gradient-to-r from-orange-400 to-red-500 rounded-full shadow-lg flex items-center justify-center text-white">
+                    <i class="fas fa-plus text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <div class="bg-white border-t border-gray-200 px-6 py-3 fixed bottom-0 left-0 right-0">
+                <div class="flex justify-around">
+                    <div class="text-center">
+                        <i class="fas fa-home text-gray-400 text-xl mb-1"></i>
+                        <p class="text-gray-400 text-xs">首页</p>
+                    </div>
+                    <div class="text-center">
+                        <i class="fas fa-coins text-gray-400 text-xl mb-1"></i>
+                        <p class="text-gray-400 text-xs">贷款</p>
+                    </div>
+                    <div class="text-center">
+                        <i class="fas fa-tractor text-blue-600 text-xl mb-1"></i>
+                        <p class="text-blue-600 text-xs font-medium">租赁</p>
+                    </div>
+                    <div class="text-center">
+                        <i class="fas fa-user text-gray-400 text-xl mb-1"></i>
+                        <p class="text-gray-400 text-xs">我的</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="home-indicator"></div>
+    </div>
+</body>
+</html> 
