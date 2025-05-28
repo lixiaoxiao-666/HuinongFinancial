@@ -58,10 +58,12 @@ func (r *Router) SetupRoutes() *gin.Engine {
 	// 创建服务实例
 	userService := service.NewUserService(r.data, r.jwtManager, r.log)
 	loanService := service.NewLoanService(r.data, r.log)
+	adminService := service.NewAdminService(r.data, r.jwtManager, r.log)
 
 	// 创建处理器实例
 	userHandler := NewUserHandler(userService, r.log)
 	loanHandler := NewLoanHandler(loanService, r.log)
+	adminHandler := NewAdminHandler(adminService, loanService, r.log)
 
 	// 创建认证中间件
 	authMiddleware := AuthMiddleware(r.jwtManager)
@@ -71,7 +73,7 @@ func (r *Router) SetupRoutes() *gin.Engine {
 	r.registerUserRoutes(v1, userHandler, authMiddleware)
 	r.registerLoanRoutes(v1, loanHandler, authMiddleware)
 	r.registerFileRoutes(v1, authMiddleware)
-	r.registerAdminRoutes(v1, adminAuthMiddleware)
+	r.registerAdminRoutes(v1, adminHandler, adminAuthMiddleware)
 
 	return engine
 }
@@ -98,19 +100,9 @@ func (r *Router) registerFileRoutes(v1 *gin.RouterGroup, authMiddleware gin.Hand
 }
 
 // registerAdminRoutes 注册管理员路由
-func (r *Router) registerAdminRoutes(v1 *gin.RouterGroup, adminAuthMiddleware gin.HandlerFunc) {
+func (r *Router) registerAdminRoutes(v1 *gin.RouterGroup, adminHandler *AdminHandler, adminAuthMiddleware gin.HandlerFunc) {
 	admin := v1.Group("/admin")
-	admin.Use(adminAuthMiddleware)
-	{
-		// OA用户登录（不需要管理员认证）
-		v1.POST("/admin/login", r.handleAdminLogin)
-
-		// 需要管理员认证的路由
-		admin.GET("/loans/applications/pending", r.handleGetPendingApplications)
-		admin.GET("/loans/applications/:application_id", r.handleGetApplicationDetail)
-		admin.POST("/loans/applications/:application_id/review", r.handleReviewApplication)
-		admin.POST("/system/ai-approval/toggle", r.handleToggleAIApproval)
-	}
+	RegisterAdminRoutes(admin, adminHandler, adminAuthMiddleware)
 }
 
 // handleFileUpload 文件上传处理器（简化实现）
@@ -152,51 +144,4 @@ func (r *Router) handleFileUpload(c *gin.Context) {
 		"file_name": header.Filename,
 		"file_size": header.Size,
 	})
-}
-
-// handleAdminLogin OA用户登录（简化实现）
-func (r *Router) handleAdminLogin(c *gin.Context) {
-	var req struct {
-		Username string `json:"username" binding:"required"`
-		Password string `json:"password" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		pkg.ValidationError(c, err.Error())
-		return
-	}
-
-	// 这里应该验证OA用户密码
-	// 简化实现，直接生成token
-	token, err := r.jwtManager.GenerateToken("oa_admin001", "oa_user", "ADMIN")
-	if err != nil {
-		pkg.InternalError(c, "登录失败")
-		return
-	}
-
-	pkg.Success(c, map[string]interface{}{
-		"admin_user_id": "oa_admin001",
-		"username":      req.Username,
-		"role":          "ADMIN",
-		"token":         token,
-		"expires_in":    3600,
-	})
-}
-
-// 以下是管理员相关的处理器（简化实现）
-func (r *Router) handleGetPendingApplications(c *gin.Context) {
-	pkg.Success(c, []interface{}{})
-}
-
-func (r *Router) handleGetApplicationDetail(c *gin.Context) {
-	applicationID := c.Param("application_id")
-	pkg.Success(c, map[string]string{"application_id": applicationID})
-}
-
-func (r *Router) handleReviewApplication(c *gin.Context) {
-	pkg.SuccessWithMessage(c, "审批决策提交成功", nil)
-}
-
-func (r *Router) handleToggleAIApproval(c *gin.Context) {
-	pkg.SuccessWithMessage(c, "AI审批状态更新成功", nil)
 }

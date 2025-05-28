@@ -76,7 +76,7 @@ func AdminAuthMiddleware(jwtManager *pkg.JWTManager) gin.HandlerFunc {
 		}
 
 		// 设置用户信息到上下文
-		c.Set("oa_user_id", claims.UserID)
+		c.Set("admin_user_id", claims.UserID)
 		c.Set("role", claims.Role)
 
 		c.Next()
