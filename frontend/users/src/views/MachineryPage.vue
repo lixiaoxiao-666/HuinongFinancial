@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { ArrowLeft, Refresh, User } from '@element-plus/icons-vue'
 import AppFooter from './components/footer.vue'
 import { useUserStore } from '../stores/user'
 import '../assets/icons/agri-icons.css'
@@ -457,138 +458,211 @@ onMounted(() => {
 <template>
   <div class="machinery-container">
     <!-- 顶部导航 -->
-    <div class="top-header">
-      <div class="header-content">
-        <div class="back-btn" @click="router.go(-1)">
-          <i class="el-icon-arrow-left"></i>
-        </div>
-        <h1 class="header-title">农机租赁</h1>
-        <div class="header-actions">
-          <i class="el-icon-refresh" @click="onRefresh" :class="{ rotating: refreshing }"></i>
-        </div>
+    <div class="top-nav">
+      <div class="nav-left">
+        <el-icon @click="router.go(-1)"><ArrowLeft /></el-icon>
+      </div>
+      <div class="nav-title">农机租赁</div>
+      <div class="nav-right">
+        <el-icon @click="onRefresh" :class="{ 'is-loading': refreshing }">
+          <Refresh />
+        </el-icon>
       </div>
     </div>
 
-    <!-- 我的租赁入口 -->
-    <div class="my-rental-entry" v-if="userStore.isLoggedIn">
-      <div class="entry-content" @click="router.push('/machinery/my-rentals')">
-        <div class="entry-left">
-          <div class="entry-title">我的租赁</div>
-          <div class="entry-subtitle">查看租赁记录进度</div>
-        </div>
-        <div class="entry-right">
-          <div class="entry-action">查看</div>
-          <i class="el-icon-arrow-right"></i>
-        </div>
-      </div>
-    </div>
-
-    <!-- 分类筛选 -->
-    <div class="category-section">
-      <div class="category-title">设备分类</div>
-      <div class="category-tabs">
-        <div
-          v-for="category in categories"
-          :key="category.value"
-          class="category-tab"
-          :class="{ active: selectedCategory === category.value }"
-          @click="selectCategory(category.value)"
-        >
-          <div class="category-icon" :class="`icon-${category.icon}`"></div>
-          <div class="category-name">{{ category.label }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 农机列表 -->
-    <div class="machinery-section">
-      <div class="section-header">
-        <div class="section-title">可租设备</div>
-        <div class="section-count">{{ filteredMachinery.length }}台设备</div>
-      </div>
-
-      <div v-loading="loading" class="machinery-list">
-        <div
-          v-for="machinery in filteredMachinery"
-          :key="machinery.id"
-          class="machinery-card"
-        >
-          <div class="card-header">
-            <div class="machinery-info">
-              <h3 class="machinery-name">{{ machinery.name }}</h3>
-              <div class="machinery-meta">
-                <span class="category-tag">{{ machinery.category }}</span>
-                <span class="brand-tag">{{ machinery.brand }}</span>
-                <span class="availability-tag" :class="{ available: machinery.available, unavailable: !machinery.available }">
-                  {{ machinery.available ? '可租用' : '已租出' }}
-                </span>
-              </div>
-              <p class="machinery-desc">{{ machinery.description }}</p>
-            </div>
+    <div class="page-content">
+      <!-- 用户快捷操作 -->
+      <div class="quick-actions" v-if="userStore.isLoggedIn">
+        <div class="action-card primary" @click="router.push('/machinery/my-applications')">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="white">
+              <path d="M14,2H6C4.9,2,4,2.9,4,4v16c0,1.1,0.9,2,2,2h12c1.1,0,2-0.9,2-2V8L14,2z M16,18H8v-2h8V18z M16,14H8v-2h8V14z M13,9V3.5L18.5,9H13z"/>
+            </svg>
           </div>
-
           <div class="card-content">
-            <div class="spec-grid">
-              <div class="spec-item">
-                <span class="spec-label">动力</span>
-                <span class="spec-value">{{ machinery.power }}</span>
-              </div>
-              <div class="spec-item">
-                <span class="spec-label">幅宽</span>
-                <span class="spec-value">{{ machinery.workWidth }}</span>
-              </div>
-              <div class="spec-item">
-                <span class="spec-label">燃料</span>
-                <span class="spec-value">{{ machinery.fuelType }}</span>
-              </div>
-              <div class="spec-item">
-                <span class="spec-label">位置</span>
-                <span class="spec-value">{{ machinery.location }}</span>
-              </div>
-            </div>
-
-            <div class="price-section">
-              <div class="price-info">
-                <div class="daily-price">
-                  <span class="price-label">日租</span>
-                  <span class="price-value">¥{{ formatPrice(machinery.dailyPrice) }}</span>
-                  <span class="price-unit">/天</span>
-                </div>
-                <div class="hourly-price">
-                  <span class="price-label">时租</span>
-                  <span class="price-value">¥{{ formatPrice(machinery.hourlyPrice) }}</span>
-                  <span class="price-unit">/小时</span>
-                </div>
-              </div>
+            <h3>我的申请</h3>
+            <p>查看租赁申请进度</p>
+          </div>
+          <div class="card-arrow">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="white" opacity="0.8">
+              <path d="M8.59,16.59L13.17,12L8.59,7.41L10,6l6,6l-6,6L8.59,16.59z"/>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="stats-row">
+          <div class="stat-item">
+            <div class="stat-value">2</div>
+            <div class="stat-label">申请笔数</div>
+            <div class="stat-icon">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="#27ae60">
+                <path d="M14,10H2V12H14V10M14,6H2V8H14V6M2,16H10V14H2V16M21.5,11.5L23,13L16,20L11.5,15.5L13,14L16,17L21.5,11.5Z"/>
+              </svg>
             </div>
           </div>
-
-          <div class="card-actions">
-            <button class="action-btn detail-btn" @click="viewMachineryDetail(machinery)">
-              查看详情
-            </button>
-            <button
-              class="action-btn contact-btn"
-              @click="contactRenter(machinery)"
-            >
-              联系租赁
-            </button>
-            <button
-              class="action-btn rent-btn"
-              :class="{ disabled: !machinery.available }"
-              @click="rentMachinery(machinery)"
-              :disabled="!machinery.available"
-            >
-              {{ machinery.available ? '立即租赁' : '已租出' }}
-            </button>
+          <div class="stat-item">
+            <div class="stat-value">3台</div>
+            <div class="stat-label">已租数量</div>
+            <div class="stat-icon">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="#27ae60">
+                <path d="M18,18.5A1.5,1.5 0 0,1 16.5,17A1.5,1.5 0 0,1 18,15.5A1.5,1.5 0 0,1 19.5,17A1.5,1.5 0 0,1 18,18.5M19.5,9.5L21.46,12H17V9.5M6,18.5A1.5,1.5 0 0,1 4.5,17A1.5,1.5 0 0,1 6,15.5A1.5,1.5 0 0,1 7.5,17A1.5,1.5 0 0,1 6,18.5M20,8H17V4H3C1.89,4 1,4.89 1,6V17H3A3,3 0 0,0 6,20A3,3 0 0,0 9,17H15A3,3 0 0,0 18,20A3,3 0 0,0 21,17H23V12L20,8Z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">4.8</div>
+            <div class="stat-label">信用评分</div>
+            <div class="stat-icon">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="#27ae60">
+                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+              </svg>
+            </div>
           </div>
         </div>
       </div>
 
-      <div v-if="filteredMachinery.length === 0 && !loading" class="empty-state">
-        <div class="empty-icon">🚜</div>
-        <div class="empty-text">暂无可租用设备</div>
-        <div class="empty-desc">请稍后再试或联系客服</div>
+      <!-- 登录提示 -->
+      <div class="login-prompt" v-if="!userStore.isLoggedIn">
+        <div class="prompt-content">
+          <el-icon class="prompt-icon"><User /></el-icon>
+          <p>登录后享受更多租赁服务</p>
+          <el-button type="primary" @click="router.push('/login')">
+            立即登录
+          </el-button>
+        </div>
+      </div>
+
+      <!-- 我的租赁入口 -->
+      <div class="my-rental-card" v-if="userStore.isLoggedIn">
+        <div class="rental-card-content" @click="router.push('/machinery/my-rentals')">
+          <div class="rental-card-left">
+            <div class="rental-card-icon">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="white">
+                <path d="M18,6H9V4H18M18,14v4H9v2H7v-2H3v-4H7v-2H9v2M7,14H5v2H7m11-2v6H9m9-10H9V6h9m0-4H9A2,2 0 0,0 7,4V12H9V8h9V20H9v2h11V4A2,2 0 0,0 18,2z"/>
+              </svg>
+            </div>
+            <div class="rental-card-info">
+              <h3 class="rental-card-title">我的租赁</h3>
+              <p class="rental-card-desc">查看租赁记录及设备状态</p>
+            </div>
+          </div>
+          <div class="rental-card-right">
+            <span class="rental-card-count">3</span>
+            <span class="rental-card-label">条记录</span>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="#27ae60">
+              <path d="M8.59,16.59L13.17,12L8.59,7.41L10,6l6,6l-6,6L8.59,16.59z"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- 分类筛选 -->
+      <div class="category-section">
+        <div class="category-title">设备分类</div>
+        <div class="category-tabs">
+          <div
+            v-for="category in categories"
+            :key="category.value"
+            class="category-tab"
+            :class="{ active: selectedCategory === category.value }"
+            @click="selectCategory(category.value)"
+          >
+            <div class="category-icon" :class="`icon-${category.icon}`"></div>
+            <div class="category-name">{{ category.label }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 农机列表 -->
+      <div class="machinery-section">
+        <div class="section-header">
+          <div class="section-title">可租设备</div>
+          <div class="section-count">{{ filteredMachinery.length }}台设备</div>
+        </div>
+
+        <div v-loading="loading" class="machinery-list">
+          <div
+            v-for="machinery in filteredMachinery"
+            :key="machinery.id"
+            class="machinery-card"
+          >
+            <div class="card-header">
+              <div class="machinery-info">
+                <h3 class="machinery-name">{{ machinery.name }}</h3>
+                <div class="machinery-meta">
+                  <span class="category-tag">{{ machinery.category }}</span>
+                  <span class="brand-tag">{{ machinery.brand }}</span>
+                  <span class="availability-tag" :class="{ available: machinery.available, unavailable: !machinery.available }">
+                    {{ machinery.available ? '可租用' : '已租出' }}
+                  </span>
+                </div>
+                <p class="machinery-desc">{{ machinery.description }}</p>
+              </div>
+            </div>
+
+            <div class="card-content">
+              <div class="spec-grid">
+                <div class="spec-item">
+                  <span class="spec-label">动力</span>
+                  <span class="spec-value">{{ machinery.power }}</span>
+                </div>
+                <div class="spec-item">
+                  <span class="spec-label">幅宽</span>
+                  <span class="spec-value">{{ machinery.workWidth }}</span>
+                </div>
+                <div class="spec-item">
+                  <span class="spec-label">燃料</span>
+                  <span class="spec-value">{{ machinery.fuelType }}</span>
+                </div>
+                <div class="spec-item">
+                  <span class="spec-label">位置</span>
+                  <span class="spec-value">{{ machinery.location }}</span>
+                </div>
+              </div>
+
+              <div class="price-section">
+                <div class="price-info">
+                  <div class="daily-price">
+                    <span class="price-label">日租</span>
+                    <span class="price-value">¥{{ formatPrice(machinery.dailyPrice) }}</span>
+                    <span class="price-unit">/天</span>
+                  </div>
+                  <div class="hourly-price">
+                    <span class="price-label">时租</span>
+                    <span class="price-value">¥{{ formatPrice(machinery.hourlyPrice) }}</span>
+                    <span class="price-unit">/小时</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-actions">
+              <button class="action-btn detail-btn" @click="viewMachineryDetail(machinery)">
+                查看详情
+              </button>
+              <button
+                class="action-btn contact-btn"
+                @click="contactRenter(machinery)"
+              >
+                联系租赁
+              </button>
+              <button
+                class="action-btn rent-btn"
+                :class="{ disabled: !machinery.available }"
+                @click="rentMachinery(machinery)"
+                :disabled="!machinery.available"
+              >
+                {{ machinery.available ? '立即租赁' : '已租出' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="filteredMachinery.length === 0 && !loading" class="empty-state">
+          <div class="empty-icon">🚜</div>
+          <div class="empty-text">暂无可租用设备</div>
+          <div class="empty-desc">请稍后再试或联系客服</div>
+        </div>
       </div>
     </div>
 
@@ -600,119 +674,291 @@ onMounted(() => {
 <style scoped>
 .machinery-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background-color: #f5f5f5;
   padding-bottom: 80px;
 }
 
-/* 顶部导航 */
-.top-header {
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-  color: white;
-  padding: 20px 0 15px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  max-width: 1200px;
+.page-content {
+  padding: 16px;
+  max-width: 600px;
   margin: 0 auto;
 }
 
-.back-btn {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255,255,255,0.2);
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.back-btn:hover {
-  background: rgba(255,255,255,0.3);
-  transform: scale(1.1);
-}
-
-.header-title {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.header-actions {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.rotating {
-  animation: rotate 1s linear infinite;
-}
-
-@keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* 我的租赁入口 */
-.my-rental-entry {
-  margin: 20px 20px 0;
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-  border-radius: 12px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.my-rental-entry:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(39, 174, 96, 0.3);
-}
-
-.entry-content {
+.top-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px;
-  color: white;
+  padding: 12px 16px;
+  background: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
-.entry-title {
+.nav-left, .nav-right {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #2c3e50;
+}
+
+.nav-title {
   font-size: 18px;
   font-weight: 600;
-  margin-bottom: 4px;
+  color: #2c3e50;
 }
 
-.entry-subtitle {
+.quick-actions {
+  margin-bottom: 16px;
+}
+
+.action-card {
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  border-radius: 16px;
+  padding: 22px;
+  color: white;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 16px rgba(39, 174, 96, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.action-card:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+  z-index: 1;
+}
+
+.action-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(39, 174, 96, 0.3);
+}
+
+.card-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16px;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.card-content {
+  flex: 1;
+  position: relative;
+  z-index: 2;
+}
+
+.card-content h3 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.card-content p {
+  margin: 0;
   font-size: 14px;
-  opacity: 0.8;
+  opacity: 0.9;
+  font-weight: 400;
 }
 
-.entry-right {
+.card-arrow {
+  opacity: 0.8;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-row:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #27ae60, #2ecc71);
+}
+
+.stat-item {
+  text-align: center;
+  position: relative;
+  padding: 8px 0;
+}
+
+.stat-item:not(:last-child):after {
+  content: '';
+  position: absolute;
+  right: -8px;
+  top: 20%;
+  height: 60%;
+  width: 1px;
+  background: #f0f0f0;
+}
+
+.stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: #27ae60;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.stat-icon {
+  position: absolute;
+  top: 8px;
+  right: 16px;
+  opacity: 0.2;
+}
+
+/* 我的租赁入口 */
+.my-rental-card {
+  background: white;
+  border-radius: 16px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  position: relative;
+}
+
+.my-rental-card:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to bottom, #27ae60, #2ecc71);
+}
+
+.rental-card-content {
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rental-card-content:hover {
+  background-color: #f9f9f9;
+}
+
+.rental-card-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.rental-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(39, 174, 96, 0.25);
+}
+
+.rental-card-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.rental-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 4px;
+}
+
+.rental-card-desc {
+  font-size: 13px;
+  color: #666;
+  margin: 0;
+}
+
+.rental-card-right {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.entry-action {
-  font-size: 16px;
-  font-weight: 500;
+.rental-card-count {
+  font-size: 18px;
+  font-weight: 700;
+  color: #27ae60;
+}
+
+.rental-card-label {
+  font-size: 14px;
+  color: #666;
+}
+
+/* 登录提示 */
+.login-prompt {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.prompt-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.prompt-icon {
+  font-size: 32px;
+  color: #27ae60;
 }
 
 /* 分类筛选 */
 .category-section {
-  margin: 20px 20px 0;
+  margin-bottom: 16px;
   background: white;
   border-radius: 12px;
   padding: 20px;
@@ -773,7 +1019,11 @@ onMounted(() => {
 
 /* 农机列表 */
 .machinery-section {
-  margin: 20px 20px 0;
+  margin-bottom: 16px;
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .section-header {
@@ -991,6 +1241,9 @@ onMounted(() => {
   text-align: center;
   padding: 40px 20px;
   color: #666;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .empty-icon {
@@ -1015,15 +1268,37 @@ onMounted(() => {
     padding-bottom: 70px;
   }
   
-  .header-content {
-    padding: 0 15px;
+  .page-content {
+    padding: 12px;
   }
   
-  .my-rental-entry,
-  .category-section,
-  .machinery-section {
-    margin-left: 15px;
-    margin-right: 15px;
+  .action-card {
+    padding: 18px;
+  }
+  
+  .card-icon {
+    width: 42px;
+    height: 42px;
+  }
+  
+  .card-content h3 {
+    font-size: 18px;
+  }
+  
+  .stats-row {
+    padding: 16px 10px;
+  }
+  
+  .stat-value {
+    font-size: 22px;
+  }
+  
+  .stat-label {
+    font-size: 12px;
+  }
+  
+  .stat-icon {
+    display: none;
   }
   
   .category-tabs {

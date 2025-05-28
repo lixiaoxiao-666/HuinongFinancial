@@ -2,7 +2,7 @@ import { useUserStore } from '@/stores/user'
 import type { UserInfo, LoginResponse } from '@/stores/user'
 
 // API基础配置
-const API_BASE_URL = 'http://localhost:8080/api/v1'
+const API_BASE_URL = 'http://172.18.120.10:8080/api/v1'
 
 // 统一响应格式
 interface ApiResponse<T = any> {
