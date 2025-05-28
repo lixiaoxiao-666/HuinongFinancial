@@ -159,7 +159,7 @@ func (h *AIAgentHandler) GetAIModelConfig(c *gin.Context) {
 
 // GetExternalData 获取外部数据
 func (h *AIAgentHandler) GetExternalData(c *gin.Context) {
-	userID := c.Param("user_id")
+	userID := c.Query("user_id")
 	if userID == "" {
 		pkg.BadRequest(c, "用户ID不能为空")
 		return
@@ -167,7 +167,7 @@ func (h *AIAgentHandler) GetExternalData(c *gin.Context) {
 
 	dataTypes := c.Query("data_types")
 	if dataTypes == "" {
-		dataTypes = "credit,bank_flow,blacklist" // 默认查询类型
+		dataTypes = "credit_report,bank_flow,blacklist_check" // 默认查询类型
 	}
 
 	h.log.Info("处理获取外部数据请求",
@@ -246,7 +246,7 @@ func RegisterAIAgentRoutes(router *gin.RouterGroup, handler *AIAgentHandler, aut
 		aiAgent.GET("/config/models", handler.GetAIModelConfig)
 
 		// 获取外部数据
-		aiAgent.GET("/external-data/:user_id", handler.GetExternalData)
+		aiAgent.GET("/external-data", handler.GetExternalData)
 
 		// 更新申请状态
 		aiAgent.PUT("/applications/:application_id/status", handler.UpdateApplicationStatus)

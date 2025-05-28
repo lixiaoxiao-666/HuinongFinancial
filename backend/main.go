@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"backend/internal/api"
 	"backend/internal/conf"
@@ -397,57 +398,122 @@ func initSampleData(dataLayer *data.Data, logger *zap.Logger) error {
 		logger.Warn("创建示例用户详情失败", zap.Error(err))
 	}
 
-	// 创建示例贷款申请
-	applicantSnapshot, _ := json.Marshal(map[string]interface{}{
+	// 添加AI Agent测试专用数据
+	// 创建user_001用户（用于AI Agent测试）
+	aiTestUser := data.User{
+		UserID:       "user_001",
+		Phone:        "13800138001",
+		PasswordHash: userPasswordHash,
+		Nickname:     "AI测试用户",
+		Status:       0,
+	}
+	if err := dataLayer.DB.Create(&aiTestUser).Error; err != nil {
+		logger.Warn("创建AI测试用户失败", zap.Error(err))
+	}
+
+	// 创建AI测试用户详情
+	birthDate, _ := time.Parse("2006-01-02", "1990-01-01")
+	aiTestUserProfile := data.UserProfile{
+		UserID:           "user_001",
+		RealName:         "张三",
+		IDCardNumber:     "110101199001011234",
+		Address:          "北京市朝阳区测试街道123号",
+		Gender:           1, // 1为男性, 0为女性
+		BirthDate:        &birthDate,
+		Occupation:       "软件工程师",
+		AnnualIncome:     200000.00,
+		CreditAuthAgreed: true,
+	}
+	if err := dataLayer.DB.Create(&aiTestUserProfile).Error; err != nil {
+		logger.Warn("创建AI测试用户详情失败", zap.Error(err))
+	}
+
+	// 创建product_001产品（如果不存在）
+	aiTestProduct := data.LoanProduct{
+		ProductID:             "product_001",
+		Name:                  "个人信用贷",
+		Description:           "专为个人信用贷款设计，无需抵押，快速审批",
+		Category:              "personal_credit",
+		MinAmount:             10000,
+		MaxAmount:             500000,
+		MinTermMonths:         6,
+		MaxTermMonths:         36,
+		InterestRateYearly:    "8.5%",
+		RepaymentMethods:      []byte(`["等额本息", "先息后本"]`),
+		ApplicationConditions: "年收入不低于10万，征信良好",
+		RequiredDocuments:     []byte(`[{"type": "ID_CARD", "desc": "身份证"}, {"type": "INCOME_PROOF", "desc": "收入证明"}]`),
+		Status:                0,
+	}
+	if err := dataLayer.DB.Create(&aiTestProduct).Error; err != nil {
+		logger.Warn("创建AI测试产品失败", zap.Error(err))
+	}
+
+	// 创建test_app_001申请（用于AI Agent测试）
+	aiTestApplicantSnapshot, _ := json.Marshal(map[string]interface{}{
 		"real_name":      "张三",
-		"id_card_number": "31010119900101****",
-		"address":        "上海市浦东新区XX镇XX村",
-		"phone":          "13800138000",
+		"id_card_number": "110101199001011234",
+		"address":        "北京市朝阳区测试街道123号",
+		"phone":          "13800138001",
+		"gender":         "male",
+		"birth_date":     "1990-01-01",
+		"occupation":     "软件工程师",
+		"annual_income":  200000.00,
+		"work_years":     5,
+		"education":      "bachelor",
+		"marital_status": "single",
+		"has_house":      true,
+		"has_car":        false,
+		"credit_level":   "good",
 	})
 
-	sampleApplications := []data.LoanApplication{
+	aiTestApplication := data.LoanApplication{
+		ApplicationID:     "test_app_001",
+		UserID:            "user_001",
+		ProductID:         "product_001",
+		AmountApplied:     100000,
+		TermMonthsApplied: 24,
+		Purpose:           "装修",
+		Status:            "pending_review",
+		ApplicantSnapshot: aiTestApplicantSnapshot,
+	}
+	if err := dataLayer.DB.Create(&aiTestApplication).Error; err != nil {
+		logger.Warn("创建AI测试申请失败", zap.Error(err))
+	}
+
+	// 创建AI测试相关的上传文件记录
+	aiTestFiles := []data.UploadedFile{
 		{
-			ApplicationID:     pkg.GenerateLoanApplicationID(),
-			UserID:            testUser.UserID,
-			ProductID:         products[0].ProductID, // 春耕助力贷
-			AmountApplied:     25000,
-			TermMonthsApplied: 12,
-			Purpose:           "购买化肥、种子、农药等春耕物资",
-			Status:            "MANUAL_REVIEW_REQUIRED",
-			ApplicantSnapshot: applicantSnapshot,
-			AIRiskScore:       &[]int{75}[0],
-			AISuggestion:      "AI分析：风险评分 75，建议人工复核。申请人信用记录良好，但需重点关注收入稳定性。",
+			FileID:      "file_001",
+			UserID:      "user_001",
+			FileName:    "身份证正面.jpg",
+			FileType:    "image/jpeg",
+			FileSize:    1024000,
+			StoragePath: "/uploads/user_001/id_card_front.jpg",
+			Purpose:     "id_card",
 		},
 		{
-			ApplicationID:     pkg.GenerateLoanApplicationID(),
-			UserID:            testUser.UserID,
-			ProductID:         products[1].ProductID, // 农机购置贷
-			AmountApplied:     80000,
-			TermMonthsApplied: 24,
-			Purpose:           "购买拖拉机用于农业生产",
-			Status:            "AI_REVIEWING",
-			ApplicantSnapshot: applicantSnapshot,
+			FileID:      "file_002",
+			UserID:      "user_001",
+			FileName:    "收入证明.pdf",
+			FileType:    "application/pdf",
+			FileSize:    2048000,
+			StoragePath: "/uploads/user_001/income_proof.pdf",
+			Purpose:     "income_proof",
 		},
 		{
-			ApplicationID:      pkg.GenerateLoanApplicationID(),
-			UserID:             testUser.UserID,
-			ProductID:          products[2].ProductID, // 丰收种植贷
-			AmountApplied:      15000,
-			TermMonthsApplied:  18,
-			Purpose:            "温室大棚种植投入",
-			Status:             "APPROVED",
-			ApplicantSnapshot:  applicantSnapshot,
-			AIRiskScore:        &[]int{85}[0],
-			AISuggestion:       "AI分析：申请人信用良好，收入稳定，建议直接批准。",
-			FinalDecision:      "approved",
-			ApprovedAmount:     &[]float64{15000}[0],
-			ApprovedTermMonths: &[]int{18}[0],
+			FileID:      "file_003",
+			UserID:      "user_001",
+			FileName:    "银行流水.pdf",
+			FileType:    "application/pdf",
+			FileSize:    3072000,
+			StoragePath: "/uploads/user_001/bank_statement.pdf",
+			Purpose:     "bank_statement",
 		},
 	}
 
-	for _, app := range sampleApplications {
-		if err := dataLayer.DB.Create(&app).Error; err != nil {
-			logger.Warn("创建示例贷款申请失败", zap.Error(err), zap.String("application_id", app.ApplicationID))
+	for _, file := range aiTestFiles {
+		if err := dataLayer.DB.Create(&file).Error; err != nil {
+			logger.Warn("创建AI测试文件记录失败", zap.Error(err), zap.String("file_id", file.FileID))
 		}
 	}
 

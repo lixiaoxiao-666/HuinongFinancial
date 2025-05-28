@@ -84,9 +84,11 @@ type FileConfig struct {
 
 // AIConfig AI配置
 type AIConfig struct {
-	DifyApiUrl        string `mapstructure:"difyApiUrl"`
-	DifyApiKey        string `mapstructure:"difyApiKey"`
-	HigressGatewayUrl string `mapstructure:"higressGatewayUrl"`
+	DifyApiUrl        string   `mapstructure:"difyApiUrl"`
+	DifyApiKey        string   `mapstructure:"difyApiKey"`
+	HigressGatewayUrl string   `mapstructure:"higressGatewayUrl"`
+	AgentTokens       []string `mapstructure:"agentTokens"`
+	SystemTokens      []string `mapstructure:"systemTokens"`
 }
 
 // LoadConfig 加载配置文件
@@ -119,4 +121,4 @@ func (dc *DatabaseConfig) GetDSN() string {
 // GetRedisAddr 获取Redis地址
 func (rc *RedisConfig) GetRedisAddr() string {
 	return fmt.Sprintf("%s:%d", rc.Host, rc.Port)
-} 
+}

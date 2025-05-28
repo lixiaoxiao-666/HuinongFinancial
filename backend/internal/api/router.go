@@ -70,7 +70,7 @@ func (r *Router) SetupRoutes() *gin.Engine {
 	// 创建认证中间件
 	authMiddleware := AuthMiddleware(r.jwtManager)
 	adminAuthMiddleware := AdminAuthMiddleware(r.jwtManager)
-	aiAgentAuthMiddleware := AIAgentAuthMiddleware()
+	aiAgentAuthMiddleware := AIAgentAuthMiddleware(&r.config.AI)
 
 	// 注册路由
 	r.registerUserRoutes(v1, userHandler, authMiddleware)

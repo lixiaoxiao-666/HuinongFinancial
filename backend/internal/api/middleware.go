@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"backend/internal/conf"
 	"backend/pkg"
 
 	"github.com/gin-gonic/gin"
@@ -188,79 +189,81 @@ func RateLimitMiddleware() gin.HandlerFunc {
 }
 
 // AIAgentAuthMiddleware AI智能体Token认证中间件
-func AIAgentAuthMiddleware() gin.HandlerFunc {
+func AIAgentAuthMiddleware(config *conf.AIConfig) gin.HandlerFunc {
 	return gin.HandlerFunc(func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
+
+		// 添加调试日志
+		log := zap.L()
+		log.Info("收到AI Agent认证请求",
+			zap.String("client_ip", c.ClientIP()),
+			zap.String("auth_header", authHeader),
+			zap.String("user_agent", c.GetHeader("User-Agent")),
+		)
+
 		if authHeader == "" {
+			log.Warn("缺少Authorization头")
 			pkg.Unauthorized(c, "Missing authorization header")
 			c.Abort()
 			return
 		}
 
-		// 检查是否为AI Agent Token格式
+		var token string
+
+		// 支持多种Token格式
 		if strings.HasPrefix(authHeader, "AI-Agent-Token ") {
-			token := strings.TrimPrefix(authHeader, "AI-Agent-Token ")
+			// 格式1: AI-Agent-Token your_token
+			token = strings.TrimPrefix(authHeader, "AI-Agent-Token ")
+			log.Info("检测到AI-Agent-Token格式", zap.String("token", token))
+		} else if strings.HasPrefix(authHeader, "Bearer ") {
+			// 格式2: Bearer your_token（Dify可能使用此格式）
+			token = strings.TrimPrefix(authHeader, "Bearer ")
+			log.Info("检测到Bearer格式", zap.String("token", token))
+		} else if strings.HasPrefix(authHeader, "System-Token ") {
+			// 格式3: System-Token your_token
+			token = strings.TrimPrefix(authHeader, "System-Token ")
+			log.Info("检测到System-Token格式", zap.String("token", token))
+		} else {
+			// 格式4: 直接是Token值（Custom API Key）
+			token = authHeader
+			log.Info("检测到直接Token格式", zap.String("token", token))
+		}
 
-			// 这里应该验证AI Agent Token的有效性
-			// 实际项目中应该从配置文件或数据库读取有效的Token列表
-			validTokens := []string{
-				"ai_agent_secure_token_123456",
-				"dify_agent_token_789",
+		// 验证Token有效性
+		isValid := false
+		var agentType string
+
+		// 检查AI Agent Token
+		for _, validToken := range config.AgentTokens {
+			if token == validToken {
+				isValid = true
+				agentType = "ai_agent"
+				break
 			}
+		}
 
-			isValid := false
-			for _, validToken := range validTokens {
+		// 如果不是AI Agent Token，检查System Token
+		if !isValid {
+			for _, validToken := range config.SystemTokens {
 				if token == validToken {
 					isValid = true
+					agentType = "system"
 					break
 				}
 			}
+		}
 
-			if !isValid {
-				pkg.Unauthorized(c, "Invalid AI Agent token")
-				c.Abort()
-				return
-			}
-
-			// 设置AI Agent上下文信息
-			c.Set("agent_type", "ai_agent")
-			c.Set("agent_token", token)
-			c.Next()
+		if !isValid {
+			log.Warn("无效的Token", zap.String("token", token))
+			pkg.Unauthorized(c, "Invalid token")
+			c.Abort()
 			return
 		}
 
-		// 检查是否为系统Token格式
-		if strings.HasPrefix(authHeader, "System-Token ") {
-			token := strings.TrimPrefix(authHeader, "System-Token ")
-
-			// 验证系统Token
-			validSystemTokens := []string{
-				"system_secure_token",
-				"internal_api_token_456",
-			}
-
-			isValid := false
-			for _, validToken := range validSystemTokens {
-				if token == validToken {
-					isValid = true
-					break
-				}
-			}
-
-			if !isValid {
-				pkg.Unauthorized(c, "Invalid system token")
-				c.Abort()
-				return
-			}
-
-			// 设置系统调用上下文信息
-			c.Set("agent_type", "system")
-			c.Set("system_token", token)
-			c.Next()
-			return
-		}
-
-		pkg.Unauthorized(c, "Invalid authorization header format")
-		c.Abort()
+		// 设置上下文信息
+		c.Set("agent_type", agentType)
+		c.Set("agent_token", token)
+		log.Info("Token验证成功", zap.String("agent_type", agentType))
+		c.Next()
 	})
 }

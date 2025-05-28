@@ -49,6 +49,13 @@ file:
   allowedTypes: ["jpg", "jpeg", "png", "pdf", "doc", "docx"]
   
 ai:
-  difyApiUrl: "http://localhost:8001"
-  difyApiKey: "your-dify-api-key"
-  higressGatewayUrl: "http://localhost:8002" 
+  difyApiUrl: "http://172.18.120.57/v1/workflows/run"
+  difyApiKey: "app-your-dify-api-key-here"
+  higressGatewayUrl: "http://localhost:8002"
+  agentTokens:
+    - "ai_agent_secure_token_2024_v1"
+    - "dify_huinong_finance_token_001"
+    - "ai_risk_assessment_token_456"
+  systemTokens:
+    - "system_internal_api_token_2024"
+    - "huinong_backend_system_token" 
