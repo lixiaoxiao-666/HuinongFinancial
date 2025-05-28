@@ -521,6 +521,207 @@
     }
     ```
 
+### 5.6 获取OA首页/工作台信息
+
+*   **URL**: `/admin/dashboard`
+*   **Method**: `GET`
+*   **Authentication**: Required (管理员/审批员)
+*   **Response (200 OK)**:
+    ```json
+    {
+      "code": 0,
+      "message": "Success",
+      "data": {
+        "system_stats": {
+          "total_applications": 150,
+          "pending_applications": 25,
+          "approved_applications": 98,
+          "rejected_applications": 27,
+          "today_applications": 12,
+          "ai_processed_rate": 78.5,
+          "avg_processing_time_hours": 4.2,
+          "ai_approval_enabled": true
+        },
+        "pending_tasks": [
+          {
+            "task_id": "la_app_001",
+            "task_type": "loan_approval",
+            "title": "审批张三的贷款申请",
+            "description": "申请金额：30000.00元",
+            "priority": "normal",
+            "submitted_at": "2024-03-10T10:00:00Z",
+            "waiting_hours": 8
+          }
+        ],
+        "quick_actions": [
+          {"name": "审批看板", "path": "/admin/approval", "icon": "approval"},
+          {"name": "系统配置", "path": "/admin/system", "icon": "setting"},
+          {"name": "操作日志", "path": "/admin/logs", "icon": "log"},
+          {"name": "用户管理", "path": "/admin/users", "icon": "user"}
+        ],
+        "recent_activities": [
+          {
+            "time": "2024-03-10T14:30:00Z",
+            "action": "审批申请",
+            "target": "贷款申请 APP20241210001",
+            "operator": "审批员张三",
+            "result": "已批准"
+          }
+        ]
+      }
+    }
+    ```
+
+### 5.7 获取OA用户列表
+
+*   **URL**: `/admin/users`
+*   **Method**: `GET`
+*   **Authentication**: Required (系统管理员)
+*   **Query Parameters**:
+    *   `page` (int, optional, default: 1)
+    *   `limit` (int, optional, default: 10)
+    *   `role` (string, optional): 用户角色筛选
+*   **Response (200 OK)**:
+    ```json
+    {
+      "code": 0,
+      "message": "Success",
+      "data": [
+        {
+          "oa_user_id": "oa_admin_001",
+          "username": "admin",
+          "role": "ADMIN",
+          "display_name": "系统管理员",
+          "email": "admin@example.com",
+          "status": 0,
+          "created_at": "2024-01-01T00:00:00Z",
+          "updated_at": "2024-03-10T15:00:00Z"
+        }
+      ],
+      "total": 5,
+      "page": 1,
+      "limit": 10
+    }
+    ```
+
+### 5.8 创建OA用户
+
+*   **URL**: `/admin/users`
+*   **Method**: `POST`
+*   **Authentication**: Required (系统管理员)
+*   **Request Body**:
+    ```json
+    {
+      "username": "new_reviewer",
+      "password": "password123",
+      "role": "审批员",
+      "display_name": "新审批员",
+      "email": "reviewer@example.com"
+    }
+    ```
+*   **Response (200 OK)**:
+    ```json
+    {
+      "code": 0,
+      "message": "用户创建成功"
+    }
+    ```
+
+### 5.9 更新OA用户状态
+
+*   **URL**: `/admin/users/{user_id}/status`
+*   **Method**: `PUT`
+*   **Authentication**: Required (系统管理员)
+*   **Request Body**:
+    ```json
+    {
+      "status": 1
+    }
+    ```
+*   **Response (200 OK)**:
+    ```json
+    {
+      "code": 0,
+      "message": "用户状态已禁用"
+    }
+    ```
+
+### 5.10 获取操作日志
+
+*   **URL**: `/admin/logs`
+*   **Method**: `GET`
+*   **Authentication**: Required (管理员/审批员)
+*   **Query Parameters**:
+    *   `operator_id` (string, optional): 操作员ID
+    *   `action` (string, optional): 操作类型
+    *   `start_date` (string, optional): 开始日期 (YYYY-MM-DD)
+    *   `end_date` (string, optional): 结束日期 (YYYY-MM-DD)
+    *   `page` (int, optional, default: 1)
+    *   `limit` (int, optional, default: 10)
+*   **Response (200 OK)**:
+    ```json
+    {
+      "code": 0,
+      "message": "Success",
+      "data": [
+        {
+          "id": 1,
+          "operator_id": "oa_admin001",
+          "operator_name": "管理员李四",
+          "action": "审批申请",
+          "target": "贷款申请 la_app_001",
+          "result": "已批准",
+          "ip_address": "192.168.1.100",
+          "user_agent": "Mozilla/5.0...",
+          "occurred_at": "2024-03-10T12:00:00Z"
+        }
+      ],
+      "total": 50,
+      "page": 1,
+      "limit": 10
+    }
+    ```
+
+### 5.11 获取系统配置
+
+*   **URL**: `/admin/configs`
+*   **Method**: `GET`
+*   **Authentication**: Required (系统管理员)
+*   **Response (200 OK)**:
+    ```json
+    {
+      "code": 0,
+      "message": "Success",
+      "data": [
+        {
+          "config_key": "ai_approval_enabled",
+          "config_value": "true",
+          "description": "AI审批功能开关",
+          "updated_at": "2024-03-10T15:00:00Z"
+        }
+      ]
+    }
+    ```
+
+### 5.12 更新系统配置
+
+*   **URL**: `/admin/configs/{config_key}`
+*   **Method**: `PUT`
+*   **Authentication**: Required (系统管理员)
+*   **Request Body**:
+    ```json
+    {
+      "config_value": "false"
+    }
+    ```
+*   **Response (200 OK)**:
+    ```json
+    {
+      "code": 0,
+      "message": "系统配置更新成功"
+    }
+    ```
+
 ## 6. Dify及本地AI模型调用 (内部，通过Higress AI网关)
 
 这部分API通常是后端服务内部调用，由Higress AI网关统一管理和暴露。具体接口格式取决于Dify智能体和本地模型的定义。

@@ -156,6 +156,16 @@ func (s *LoanService) GetLoanProduct(ctx context.Context, productID string) (*Lo
 	}, nil
 }
 
+// GetProductByID 获取贷款产品详情（返回原始数据模型）
+func (s *LoanService) GetProductByID(productID string) (*data.LoanProduct, error) {
+	var product data.LoanProduct
+	if err := s.data.DB.Where("product_id = ? AND status = ?", productID, 0).First(&product).Error; err != nil {
+		s.log.Error("查询贷款产品失败", zap.String("product_id", productID), zap.Error(err))
+		return nil, errors.New("产品不存在")
+	}
+	return &product, nil
+}
+
 // SubmitLoanApplication 提交贷款申请
 func (s *LoanService) SubmitLoanApplication(ctx context.Context, userID string, req *SubmitLoanApplicationRequest) (*LoanApplicationResponse, error) {
 	// 验证产品是否存在

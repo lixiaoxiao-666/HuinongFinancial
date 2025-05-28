@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"backend/internal/api"
 	"backend/internal/conf"
 	"backend/internal/data"
+	"backend/internal/service"
 	"backend/pkg"
 
 	"go.uber.org/zap"
@@ -56,6 +58,12 @@ func main() {
 
 	// 初始化JWT管理器
 	jwtManager := pkg.NewJWTManager(config.JWT.Secret, config.JWT.Expire)
+
+	// 创建AdminService并初始化默认OA用户
+	adminService := service.NewAdminService(dataLayer, jwtManager, logger)
+	if err := adminService.CreateDefaultOAUsers(); err != nil {
+		logger.Error("创建默认OA用户失败", zap.Error(err))
+	}
 
 	// 初始化路由器
 	router := api.NewRouter(config, dataLayer, jwtManager, logger)
@@ -361,6 +369,95 @@ func initSampleData(dataLayer *data.Data, logger *zap.Logger) error {
 	if err := dataLayer.DB.Create(&oaUser).Error; err != nil {
 		return fmt.Errorf("创建示例OA用户失败: %w", err)
 	}
+
+	// 创建示例普通用户
+	userPasswordHash, _ := pkg.HashPassword("user123")
+	testUser := data.User{
+		UserID:       pkg.GenerateUserID(),
+		Phone:        "13800138000",
+		PasswordHash: userPasswordHash,
+		Nickname:     "测试农户",
+		Status:       0,
+	}
+
+	if err := dataLayer.DB.Create(&testUser).Error; err != nil {
+		logger.Warn("创建示例用户失败", zap.Error(err))
+	}
+
+	// 创建用户详情
+	userProfile := data.UserProfile{
+		UserID:           testUser.UserID,
+		RealName:         "张三",
+		IDCardNumber:     "31010119900101****",
+		Address:          "上海市浦东新区XX镇XX村",
+		CreditAuthAgreed: true,
+	}
+
+	if err := dataLayer.DB.Create(&userProfile).Error; err != nil {
+		logger.Warn("创建示例用户详情失败", zap.Error(err))
+	}
+
+	// 创建示例贷款申请
+	applicantSnapshot, _ := json.Marshal(map[string]interface{}{
+		"real_name":      "张三",
+		"id_card_number": "31010119900101****",
+		"address":        "上海市浦东新区XX镇XX村",
+		"phone":          "13800138000",
+	})
+
+	sampleApplications := []data.LoanApplication{
+		{
+			ApplicationID:     pkg.GenerateLoanApplicationID(),
+			UserID:            testUser.UserID,
+			ProductID:         products[0].ProductID, // 春耕助力贷
+			AmountApplied:     25000,
+			TermMonthsApplied: 12,
+			Purpose:           "购买化肥、种子、农药等春耕物资",
+			Status:            "MANUAL_REVIEW_REQUIRED",
+			ApplicantSnapshot: applicantSnapshot,
+			AIRiskScore:       &[]int{75}[0],
+			AISuggestion:      "AI分析：风险评分 75，建议人工复核。申请人信用记录良好，但需重点关注收入稳定性。",
+		},
+		{
+			ApplicationID:     pkg.GenerateLoanApplicationID(),
+			UserID:            testUser.UserID,
+			ProductID:         products[1].ProductID, // 农机购置贷
+			AmountApplied:     80000,
+			TermMonthsApplied: 24,
+			Purpose:           "购买拖拉机用于农业生产",
+			Status:            "AI_REVIEWING",
+			ApplicantSnapshot: applicantSnapshot,
+		},
+		{
+			ApplicationID:      pkg.GenerateLoanApplicationID(),
+			UserID:             testUser.UserID,
+			ProductID:          products[2].ProductID, // 丰收种植贷
+			AmountApplied:      15000,
+			TermMonthsApplied:  18,
+			Purpose:            "温室大棚种植投入",
+			Status:             "APPROVED",
+			ApplicantSnapshot:  applicantSnapshot,
+			AIRiskScore:        &[]int{85}[0],
+			AISuggestion:       "AI分析：申请人信用良好，收入稳定，建议直接批准。",
+			FinalDecision:      "approved",
+			ApprovedAmount:     &[]float64{15000}[0],
+			ApprovedTermMonths: &[]int{18}[0],
+		},
+	}
+
+	for _, app := range sampleApplications {
+		if err := dataLayer.DB.Create(&app).Error; err != nil {
+			logger.Warn("创建示例贷款申请失败", zap.Error(err), zap.String("application_id", app.ApplicationID))
+		}
+	}
+
+	// 初始化AI审批开关配置
+	aiConfig := data.SystemConfiguration{
+		ConfigKey:   "ai_approval_enabled",
+		ConfigValue: "true",
+		Description: "AI审批功能开关",
+	}
+	dataLayer.DB.Save(&aiConfig)
 
 	logger.Info("示例数据初始化完成")
 	return nil

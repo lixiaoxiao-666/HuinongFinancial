@@ -62,7 +62,7 @@ func main() {
 
 	// 优雅关闭
 	go func() {
-		if err := engine.Run(serverAddr); err != nil {
+		if err := engine.Run("0.0.0.0:" + serverAddr); err != nil {
 			logger.Fatal("服务器启动失败", zap.Error(err))
 		}
 	}()

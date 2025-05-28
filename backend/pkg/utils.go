@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gin-gonic/gin"
 )
 
 // GenerateUUID 生成UUID
@@ -21,6 +22,11 @@ func GenerateUserID() string {
 // GenerateApplicationID 生成申请ID
 func GenerateApplicationID() string {
 	return fmt.Sprintf("la_%s", GenerateUUID()[:12])
+}
+
+// GenerateLoanApplicationID 生成贷款申请ID (别名)
+func GenerateLoanApplicationID() string {
+	return GenerateApplicationID()
 }
 
 // GenerateMachineryID 生成农机ID
@@ -78,4 +84,19 @@ func GetCurrentTimestamp() int64 {
 // FormatTime 格式化时间
 func FormatTime(t time.Time) string {
 	return t.Format("2006-01-02 15:04:05")
+}
+
+// GetIntParam 从gin.Context中获取整数参数
+func GetIntParam(c *gin.Context, paramName string, defaultValue int) int {
+	paramStr := c.Query(paramName)
+	if paramStr == "" {
+		return defaultValue
+	}
+	
+	value, err := strconv.Atoi(paramStr)
+	if err != nil {
+		return defaultValue
+	}
+	
+	return value
 }

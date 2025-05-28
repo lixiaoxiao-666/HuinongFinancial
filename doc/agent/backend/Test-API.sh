@@ -1,13 +1,14 @@
 #!/bin/bash
 
-# 数字惠农APP后端服务接口测试脚本
-# 测试所有已实现的API接口
+# 数字惠农OA管理系统后端接口测试脚本
+# 测试OA系统的审批管理、用户管理、系统配置等API接口
 
 BASE_URL="http://localhost:8080"
-API_BASE="$BASE_URL/api/v1"
+ADMIN_TOKEN=""
+REVIEWER_TOKEN=""
 
 echo "==================================================="
-echo "   数字惠农APP后端服务接口测试开始"
+echo "   数字惠农OA管理系统 后端接口测试开始"
 echo "==================================================="
 
 # 颜色定义
@@ -22,19 +23,14 @@ TOTAL_TESTS=0
 PASSED_TESTS=0
 FAILED_TESTS=0
 
-# 存储token的变量
-USER_TOKEN=""
-ADMIN_TOKEN=""
-
 # 测试函数
 test_api() {
     local method=$1
     local endpoint=$2
     local description=$3
-    local data=${4:-""}
-    local auth_header=${5:-""}
+    local data="$4"
+    local token="$5"
     local expected_status=${6:-200}
-    local content_type=${7:-"application/json"}
     
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
     
@@ -42,21 +38,21 @@ test_api() {
     echo "请求: $method $endpoint"
     
     # 构建curl命令
-    local curl_cmd="curl -s -w \"\\n%{http_code}\" -X $method"
+    local curl_cmd="curl -s -w \"\n%{http_code}\" \"$BASE_URL$endpoint\""
     
-    if [ ! -z "$auth_header" ]; then
-        curl_cmd="$curl_cmd -H \"Authorization: $auth_header\""
+    if [ "$method" != "GET" ]; then
+        curl_cmd="$curl_cmd -X $method"
     fi
     
-    if [ "$content_type" = "application/json" ] && [ ! -z "$data" ]; then
+    if [ -n "$token" ]; then
+        curl_cmd="$curl_cmd -H \"Authorization: Bearer $token\""
+    fi
+    
+    if [ -n "$data" ]; then
         curl_cmd="$curl_cmd -H \"Content-Type: application/json\" -d '$data'"
-    elif [ "$content_type" = "multipart/form-data" ]; then
-        curl_cmd="$curl_cmd $data"  # data参数直接包含-F选项
     fi
     
-    curl_cmd="$curl_cmd \"$endpoint\""
-    
-    # 执行curl命令
+    # 执行请求
     response=$(eval $curl_cmd)
     
     # 提取HTTP状态码
@@ -67,11 +63,11 @@ test_api() {
         echo -e "${GREEN}✓ 通过${NC} (状态码: $http_code)"
         PASSED_TESTS=$((PASSED_TESTS + 1))
         
-        # 显示部分响应数据（截断长内容）
-        if [ ${#response_body} -gt 200 ]; then
-            echo "响应: ${response_body:0:200}..."
-        else
+        # 显示关键响应数据
+        if [ ${#response_body} -lt 500 ]; then
             echo "响应: $response_body"
+        else
+            echo "响应: ${response_body:0:200}..."
         fi
     else
         echo -e "${RED}✗ 失败${NC} (期望状态码: $expected_status, 实际状态码: $http_code)"
@@ -80,217 +76,215 @@ test_api() {
     fi
     
     echo "---------------------------------------------------"
-    
-    # 返回响应体用于后续处理
-    echo "$response_body"
 }
 
-# 提取Token函数
+# 辅助函数：从响应中提取token
 extract_token() {
-    local response=$1
+    local response="$1"
     echo "$response" | grep -o '"token":"[^"]*"' | cut -d'"' -f4
 }
 
-echo -e "\n${BLUE}=== 1. 健康检查接口测试 ===${NC}"
+echo -e "\n${BLUE}======================== 1. OA用户认证测试 ========================${NC}"
 
-# 1. 健康检查
-test_api "GET" "$BASE_URL/health" "健康检查接口"
+# 1.1 管理员登录
+test_api "POST" "/admin/login" "管理员登录" '{
+  "username": "admin",
+  "password": "admin123"
+}' "" 200
 
-echo -e "\n${BLUE}=== 2. 用户服务接口测试 ===${NC}"
+# 提取管理员token（简化处理，实际环境中需要解析JSON）
+ADMIN_TOKEN=$(curl -s -X POST "$BASE_URL/admin/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "admin123"}' | \
+  grep -o '"token":"[^"]*"' | cut -d'"' -f4)
 
-# 2. 发送验证码
-test_api "POST" "$API_BASE/users/send-verification-code" "发送验证码" \
-    '{"phone": "13800138000"}'
+echo "管理员Token: ${ADMIN_TOKEN:0:20}..."
 
-# 3. 用户注册
-register_response=$(test_api "POST" "$API_BASE/users/register" "用户注册" \
-    '{"phone": "13800138001", "password": "test123456", "verification_code": "123456"}' \
-    "" 201)
+# 1.2 审批员登录
+test_api "POST" "/admin/login" "审批员登录" '{
+  "username": "reviewer",
+  "password": "reviewer123"
+}' "" 200
 
-# 4. 用户登录
-echo -e "\n${YELLOW}正在进行用户登录获取Token...${NC}"
-login_response=$(test_api "POST" "$API_BASE/users/login" "用户登录" \
-    '{"phone": "13800138001", "password": "test123456"}')
+# 提取审批员token
+REVIEWER_TOKEN=$(curl -s -X POST "$BASE_URL/admin/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username": "reviewer", "password": "reviewer123"}' | \
+  grep -o '"token":"[^"]*"' | cut -d'"' -f4)
 
-# 提取用户Token
-USER_TOKEN=$(extract_token "$login_response")
-if [ ! -z "$USER_TOKEN" ]; then
-    echo -e "${GREEN}✓ 成功获取用户Token: ${USER_TOKEN:0:20}...${NC}"
-else
-    echo -e "${RED}✗ 未能获取用户Token${NC}"
-fi
+echo "审批员Token: ${REVIEWER_TOKEN:0:20}..."
 
-# 5. 获取用户信息（需要认证）
-if [ ! -z "$USER_TOKEN" ]; then
-    test_api "GET" "$API_BASE/users/me" "获取用户信息" \
-        "" "Bearer $USER_TOKEN"
-fi
+echo -e "\n${BLUE}======================== 2. OA首页/工作台测试 ========================${NC}"
 
-# 6. 更新用户信息（需要认证）
-if [ ! -z "$USER_TOKEN" ]; then
-    test_api "PUT" "$API_BASE/users/me" "更新用户信息" \
-        '{"nickname": "测试农户", "real_name": "张三", "address": "测试省测试市测试村"}' \
-        "Bearer $USER_TOKEN"
-fi
+# 2.1 获取OA首页信息
+test_api "GET" "/admin/dashboard" "获取OA首页/工作台信息" "" "$ADMIN_TOKEN" 200
 
-echo -e "\n${BLUE}=== 3. 贷款服务接口测试 ===${NC}"
+echo -e "\n${BLUE}======================== 3. 审批管理测试 ========================${NC}"
 
-# 7. 获取贷款产品列表
-products_response=$(test_api "GET" "$API_BASE/loans/products" "获取贷款产品列表")
+# 3.1 获取待审批申请列表
+test_api "GET" "/admin/loans/applications/pending" "获取待审批申请列表" "" "$REVIEWER_TOKEN" 200
 
-# 8. 按分类查询贷款产品
-test_api "GET" "$API_BASE/loans/products?category=种植贷" "按分类查询贷款产品"
+# 3.2 获取待审批申请列表（带筛选）
+test_api "GET" "/admin/loans/applications/pending?status_filter=MANUAL_REVIEW_REQUIRED&page=1&limit=5" "获取待审批申请列表（筛选）" "" "$REVIEWER_TOKEN" 200
 
-# 9. 获取贷款产品详情（使用示例产品ID）
-test_api "GET" "$API_BASE/loans/products/loan_prod_001" "获取贷款产品详情"
+# 3.3 获取申请详情（需要真实的application_id，这里使用示例ID）
+test_api "GET" "/admin/loans/applications/la_test_app_001" "获取申请详情" "" "$REVIEWER_TOKEN" 200
 
-# 10. 提交贷款申请（需要认证）
-if [ ! -z "$USER_TOKEN" ]; then
-    application_response=$(test_api "POST" "$API_BASE/loans/applications" "提交贷款申请" \
-        '{
-            "product_id": "loan_prod_001",
-            "amount": 30000,
-            "term_months": 12,
-            "purpose": "购买化肥和种子",
-            "applicant_info": {
-                "real_name": "张三",
-                "id_card_number": "310123456789012345",
-                "address": "测试省测试市测试村"
-            },
-            "uploaded_documents": []
-        }' \
-        "Bearer $USER_TOKEN" 201)
-fi
+# 3.4 提交审批决策 - 批准
+test_api "POST" "/admin/loans/applications/la_test_app_001/review" "提交审批决策（批准）" '{
+  "decision": "approved",
+  "approved_amount": 25000.00,
+  "approved_term_months": 12,
+  "comments": "申请人资质良好，批准贷款申请。"
+}' "$REVIEWER_TOKEN" 200
 
-# 11. 获取我的贷款申请列表（需要认证）
-if [ ! -z "$USER_TOKEN" ]; then
-    test_api "GET" "$API_BASE/loans/applications/my" "获取我的贷款申请列表" \
-        "" "Bearer $USER_TOKEN"
-fi
+# 3.5 提交审批决策 - 拒绝
+test_api "POST" "/admin/loans/applications/la_test_app_002/review" "提交审批决策（拒绝）" '{
+  "decision": "rejected",
+  "comments": "申请人收入证明不足，拒绝贷款申请。"
+}' "$REVIEWER_TOKEN" 200
 
-# 12. 分页查询我的贷款申请
-if [ ! -z "$USER_TOKEN" ]; then
-    test_api "GET" "$API_BASE/loans/applications/my?page=1&limit=5" "分页查询我的贷款申请" \
-        "" "Bearer $USER_TOKEN"
-fi
+# 3.6 提交审批决策 - 要求补充信息
+test_api "POST" "/admin/loans/applications/la_test_app_003/review" "提交审批决策（要求补充信息）" '{
+  "decision": "request_more_info",
+  "comments": "需要补充收入证明材料",
+  "required_info_details": "请提供最近3个月的银行流水和收入证明"
+}' "$REVIEWER_TOKEN" 200
 
-echo -e "\n${BLUE}=== 4. 文件服务接口测试 ===${NC}"
+echo -e "\n${BLUE}======================== 4. 系统管理测试 ========================${NC}"
 
-# 13. 文件上传测试（需要认证）
-if [ ! -z "$USER_TOKEN" ]; then
-    # 创建一个测试文件
-    echo "这是一个测试文件" > /tmp/test_upload.txt
-    
-    test_api "POST" "$API_BASE/files/upload" "文件上传" \
-        "-F 'file=@/tmp/test_upload.txt' -F 'purpose=loan_document'" \
-        "Bearer $USER_TOKEN" 200 "multipart/form-data"
-    
-    # 清理测试文件
-    rm -f /tmp/test_upload.txt
-fi
+# 4.1 获取系统统计信息
+test_api "GET" "/admin/system/stats" "获取系统统计信息" "" "$ADMIN_TOKEN" 200
 
-echo -e "\n${BLUE}=== 5. OA后台管理接口测试 ===${NC}"
+# 4.2 AI审批开关控制 - 启用
+test_api "POST" "/admin/system/ai-approval/toggle" "启用AI审批" '{
+  "enabled": true
+}' "$ADMIN_TOKEN" 200
 
-# 14. OA用户登录
-echo -e "\n${YELLOW}正在进行OA管理员登录获取Token...${NC}"
-admin_login_response=$(test_api "POST" "$API_BASE/admin/login" "OA用户登录" \
-    '{"username": "admin", "password": "admin123"}')
+# 4.3 AI审批开关控制 - 禁用
+test_api "POST" "/admin/system/ai-approval/toggle" "禁用AI审批" '{
+  "enabled": false
+}' "$ADMIN_TOKEN" 200
 
-# 提取管理员Token
-ADMIN_TOKEN=$(extract_token "$admin_login_response")
-if [ ! -z "$ADMIN_TOKEN" ]; then
-    echo -e "${GREEN}✓ 成功获取管理员Token: ${ADMIN_TOKEN:0:20}...${NC}"
-else
-    echo -e "${RED}✗ 未能获取管理员Token${NC}"
-fi
+echo -e "\n${BLUE}======================== 5. 用户管理测试 ========================${NC}"
 
-# 15. 获取待审批贷款申请列表（需要管理员认证）
-if [ ! -z "$ADMIN_TOKEN" ]; then
-    test_api "GET" "$API_BASE/admin/loans/applications/pending" "获取待审批贷款申请列表" \
-        "" "Bearer $ADMIN_TOKEN"
-fi
+# 5.1 获取OA用户列表
+test_api "GET" "/admin/users?page=1&limit=10" "获取OA用户列表" "" "$ADMIN_TOKEN" 200
 
-# 16. 获取贷款申请详情（管理员视角）
-if [ ! -z "$ADMIN_TOKEN" ]; then
-    test_api "GET" "$API_BASE/admin/loans/applications/test_app_id" "获取贷款申请详情(管理员)" \
-        "" "Bearer $ADMIN_TOKEN"
-fi
+# 5.2 获取OA用户列表（角色筛选）
+test_api "GET" "/admin/users?role=REVIEWER&page=1&limit=10" "获取OA用户列表（审批员）" "" "$ADMIN_TOKEN" 200
 
-# 17. 提交审批决策（需要管理员认证）
-if [ ! -z "$ADMIN_TOKEN" ]; then
-    test_api "POST" "$API_BASE/admin/loans/applications/test_app_id/review" "提交审批决策" \
-        '{
-            "decision": "approved",
-            "approved_amount": 25000,
-            "comments": "申请人信用良好，略微调整批准金额",
-            "required_info_details": null
-        }' \
-        "Bearer $ADMIN_TOKEN"
-fi
+# 5.3 创建OA用户
+test_api "POST" "/admin/users" "创建OA用户" '{
+  "username": "test_reviewer",
+  "password": "password123",
+  "role": "审批员",
+  "display_name": "测试审批员",
+  "email": "test@example.com"
+}' "$ADMIN_TOKEN" 200
 
-# 18. 控制AI审批流程开关（需要管理员认证）
-if [ ! -z "$ADMIN_TOKEN" ]; then
-    test_api "POST" "$API_BASE/admin/system/ai-approval/toggle" "控制AI审批流程开关" \
-        '{"enabled": true}' \
-        "Bearer $ADMIN_TOKEN"
-fi
+# 5.4 更新OA用户状态 - 禁用（需要真实的user_id）
+test_api "PUT" "/admin/users/oa_test_user_001/status" "更新OA用户状态（禁用）" '{
+  "status": 1
+}' "$ADMIN_TOKEN" 200
 
-echo -e "\n${BLUE}=== 6. 错误处理测试 ===${NC}"
+# 5.5 更新OA用户状态 - 启用
+test_api "PUT" "/admin/users/oa_test_user_001/status" "更新OA用户状态（启用）" '{
+  "status": 0
+}' "$ADMIN_TOKEN" 200
 
-# 19. 测试未授权访问
-test_api "GET" "$API_BASE/users/me" "未授权访问用户信息" \
-    "" "" 401
+echo -e "\n${BLUE}======================== 6. 操作日志测试 ========================${NC}"
 
-# 20. 测试无效的产品ID
-test_api "GET" "$API_BASE/loans/products/invalid_id" "查询不存在的产品" \
-    "" "" 404
+# 6.1 获取操作日志
+test_api "GET" "/admin/logs?page=1&limit=10" "获取操作日志" "" "$ADMIN_TOKEN" 200
 
-# 21. 测试无效的请求数据
-test_api "POST" "$API_BASE/users/register" "无效注册请求" \
-    '{"phone": "invalid"}' "" 400
+# 6.2 获取操作日志（带筛选）
+test_api "GET" "/admin/logs?action=审批申请&start_date=2024-03-01&end_date=2024-03-31&page=1&limit=5" "获取操作日志（筛选）" "" "$ADMIN_TOKEN" 200
 
-# 22. 测试无效的Token
-test_api "GET" "$API_BASE/users/me" "无效Token访问" \
-    "" "Bearer invalid_token" 401
+echo -e "\n${BLUE}======================== 7. 系统配置测试 ========================${NC}"
 
-echo -e "\n${BLUE}=== 7. 性能和边界测试 ===${NC}"
+# 7.1 获取系统配置
+test_api "GET" "/admin/configs" "获取系统配置" "" "$ADMIN_TOKEN" 200
 
-# 23. 测试大数据量查询
-test_api "GET" "$API_BASE/loans/applications/my?page=1&limit=100" "大分页查询" \
-    "" "Bearer $USER_TOKEN"
+# 7.2 更新系统配置
+test_api "PUT" "/admin/configs/ai_approval_enabled" "更新系统配置" '{
+  "config_value": "true"
+}' "$ADMIN_TOKEN" 200
 
-# 24. 测试空查询参数
-test_api "GET" "$API_BASE/loans/products?category=" "空分类查询"
+# 7.3 更新自定义配置
+test_api "PUT" "/admin/configs/max_loan_amount" "更新自定义配置" '{
+  "config_value": "500000"
+}' "$ADMIN_TOKEN" 200
+
+echo -e "\n${BLUE}======================== 8. 错误处理测试 ========================${NC}"
+
+# 8.1 无效token测试
+test_api "GET" "/admin/dashboard" "无效token访问" "" "invalid_token" 401
+
+# 8.2 无权限访问测试（审批员访问管理员功能）
+test_api "POST" "/admin/users" "无权限访问（创建用户）" '{
+  "username": "unauthorized_test",
+  "password": "password123",
+  "role": "审批员",
+  "display_name": "无权限测试",
+  "email": "unauthorized@example.com"
+}' "$REVIEWER_TOKEN" 403
+
+# 8.3 参数错误测试
+test_api "POST" "/admin/login" "登录参数错误" '{
+  "username": "",
+  "password": "short"
+}' "" 400
+
+# 8.4 资源不存在测试
+test_api "GET" "/admin/loans/applications/non_existent_id" "不存在的申请ID" "" "$REVIEWER_TOKEN" 404
+
+echo -e "\n${BLUE}======================== 9. 性能和压力测试示例 ========================${NC}"
+
+# 9.1 并发请求测试（简化版）
+echo -e "\n${YELLOW}执行并发请求测试...${NC}"
+for i in {1..5}; do
+    test_api "GET" "/admin/system/stats" "并发请求 #$i" "" "$ADMIN_TOKEN" 200 &
+done
+wait
 
 echo -e "\n==================================================="
-echo "                测试结果统计"
+echo "           测试结果统计"
 echo "==================================================="
 echo "总测试数: $TOTAL_TESTS"
 echo -e "${GREEN}通过: $PASSED_TESTS${NC}"
 echo -e "${RED}失败: $FAILED_TESTS${NC}"
 
+success_rate=$(echo "scale=2; $PASSED_TESTS * 100 / $TOTAL_TESTS" | bc)
+echo "成功率: ${success_rate}%"
+
 if [ $FAILED_TESTS -eq 0 ]; then
-    echo -e "\n${GREEN}🎉 所有测试通过！${NC}"
+    echo -e "\n${GREEN}🎉 所有测试通过！OA管理系统接口运行正常！${NC}"
     exit 0
 else
     echo -e "\n${RED}❌ 有测试失败，请检查API实现${NC}"
-    
     echo -e "\n${YELLOW}注意事项：${NC}"
-    echo "- 某些失败可能是因为测试环境中没有相应的数据"
-    echo "- 404错误在查询不存在资源时是正常的"
-    echo "- 401错误在未授权访问时是正常的" 
-    echo "- 确保数字惠农后端服务正在运行在 http://localhost:8080"
-    echo "- 检查数据库连接和初始化数据是否正确"
+    echo "- 部分失败可能是因为测试环境中没有相应的数据"
+    echo "- 404错误通常表示使用了示例ID，在实际测试中需要使用真实ID"
+    echo "- 403错误表示权限控制正常工作"
+    echo "- 检查服务是否正常启动并连接到数据库"
+    echo "- 确保已创建默认的OA用户账号"
     
-    # 计算成功率
-    success_rate=$((PASSED_TESTS * 100 / TOTAL_TESTS))
-    echo -e "\n成功率: ${success_rate}%"
+    echo -e "\n${BLUE}默认测试账号：${NC}"
+    echo "管理员：admin / admin123"
+    echo "审批员：reviewer / reviewer123"
     
-    if [ $success_rate -ge 80 ]; then
-        echo -e "${YELLOW}✓ 总体测试通过率良好${NC}"
-        exit 0
-    else
-        echo -e "${RED}✗ 测试通过率较低，需要重点检查${NC}"
-        exit 1
-    fi
-fi 
+    exit 1
+fi
+
+echo -e "\n${BLUE}==================================================="
+echo "           OA接口功能说明"
+echo "===================================================${NC}"
+echo "1. 🔐 认证系统：支持OA用户登录和JWT token验证"
+echo "2. 📊 工作台：提供系统统计、待办事项、快捷操作"
+echo "3. 📋 审批管理：待审批列表、申请详情、审批决策"
+echo "4. ⚙️  系统管理：AI审批开关、系统统计、配置管理"
+echo "5. 👥 用户管理：OA用户创建、状态管理、权限控制"
+echo "6. 📝 操作日志：记录和查询所有操作历史"
+echo "7. 🔧 系统配置：灵活的配置项管理"
+echo "8. 🛡️  安全控制：权限验证、参数校验、错误处理" 
