@@ -180,6 +180,102 @@ type SystemConfiguration struct {
 	UpdatedAt   time.Time `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)" json:"updatedAt"`
 }
 
+// AIAnalysisResult AI分析结果表
+type AIAnalysisResult struct {
+	ID                    uint            `gorm:"primarykey;autoIncrement" json:"id"`
+	ApplicationID         string          `gorm:"type:varchar(64);not null;index" json:"applicationId"`
+	WorkflowExecutionID   string          `gorm:"type:varchar(64);uniqueIndex" json:"workflowExecutionId"`
+	RiskLevel             string          `gorm:"type:varchar(20);not null" json:"riskLevel"`
+	RiskScore             float64         `gorm:"type:decimal(5,4);not null" json:"riskScore"`
+	ConfidenceScore       float64         `gorm:"type:decimal(5,4);not null" json:"confidenceScore"`
+	AnalysisSummary       string          `gorm:"type:text" json:"analysisSummary"`
+	DetailedAnalysis      json.RawMessage `gorm:"type:json" json:"detailedAnalysis"`
+	RiskFactors           json.RawMessage `gorm:"type:json" json:"riskFactors"`
+	Recommendations       json.RawMessage `gorm:"type:json" json:"recommendations"`
+	AIDecision            string          `gorm:"type:varchar(50);not null" json:"aiDecision"`
+	ApprovedAmount        *float64        `gorm:"type:decimal(15,2)" json:"approvedAmount"`
+	ApprovedTermMonths    *int            `gorm:"type:int" json:"approvedTermMonths"`
+	SuggestedInterestRate string          `gorm:"type:varchar(20)" json:"suggestedInterestRate"`
+	NextAction            string          `gorm:"type:varchar(50);not null" json:"nextAction"`
+	AIModelVersion        string          `gorm:"type:varchar(50);not null" json:"aiModelVersion"`
+	ProcessingTimeMs      int             `gorm:"type:int;not null" json:"processingTimeMs"`
+	ProcessedAt           time.Time       `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"processedAt"`
+	CreatedAt             time.Time       `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"createdAt"`
+	UpdatedAt             time.Time       `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)" json:"updatedAt"`
+}
+
+// WorkflowExecution 工作流执行记录表
+type WorkflowExecution struct {
+	ID                  uint            `gorm:"primarykey;autoIncrement" json:"id"`
+	ExecutionID         string          `gorm:"type:varchar(64);uniqueIndex;not null" json:"executionId"`
+	ApplicationID       string          `gorm:"type:varchar(64);not null;index" json:"applicationId"`
+	WorkflowType        string          `gorm:"type:varchar(50);not null" json:"workflowType"`
+	Status              string          `gorm:"type:varchar(50);not null;index" json:"status"`
+	Priority            string          `gorm:"type:varchar(20);not null;default:'NORMAL'" json:"priority"`
+	StartedAt           time.Time       `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"startedAt"`
+	CompletedAt         *time.Time      `gorm:"type:datetime(3)" json:"completedAt"`
+	EstimatedCompletion *time.Time      `gorm:"type:datetime(3)" json:"estimatedCompletion"`
+	CurrentStage        string          `gorm:"type:varchar(100)" json:"currentStage"`
+	Progress            int             `gorm:"type:int;not null;default:0" json:"progress"`
+	ErrorMessage        string          `gorm:"type:text" json:"errorMessage"`
+	Metadata            json.RawMessage `gorm:"type:json" json:"metadata"`
+	CallbackURL         string          `gorm:"type:varchar(512)" json:"callbackUrl"`
+	RetryCount          int             `gorm:"type:int;not null;default:0" json:"retryCount"`
+	CreatedAt           time.Time       `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"createdAt"`
+	UpdatedAt           time.Time       `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)" json:"updatedAt"`
+}
+
+// AIModelConfig AI模型配置表
+type AIModelConfig struct {
+	ID            uint            `gorm:"primarykey;autoIncrement" json:"id"`
+	ModelID       string          `gorm:"type:varchar(100);uniqueIndex;not null" json:"modelId"`
+	ModelType     string          `gorm:"type:varchar(50);not null;index" json:"modelType"`
+	Version       string          `gorm:"type:varchar(50);not null" json:"version"`
+	Status        string          `gorm:"type:varchar(20);not null;default:'ACTIVE'" json:"status"`
+	Configuration json.RawMessage `gorm:"type:json" json:"configuration"`
+	Thresholds    json.RawMessage `gorm:"type:json" json:"thresholds"`
+	Description   string          `gorm:"type:text" json:"description"`
+	CreatedBy     string          `gorm:"type:varchar(64);not null" json:"createdBy"`
+	ActivatedAt   *time.Time      `gorm:"type:datetime(3)" json:"activatedAt"`
+	DeactivatedAt *time.Time      `gorm:"type:datetime(3)" json:"deactivatedAt"`
+	CreatedAt     time.Time       `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"createdAt"`
+	UpdatedAt     time.Time       `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)" json:"updatedAt"`
+}
+
+// ExternalDataQuery 外部数据查询记录表
+type ExternalDataQuery struct {
+	ID            uint            `gorm:"primarykey;autoIncrement" json:"id"`
+	QueryID       string          `gorm:"type:varchar(64);uniqueIndex;not null" json:"queryId"`
+	UserID        string          `gorm:"type:varchar(64);not null;index" json:"userId"`
+	ApplicationID string          `gorm:"type:varchar(64);index" json:"applicationId"`
+	DataTypes     string          `gorm:"type:varchar(200);not null" json:"dataTypes"`
+	QueryResult   json.RawMessage `gorm:"type:json" json:"queryResult"`
+	Status        string          `gorm:"type:varchar(20);not null" json:"status"`
+	ErrorMessage  string          `gorm:"type:text" json:"errorMessage"`
+	QueryDuration int             `gorm:"type:int" json:"queryDuration"`
+	QueriedAt     time.Time       `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"queriedAt"`
+	CreatedAt     time.Time       `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"createdAt"`
+	UpdatedAt     time.Time       `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)" json:"updatedAt"`
+}
+
+// AIAgentLog AI智能体操作日志表
+type AIAgentLog struct {
+	ID            uint            `gorm:"primarykey;autoIncrement" json:"id"`
+	LogID         string          `gorm:"type:varchar(64);uniqueIndex;not null" json:"logId"`
+	ApplicationID string          `gorm:"type:varchar(64);index" json:"applicationId"`
+	ActionType    string          `gorm:"type:varchar(50);not null;index" json:"actionType"`
+	AgentType     string          `gorm:"type:varchar(50);not null" json:"agentType"`
+	RequestData   json.RawMessage `gorm:"type:json" json:"requestData"`
+	ResponseData  json.RawMessage `gorm:"type:json" json:"responseData"`
+	Status        string          `gorm:"type:varchar(20);not null" json:"status"`
+	ErrorMessage  string          `gorm:"type:text" json:"errorMessage"`
+	Duration      int             `gorm:"type:int" json:"duration"`
+	IPAddress     string          `gorm:"type:varchar(45)" json:"ipAddress"`
+	UserAgent     string          `gorm:"type:text" json:"userAgent"`
+	OccurredAt    time.Time       `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"occurredAt"`
+	CreatedAt     time.Time       `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"createdAt"`
+}
+
 // 表名映射
 func (User) TableName() string                   { return "users" }
 func (UserProfile) TableName() string            { return "user_profiles" }
@@ -191,4 +287,8 @@ func (FarmMachinery) TableName() string          { return "farm_machinery" }
 func (MachineryLeasingOrder) TableName() string  { return "machinery_leasing_orders" }
 func (OAUser) TableName() string                 { return "oa_users" }
 func (SystemConfiguration) TableName() string    { return "system_configurations" }
- 
+func (AIAnalysisResult) TableName() string       { return "ai_analysis_results" }
+func (WorkflowExecution) TableName() string      { return "workflow_executions" }
+func (AIModelConfig) TableName() string          { return "ai_model_configs" }
+func (ExternalDataQuery) TableName() string      { return "external_data_queries" }
+func (AIAgentLog) TableName() string             { return "ai_agent_logs" }

@@ -186,3 +186,81 @@ func RateLimitMiddleware() gin.HandlerFunc {
 		c.Next()
 	})
 }
+
+// AIAgentAuthMiddleware AI智能体Token认证中间件
+func AIAgentAuthMiddleware() gin.HandlerFunc {
+	return gin.HandlerFunc(func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			pkg.Unauthorized(c, "Missing authorization header")
+			c.Abort()
+			return
+		}
+
+		// 检查是否为AI Agent Token格式
+		if strings.HasPrefix(authHeader, "AI-Agent-Token ") {
+			token := strings.TrimPrefix(authHeader, "AI-Agent-Token ")
+
+			// 这里应该验证AI Agent Token的有效性
+			// 实际项目中应该从配置文件或数据库读取有效的Token列表
+			validTokens := []string{
+				"ai_agent_secure_token_123456",
+				"dify_agent_token_789",
+			}
+
+			isValid := false
+			for _, validToken := range validTokens {
+				if token == validToken {
+					isValid = true
+					break
+				}
+			}
+
+			if !isValid {
+				pkg.Unauthorized(c, "Invalid AI Agent token")
+				c.Abort()
+				return
+			}
+
+			// 设置AI Agent上下文信息
+			c.Set("agent_type", "ai_agent")
+			c.Set("agent_token", token)
+			c.Next()
+			return
+		}
+
+		// 检查是否为系统Token格式
+		if strings.HasPrefix(authHeader, "System-Token ") {
+			token := strings.TrimPrefix(authHeader, "System-Token ")
+
+			// 验证系统Token
+			validSystemTokens := []string{
+				"system_secure_token",
+				"internal_api_token_456",
+			}
+
+			isValid := false
+			for _, validToken := range validSystemTokens {
+				if token == validToken {
+					isValid = true
+					break
+				}
+			}
+
+			if !isValid {
+				pkg.Unauthorized(c, "Invalid system token")
+				c.Abort()
+				return
+			}
+
+			// 设置系统调用上下文信息
+			c.Set("agent_type", "system")
+			c.Set("system_token", token)
+			c.Next()
+			return
+		}
+
+		pkg.Unauthorized(c, "Invalid authorization header format")
+		c.Abort()
+	})
+}

@@ -59,21 +59,25 @@ func (r *Router) SetupRoutes() *gin.Engine {
 	userService := service.NewUserService(r.data, r.jwtManager, r.log)
 	loanService := service.NewLoanService(r.data, r.log)
 	adminService := service.NewAdminService(r.data, r.jwtManager, r.log)
+	aiAgentService := service.NewAIAgentService(r.data, r.log)
 
 	// 创建处理器实例
 	userHandler := NewUserHandler(userService, r.log)
 	loanHandler := NewLoanHandler(loanService, r.log)
 	adminHandler := NewAdminHandler(adminService, loanService, r.log)
+	aiAgentHandler := NewAIAgentHandler(aiAgentService, r.log)
 
 	// 创建认证中间件
 	authMiddleware := AuthMiddleware(r.jwtManager)
 	adminAuthMiddleware := AdminAuthMiddleware(r.jwtManager)
+	aiAgentAuthMiddleware := AIAgentAuthMiddleware()
 
 	// 注册路由
 	r.registerUserRoutes(v1, userHandler, authMiddleware)
 	r.registerLoanRoutes(v1, loanHandler, authMiddleware)
 	r.registerFileRoutes(v1, authMiddleware)
 	r.registerAdminRoutes(v1, adminHandler, adminAuthMiddleware)
+	r.registerAIAgentRoutes(v1, aiAgentHandler, aiAgentAuthMiddleware)
 
 	return engine
 }
@@ -103,6 +107,11 @@ func (r *Router) registerFileRoutes(v1 *gin.RouterGroup, authMiddleware gin.Hand
 func (r *Router) registerAdminRoutes(v1 *gin.RouterGroup, adminHandler *AdminHandler, adminAuthMiddleware gin.HandlerFunc) {
 	admin := v1.Group("/admin")
 	RegisterAdminRoutes(admin, adminHandler, adminAuthMiddleware)
+}
+
+// registerAIAgentRoutes 注册AI智能体路由
+func (r *Router) registerAIAgentRoutes(v1 *gin.RouterGroup, aiAgentHandler *AIAgentHandler, aiAgentAuthMiddleware gin.HandlerFunc) {
+	RegisterAIAgentRoutes(v1, aiAgentHandler, aiAgentAuthMiddleware)
 }
 
 // handleFileUpload 文件上传处理器（简化实现）

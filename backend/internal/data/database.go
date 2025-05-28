@@ -118,6 +118,12 @@ func (d *Data) AutoMigrate() error {
 		&MachineryLeasingOrder{},
 		&OAUser{},
 		&SystemConfiguration{},
+		// AI智能体相关表
+		&AIAnalysisResult{},
+		&WorkflowExecution{},
+		&AIModelConfig{},
+		&ExternalDataQuery{},
+		&AIAgentLog{},
 	)
 }
 

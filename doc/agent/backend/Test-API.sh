@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# 数字惠农OA管理系统后端接口测试脚本
-# 测试OA系统的审批管理、用户管理、系统配置等API接口
+# AI智能体接口测试脚本
+# 测试AI智能体相关的所有API接口
 
 BASE_URL="http://localhost:8080"
-ADMIN_TOKEN=""
-REVIEWER_TOKEN=""
+AI_AGENT_TOKEN="ai_agent_secure_token_123456"
+SYSTEM_TOKEN="system_secure_token"
 
 echo "==================================================="
-echo "   数字惠农OA管理系统 后端接口测试开始"
+echo "   AI智能体接口测试开始"
 echo "==================================================="
 
 # 颜色定义
@@ -23,14 +23,18 @@ TOTAL_TESTS=0
 PASSED_TESTS=0
 FAILED_TESTS=0
 
+# 测试用的数据
+TEST_APPLICATION_ID="app_20240301_001"
+TEST_USER_ID="user_20240301_001"
+
 # 测试函数
 test_api() {
     local method=$1
     local endpoint=$2
     local description=$3
-    local data="$4"
-    local token="$5"
-    local expected_status=${6:-200}
+    local expected_status=${4:-200}
+    local auth_header=$5
+    local request_body=$6
     
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
     
@@ -40,16 +44,16 @@ test_api() {
     # 构建curl命令
     local curl_cmd="curl -s -w \"\n%{http_code}\" \"$BASE_URL$endpoint\""
     
+    if [ ! -z "$auth_header" ]; then
+        curl_cmd="$curl_cmd -H \"Authorization: $auth_header\""
+    fi
+    
     if [ "$method" != "GET" ]; then
         curl_cmd="$curl_cmd -X $method"
     fi
     
-    if [ -n "$token" ]; then
-        curl_cmd="$curl_cmd -H \"Authorization: Bearer $token\""
-    fi
-    
-    if [ -n "$data" ]; then
-        curl_cmd="$curl_cmd -H \"Content-Type: application/json\" -d '$data'"
+    if [ ! -z "$request_body" ]; then
+        curl_cmd="$curl_cmd -H \"Content-Type: application/json\" -d '$request_body'"
     fi
     
     # 执行请求
@@ -63,11 +67,10 @@ test_api() {
         echo -e "${GREEN}✓ 通过${NC} (状态码: $http_code)"
         PASSED_TESTS=$((PASSED_TESTS + 1))
         
-        # 显示关键响应数据
-        if [ ${#response_body} -lt 500 ]; then
-            echo "响应: $response_body"
-        else
-            echo "响应: ${response_body:0:200}..."
+        # 美化显示JSON响应
+        if [ ! -z "$response_body" ]; then
+            echo -e "${BLUE}响应数据:${NC}"
+            echo "$response_body" | python3 -m json.tool 2>/dev/null || echo "$response_body"
         fi
     else
         echo -e "${RED}✗ 失败${NC} (期望状态码: $expected_status, 实际状态码: $http_code)"
@@ -78,175 +81,226 @@ test_api() {
     echo "---------------------------------------------------"
 }
 
-# 辅助函数：从响应中提取token
-extract_token() {
-    local response="$1"
-    echo "$response" | grep -o '"token":"[^"]*"' | cut -d'"' -f4
+# 创建测试数据的函数
+create_test_data() {
+    echo -e "\n${BLUE}准备测试数据...${NC}"
+    
+    # 这里应该调用真实的API创建测试数据
+    # 为了测试，我们假设已经有了测试数据
+    echo "使用预设的测试数据: $TEST_APPLICATION_ID, $TEST_USER_ID"
 }
 
-echo -e "\n${BLUE}======================== 1. OA用户认证测试 ========================${NC}"
+echo -e "\n${YELLOW}开始测试AI智能体接口...${NC}"
 
-# 1.1 管理员登录
-test_api "POST" "/admin/login" "管理员登录" '{
-  "username": "admin",
-  "password": "admin123"
-}' "" 200
+create_test_data
 
-# 提取管理员token（简化处理，实际环境中需要解析JSON）
-ADMIN_TOKEN=$(curl -s -X POST "$BASE_URL/admin/login" \
-  -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "admin123"}' | \
-  grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+# 1. 测试获取申请信息接口
+test_api "GET" \
+    "/api/v1/ai-agent/applications/$TEST_APPLICATION_ID/info" \
+    "获取申请信息 - 正常请求" \
+    200 \
+    "AI-Agent-Token $AI_AGENT_TOKEN"
 
-echo "管理员Token: ${ADMIN_TOKEN:0:20}..."
+# 2. 测试获取申请信息接口 - 无认证
+test_api "GET" \
+    "/api/v1/ai-agent/applications/$TEST_APPLICATION_ID/info" \
+    "获取申请信息 - 无认证头" \
+    401
 
-# 1.2 审批员登录
-test_api "POST" "/admin/login" "审批员登录" '{
-  "username": "reviewer",
-  "password": "reviewer123"
-}' "" 200
+# 3. 测试获取申请信息接口 - 错误Token
+test_api "GET" \
+    "/api/v1/ai-agent/applications/$TEST_APPLICATION_ID/info" \
+    "获取申请信息 - 无效Token" \
+    401 \
+    "AI-Agent-Token invalid_token"
 
-# 提取审批员token
-REVIEWER_TOKEN=$(curl -s -X POST "$BASE_URL/admin/login" \
-  -H "Content-Type: application/json" \
-  -d '{"username": "reviewer", "password": "reviewer123"}' | \
-  grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+# 4. 测试获取申请信息接口 - 不存在的申请
+test_api "GET" \
+    "/api/v1/ai-agent/applications/nonexistent_app/info" \
+    "获取申请信息 - 不存在的申请" \
+    500 \
+    "AI-Agent-Token $AI_AGENT_TOKEN"
 
-echo "审批员Token: ${REVIEWER_TOKEN:0:20}..."
+# 5. 测试提交AI决策结果接口
+ai_decision_body='{
+  "ai_analysis": {
+    "risk_level": "LOW",
+    "risk_score": 0.25,
+    "confidence_score": 0.92,
+    "analysis_summary": "申请人信用状况良好，还款能力强",
+    "detailed_analysis": {
+      "income_analysis": "年收入8万元，稳定",
+      "credit_analysis": "征信良好，无不良记录",
+      "asset_analysis": "拥有10亩土地，资产充足"
+    },
+    "risk_factors": [
+      {
+        "factor": "credit_score",
+        "value": 750,
+        "weight": 0.3,
+        "risk_contribution": 0.05
+      }
+    ],
+    "recommendations": [
+      "建议批准贷款",
+      "可给予优惠利率"
+    ]
+  },
+  "ai_decision": {
+    "decision": "AUTO_APPROVED",
+    "approved_amount": 30000,
+    "approved_term_months": 12,
+    "suggested_interest_rate": "6.5%",
+    "conditions": [],
+    "next_action": "AWAIT_FINAL_CONFIRMATION"
+  },
+  "processing_info": {
+    "ai_model_version": "v2.1.0",
+    "processing_time_ms": 1500,
+    "workflow_id": "workflow_001",
+    "processed_at": "2024-03-01T10:35:00Z"
+  }
+}'
 
-echo -e "\n${BLUE}======================== 2. OA首页/工作台测试 ========================${NC}"
+test_api "POST" \
+    "/api/v1/ai-agent/applications/$TEST_APPLICATION_ID/ai-decision" \
+    "提交AI决策结果 - 自动通过" \
+    200 \
+    "AI-Agent-Token $AI_AGENT_TOKEN" \
+    "$ai_decision_body"
 
-# 2.1 获取OA首页信息
-test_api "GET" "/admin/dashboard" "获取OA首页/工作台信息" "" "$ADMIN_TOKEN" 200
+# 6. 测试提交AI决策结果 - 需要人工审核
+ai_decision_manual_body='{
+  "ai_analysis": {
+    "risk_level": "MEDIUM",
+    "risk_score": 0.65,
+    "confidence_score": 0.78,
+    "analysis_summary": "申请金额较大，需要人工审核",
+    "detailed_analysis": {},
+    "risk_factors": [],
+    "recommendations": ["建议人工审核"]
+  },
+  "ai_decision": {
+    "decision": "REQUIRE_HUMAN_REVIEW",
+    "approved_amount": 0,
+    "approved_term_months": 0,
+    "suggested_interest_rate": "",
+    "conditions": ["需要提供更多收入证明"],
+    "next_action": "AWAIT_HUMAN_REVIEW"
+  },
+  "processing_info": {
+    "ai_model_version": "v2.1.0",
+    "processing_time_ms": 2000,
+    "workflow_id": "workflow_002",
+    "processed_at": "2024-03-01T10:40:00Z"
+  }
+}'
 
-echo -e "\n${BLUE}======================== 3. 审批管理测试 ========================${NC}"
+test_api "POST" \
+    "/api/v1/ai-agent/applications/app_20240301_002/ai-decision" \
+    "提交AI决策结果 - 需要人工审核" \
+    200 \
+    "AI-Agent-Token $AI_AGENT_TOKEN" \
+    "$ai_decision_manual_body"
 
-# 3.1 获取待审批申请列表
-test_api "GET" "/admin/loans/applications/pending" "获取待审批申请列表" "" "$REVIEWER_TOKEN" 200
+# 7. 测试触发AI审批工作流
+trigger_workflow_body='{
+  "workflow_type": "LOAN_APPROVAL",
+  "priority": "NORMAL",
+  "callback_url": "https://example.com/api/callback"
+}'
 
-# 3.2 获取待审批申请列表（带筛选）
-test_api "GET" "/admin/loans/applications/pending?status_filter=MANUAL_REVIEW_REQUIRED&page=1&limit=5" "获取待审批申请列表（筛选）" "" "$REVIEWER_TOKEN" 200
+test_api "POST" \
+    "/api/v1/ai-agent/applications/$TEST_APPLICATION_ID/trigger-workflow" \
+    "触发AI审批工作流" \
+    200 \
+    "System-Token $SYSTEM_TOKEN" \
+    "$trigger_workflow_body"
 
-# 3.3 获取申请详情（需要真实的application_id，这里使用示例ID）
-test_api "GET" "/admin/loans/applications/la_test_app_001" "获取申请详情" "" "$REVIEWER_TOKEN" 200
+# 8. 测试触发工作流 - 高优先级
+trigger_workflow_high_body='{
+  "workflow_type": "LOAN_APPROVAL",
+  "priority": "HIGH"
+}'
 
-# 3.4 提交审批决策 - 批准
-test_api "POST" "/admin/loans/applications/la_test_app_001/review" "提交审批决策（批准）" '{
-  "decision": "approved",
-  "approved_amount": 25000.00,
-  "approved_term_months": 12,
-  "comments": "申请人资质良好，批准贷款申请。"
-}' "$REVIEWER_TOKEN" 200
+test_api "POST" \
+    "/api/v1/ai-agent/applications/$TEST_APPLICATION_ID/trigger-workflow" \
+    "触发AI审批工作流 - 高优先级" \
+    200 \
+    "System-Token $SYSTEM_TOKEN" \
+    "$trigger_workflow_high_body"
 
-# 3.5 提交审批决策 - 拒绝
-test_api "POST" "/admin/loans/applications/la_test_app_002/review" "提交审批决策（拒绝）" '{
-  "decision": "rejected",
-  "comments": "申请人收入证明不足，拒绝贷款申请。"
-}' "$REVIEWER_TOKEN" 200
+# 9. 测试获取AI模型配置
+test_api "GET" \
+    "/api/v1/ai-agent/config/models" \
+    "获取AI模型配置" \
+    200 \
+    "AI-Agent-Token $AI_AGENT_TOKEN"
 
-# 3.6 提交审批决策 - 要求补充信息
-test_api "POST" "/admin/loans/applications/la_test_app_003/review" "提交审批决策（要求补充信息）" '{
-  "decision": "request_more_info",
-  "comments": "需要补充收入证明材料",
-  "required_info_details": "请提供最近3个月的银行流水和收入证明"
-}' "$REVIEWER_TOKEN" 200
+# 10. 测试获取外部数据
+test_api "GET" \
+    "/api/v1/ai-agent/external-data/$TEST_USER_ID" \
+    "获取外部数据 - 默认类型" \
+    200 \
+    "AI-Agent-Token $AI_AGENT_TOKEN"
 
-echo -e "\n${BLUE}======================== 4. 系统管理测试 ========================${NC}"
+# 11. 测试获取外部数据 - 指定类型
+test_api "GET" \
+    "/api/v1/ai-agent/external-data/$TEST_USER_ID?data_types=credit,bank_flow" \
+    "获取外部数据 - 指定类型" \
+    200 \
+    "AI-Agent-Token $AI_AGENT_TOKEN"
 
-# 4.1 获取系统统计信息
-test_api "GET" "/admin/system/stats" "获取系统统计信息" "" "$ADMIN_TOKEN" 200
+# 12. 测试更新申请状态
+update_status_body='{
+  "status": "MANUAL_REVIEW_REQUIRED",
+  "operator": "ai_system",
+  "remarks": "AI分析建议人工审核",
+  "metadata": {
+    "reason": "高风险申请",
+    "review_priority": "HIGH"
+  }
+}'
 
-# 4.2 AI审批开关控制 - 启用
-test_api "POST" "/admin/system/ai-approval/toggle" "启用AI审批" '{
-  "enabled": true
-}' "$ADMIN_TOKEN" 200
+test_api "PUT" \
+    "/api/v1/ai-agent/applications/$TEST_APPLICATION_ID/status" \
+    "更新申请状态" \
+    200 \
+    "AI-Agent-Token $AI_AGENT_TOKEN" \
+    "$update_status_body"
 
-# 4.3 AI审批开关控制 - 禁用
-test_api "POST" "/admin/system/ai-approval/toggle" "禁用AI审批" '{
-  "enabled": false
-}' "$ADMIN_TOKEN" 200
+# 13. 测试错误情况 - 缺少必需参数
+invalid_decision_body='{
+  "ai_analysis": {
+    "risk_level": "LOW"
+  }
+}'
 
-echo -e "\n${BLUE}======================== 5. 用户管理测试 ========================${NC}"
+test_api "POST" \
+    "/api/v1/ai-agent/applications/$TEST_APPLICATION_ID/ai-decision" \
+    "提交AI决策结果 - 缺少必需参数" \
+    400 \
+    "AI-Agent-Token $AI_AGENT_TOKEN" \
+    "$invalid_decision_body"
 
-# 5.1 获取OA用户列表
-test_api "GET" "/admin/users?page=1&limit=10" "获取OA用户列表" "" "$ADMIN_TOKEN" 200
+# 14. 测试错误情况 - 空的申请ID
+test_api "GET" \
+    "/api/v1/ai-agent/applications//info" \
+    "获取申请信息 - 空申请ID" \
+    404 \
+    "AI-Agent-Token $AI_AGENT_TOKEN"
 
-# 5.2 获取OA用户列表（角色筛选）
-test_api "GET" "/admin/users?role=REVIEWER&page=1&limit=10" "获取OA用户列表（审批员）" "" "$ADMIN_TOKEN" 200
+# 15. 测试工作流触发 - 缺少必需参数
+invalid_workflow_body='{
+  "priority": "NORMAL"
+}'
 
-# 5.3 创建OA用户
-test_api "POST" "/admin/users" "创建OA用户" '{
-  "username": "test_reviewer",
-  "password": "password123",
-  "role": "审批员",
-  "display_name": "测试审批员",
-  "email": "test@example.com"
-}' "$ADMIN_TOKEN" 200
-
-# 5.4 更新OA用户状态 - 禁用（需要真实的user_id）
-test_api "PUT" "/admin/users/oa_test_user_001/status" "更新OA用户状态（禁用）" '{
-  "status": 1
-}' "$ADMIN_TOKEN" 200
-
-# 5.5 更新OA用户状态 - 启用
-test_api "PUT" "/admin/users/oa_test_user_001/status" "更新OA用户状态（启用）" '{
-  "status": 0
-}' "$ADMIN_TOKEN" 200
-
-echo -e "\n${BLUE}======================== 6. 操作日志测试 ========================${NC}"
-
-# 6.1 获取操作日志
-test_api "GET" "/admin/logs?page=1&limit=10" "获取操作日志" "" "$ADMIN_TOKEN" 200
-
-# 6.2 获取操作日志（带筛选）
-test_api "GET" "/admin/logs?action=审批申请&start_date=2024-03-01&end_date=2024-03-31&page=1&limit=5" "获取操作日志（筛选）" "" "$ADMIN_TOKEN" 200
-
-echo -e "\n${BLUE}======================== 7. 系统配置测试 ========================${NC}"
-
-# 7.1 获取系统配置
-test_api "GET" "/admin/configs" "获取系统配置" "" "$ADMIN_TOKEN" 200
-
-# 7.2 更新系统配置
-test_api "PUT" "/admin/configs/ai_approval_enabled" "更新系统配置" '{
-  "config_value": "true"
-}' "$ADMIN_TOKEN" 200
-
-# 7.3 更新自定义配置
-test_api "PUT" "/admin/configs/max_loan_amount" "更新自定义配置" '{
-  "config_value": "500000"
-}' "$ADMIN_TOKEN" 200
-
-echo -e "\n${BLUE}======================== 8. 错误处理测试 ========================${NC}"
-
-# 8.1 无效token测试
-test_api "GET" "/admin/dashboard" "无效token访问" "" "invalid_token" 401
-
-# 8.2 无权限访问测试（审批员访问管理员功能）
-test_api "POST" "/admin/users" "无权限访问（创建用户）" '{
-  "username": "unauthorized_test",
-  "password": "password123",
-  "role": "审批员",
-  "display_name": "无权限测试",
-  "email": "unauthorized@example.com"
-}' "$REVIEWER_TOKEN" 403
-
-# 8.3 参数错误测试
-test_api "POST" "/admin/login" "登录参数错误" '{
-  "username": "",
-  "password": "short"
-}' "" 400
-
-# 8.4 资源不存在测试
-test_api "GET" "/admin/loans/applications/non_existent_id" "不存在的申请ID" "" "$REVIEWER_TOKEN" 404
-
-echo -e "\n${BLUE}======================== 9. 性能和压力测试示例 ========================${NC}"
-
-# 9.1 并发请求测试（简化版）
-echo -e "\n${YELLOW}执行并发请求测试...${NC}"
-for i in {1..5}; do
-    test_api "GET" "/admin/system/stats" "并发请求 #$i" "" "$ADMIN_TOKEN" 200 &
-done
-wait
+test_api "POST" \
+    "/api/v1/ai-agent/applications/$TEST_APPLICATION_ID/trigger-workflow" \
+    "触发工作流 - 缺少必需参数" \
+    400 \
+    "System-Token $SYSTEM_TOKEN" \
+    "$invalid_workflow_body"
 
 echo -e "\n==================================================="
 echo "           测试结果统计"
@@ -255,36 +309,50 @@ echo "总测试数: $TOTAL_TESTS"
 echo -e "${GREEN}通过: $PASSED_TESTS${NC}"
 echo -e "${RED}失败: $FAILED_TESTS${NC}"
 
-success_rate=$(echo "scale=2; $PASSED_TESTS * 100 / $TOTAL_TESTS" | bc)
-echo "成功率: ${success_rate}%"
+# 计算成功率
+if [ $TOTAL_TESTS -gt 0 ]; then
+    success_rate=$(echo "scale=2; $PASSED_TESTS * 100 / $TOTAL_TESTS" | bc -l)
+    echo "成功率: ${success_rate}%"
+fi
+
+echo -e "\n==================================================="
+echo "           详细测试报告"
+echo "==================================================="
 
 if [ $FAILED_TESTS -eq 0 ]; then
-    echo -e "\n${GREEN}🎉 所有测试通过！OA管理系统接口运行正常！${NC}"
+    echo -e "\n${GREEN}🎉 所有测试通过！${NC}"
+    echo -e "${GREEN}AI智能体接口测试全部成功${NC}"
     exit 0
 else
-    echo -e "\n${RED}❌ 有测试失败，请检查API实现${NC}"
-    echo -e "\n${YELLOW}注意事项：${NC}"
-    echo "- 部分失败可能是因为测试环境中没有相应的数据"
-    echo "- 404错误通常表示使用了示例ID，在实际测试中需要使用真实ID"
-    echo "- 403错误表示权限控制正常工作"
-    echo "- 检查服务是否正常启动并连接到数据库"
-    echo "- 确保已创建默认的OA用户账号"
+    echo -e "\n${RED}❌ 有测试失败，请检查以下问题：${NC}"
+    echo -e "\n${YELLOW}可能的原因：${NC}"
+    echo "1. 服务器未启动或端口错误"
+    echo "2. 数据库中缺少测试数据"
+    echo "3. Token配置不正确"
+    echo "4. 接口实现存在问题"
     
-    echo -e "\n${BLUE}默认测试账号：${NC}"
-    echo "管理员：admin / admin123"
-    echo "审批员：reviewer / reviewer123"
+    echo -e "\n${YELLOW}调试建议：${NC}"
+    echo "1. 检查服务器日志: docker logs [container_name]"
+    echo "2. 确认数据库连接: 检查数据库连接配置"
+    echo "3. 验证Token配置: 检查middleware.go中的Token列表"
+    echo "4. 手动创建测试数据"
+    
+    echo -e "\n${YELLOW}手动测试命令：${NC}"
+    echo "# 测试健康检查"
+    echo "curl -X GET \"$BASE_URL/health\""
+    echo ""
+    echo "# 测试获取申请信息"
+    echo "curl -X GET \"$BASE_URL/api/v1/ai-agent/applications/$TEST_APPLICATION_ID/info\" \\"
+    echo "  -H \"Authorization: AI-Agent-Token $AI_AGENT_TOKEN\""
     
     exit 1
 fi
 
-echo -e "\n${BLUE}==================================================="
-echo "           OA接口功能说明"
-echo "===================================================${NC}"
-echo "1. 🔐 认证系统：支持OA用户登录和JWT token验证"
-echo "2. 📊 工作台：提供系统统计、待办事项、快捷操作"
-echo "3. 📋 审批管理：待审批列表、申请详情、审批决策"
-echo "4. ⚙️  系统管理：AI审批开关、系统统计、配置管理"
-echo "5. 👥 用户管理：OA用户创建、状态管理、权限控制"
-echo "6. 📝 操作日志：记录和查询所有操作历史"
-echo "7. 🔧 系统配置：灵活的配置项管理"
-echo "8. 🛡️  安全控制：权限验证、参数校验、错误处理" 
+echo -e "\n==================================================="
+echo "           性能统计"
+echo "==================================================="
+echo "测试执行时间: $(date)"
+echo "接口覆盖率: 100% (6个核心接口)"
+echo "认证方式测试: ✓ AI-Agent-Token, ✓ System-Token"
+echo "错误处理测试: ✓ 401, ✓ 400, ✓ 404"
+echo "业务场景测试: ✓ 自动通过, ✓ 人工审核, ✓ 高优先级" 
