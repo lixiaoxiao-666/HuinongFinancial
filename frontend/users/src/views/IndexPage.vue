@@ -117,19 +117,19 @@ const onSearch = () => {
     <!-- 顶部导航区域 -->
     <div class="header">
       <div class="nav-bar">
-      <!-- 搜索框 -->
-      <div class="search-container">
-        <el-input 
-          v-model="searchValue" 
-          placeholder="搜索农业政策、金融产品" 
-          prefix-icon="el-icon-search"
-          class="search-input"
-          @keyup.enter="onSearch"
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
+        <!-- 搜索框 -->
+        <div class="search-container">
+          <el-input 
+            v-model="searchValue" 
+            placeholder="搜索农业政策、金融产品" 
+            prefix-icon="el-icon-search"
+            class="search-input"
+            @keyup.enter="onSearch"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
         </div>
         
         <div class="notification">

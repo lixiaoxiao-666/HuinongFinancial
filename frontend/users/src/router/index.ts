@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { authGuard } from '@/utils/auth'
+import IndexPage from '../views/IndexPage.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -12,7 +13,7 @@ const router = createRouter({
     {
       path: '/home',
       name: 'home',
-      component: () => import('../views/IndexPage.vue'),
+      component: IndexPage
     },
     {
       path: '/login',
@@ -63,6 +64,11 @@ const router = createRouter({
       path: '/loan/products/:productId',
       name: 'loanProductDetail',
       component: () => import('../views/LoanProductDetailPage.vue'),
+    },
+    {
+      path: '/digital-currency',
+      name: 'digitalCurrency',
+      component: () => import('../views/DigitalCurrencyPage.vue'),
     }
   ],
 })
