@@ -1,85 +1,75 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
+// OA管理系统根组件
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
-    </div>
-  </header>
-
-  <RouterView />
+  <div id="app">
+    <router-view />
+  </div>
 </template>
 
-<style scoped>
-header {
-  line-height: 1.5;
-  max-height: 100vh;
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+html, body, #app {
+  height: 100%;
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Source Han Sans CN', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
+#app {
+  background-color: #f0f2f5;
 }
 
-nav a.router-link-exact-active {
-  color: var(--color-text);
+/* 全局滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
 }
 
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
 }
 
-nav a:first-of-type {
-  border: 0;
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
+/* Element Plus 全局样式调整 */
+.el-button {
+  font-weight: 500;
+}
 
-  .logo {
-    margin: 0 2rem 0 0;
-  }
+.el-card {
+  border: 1px solid #ebeef5;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+}
 
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
+.el-table {
+  border-radius: 8px;
+}
 
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
+.el-pagination {
+  justify-content: center;
+}
 
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
+/* 表单样式 */
+.el-form-item__label {
+  font-weight: 500;
+  color: #333;
+}
+
+/* 加载状态 */
+.el-loading-mask {
+  background-color: rgba(255, 255, 255, 0.8);
 }
 </style>

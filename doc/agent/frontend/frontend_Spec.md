@@ -1,300 +1,723 @@
-# 前端设计修改规范方案文档
+# OA管理系统前端开发规范
 
-## 1. 项目概述
+## 概述
 
-数字惠农APP及OA后台管理系统前端开发规范，基于HTML + Tailwind CSS + FontAwesome技术栈，实现现代化、响应式的用户界面。
+本文档定义了数字惠农OA管理系统前端开发的技术规范、代码标准和最佳实践，确保代码的一致性、可维护性和高质量。
 
-### 1.1 项目结构
-- **用户端 (frontend/users/)**: 面向农户的移动优先Web应用
-- **管理端 (frontend/admin/)**: 面向审批员的后台管理系统
+## 技术架构
 
-### 1.2 技术栈
-- **基础**: HTML5, CSS3, 原生JavaScript (ES6+)
-- **样式框架**: Tailwind CSS v3.3.0
-- **图标**: FontAwesome v6.4.0
-- **字体**: 系统字体 + 思源黑体 (备选)
+### 核心技术栈
+- **框架**: Vue 3 (Composition API)
+- **构建工具**: Vite 4+
+- **语言**: TypeScript 5+
+- **UI库**: Element Plus 2.4+
+- **路由**: Vue Router 4+
+- **状态管理**: Pinia 2+
+- **HTTP客户端**: Axios 1.6+
+- **工具库**: Day.js、lodash-es
 
-## 2. 设计原则
+### 项目结构规范
 
-### 2.1 用户体验原则
-- **简洁易用**: 农户用户操作门槛低，界面简洁直观
-- **移动优先**: 用户端优先考虑手机端体验
-- **可访问性**: 遵循WCAG 2.1 AA标准
-- **性能优化**: 适配农村网络环境，快速加载
-
-### 2.2 设计一致性
-- **色彩体系**: 绿色主色调体现农业特色
-- **字体规范**: 统一字体大小和行距
-- **组件复用**: 标准化按钮、表单、卡片等组件
-- **响应式设计**: 适配手机、平板、桌面端
-
-## 3. 功能架构
-
-### 3.1 用户端核心功能
 ```
-用户端 (frontend/users/)
-├── 首页模块
-│   ├── 政策公告展示
-│   ├── 服务入口导航
-│   └── 快捷操作
-├── 用户账户模块
-│   ├── 注册/登录
-│   ├── 个人信息管理
-│   └── 我的页面
-├── 惠农贷模块
-│   ├── 产品浏览
-│   ├── 贷款申请
-│   └── 进度查询
-├── 农机租赁模块
-│   ├── 农机浏览
-│   ├── 租赁申请
-│   └── 订单管理
-└── 辅助功能模块
-    ├── 消息中心
-    ├── 帮助客服
-    └── 设置页面
+src/
+├── api/                    # API接口层
+│   ├── index.ts           # Axios配置和拦截器
+│   ├── admin.ts           # 管理系统API
+│   └── types.ts           # API相关类型定义
+├── assets/                # 静态资源
+│   ├── fonts/            # 字体文件
+│   ├── images/           # 图片资源
+│   └── styles/           # 全局样式
+├── components/            # 通用组件
+│   ├── common/           # 基础组件
+│   └── business/         # 业务组件
+├── composables/           # 组合式函数
+├── directives/            # 自定义指令
+├── hooks/                 # 可复用逻辑钩子
+├── router/                # 路由配置
+├── stores/                # 状态管理
+├── types/                 # TypeScript类型定义
+├── utils/                 # 工具函数
+├── views/                 # 页面组件
+├── App.vue               # 根组件
+└── main.ts               # 应用入口
 ```
 
-### 3.2 管理端核心功能
+## 代码规范
+
+### 命名规范
+
+#### 文件命名
+- **组件文件**: PascalCase，如 `UserList.vue`
+- **页面文件**: PascalCase + View后缀，如 `DashboardView.vue`
+- **工具文件**: camelCase，如 `formatUtils.ts`
+- **常量文件**: UPPER_SNAKE_CASE，如 `API_CONSTANTS.ts`
+
+#### 变量命名
+```typescript
+// 常量 - UPPER_SNAKE_CASE
+const API_BASE_URL = 'http://localhost:8080/api/v1'
+const MAX_FILE_SIZE = 5 * 1024 * 1024
+
+// 变量和函数 - camelCase
+const userName = ref('')
+const isLoading = ref(false)
+
+// 组件名 - PascalCase
+const UserProfile = defineComponent({})
+
+// 类型定义 - PascalCase
+interface UserInfo {
+  id: string
+  name: string
+}
 ```
-管理端 (frontend/admin/)
-├── 登录模块
-├── 工作台首页
-├── 智能审批模块
-│   ├── 审批看板
-│   ├── 审批详情
-│   └── 人工复核
-├── 系统管理模块
-│   ├── 用户权限管理
-│   ├── 系统配置
-│   └── 操作日志
-└── 数据报表模块
-    ├── 业务统计
-    └── 用户分析
+
+### TypeScript规范
+
+#### 类型定义
+```typescript
+// 接口定义
+interface AdminUser {
+  admin_user_id: string
+  username: string
+  role: 'ADMIN' | '审批员'
+  display_name: string
+  email: string
+  status: number
+  created_at: string
+  updated_at: string
+}
+
+// 类型别名
+type UserRole = 'ADMIN' | '审批员'
+type LoadingState = 'idle' | 'loading' | 'success' | 'error'
+
+// 枚举
+enum ApplicationStatus {
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected'
+}
 ```
 
-## 4. API集成规范
+#### 函数签名
+```typescript
+// API函数类型定义
+const getApplicationDetail = (
+  applicationId: string
+): Promise<ApplicationDetail> => {
+  return api.get(`/admin/loans/applications/${applicationId}`)
+}
 
-### 4.1 认证机制
-- **用户端**: Bearer Token认证
-- **管理端**: Admin Bearer Token认证
-- **Token存储**: localStorage (考虑安全性)
+// 组件props类型
+interface Props {
+  title: string
+  data: ApplicationDetail[]
+  loading?: boolean
+  onRefresh?: () => void
+}
+```
 
-### 4.2 请求规范
-```javascript
-// 统一API请求封装
-const apiRequest = async (url, options = {}) => {
-  const token = localStorage.getItem('authToken');
-  const config = {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-      ...options.headers
-    },
-    ...options
-  };
-  
+### Vue组件规范
+
+#### Composition API使用
+```typescript
+<script setup lang="ts">
+import { ref, reactive, computed, onMounted } from 'vue'
+
+// 响应式数据
+const loading = ref(false)
+const formData = reactive({
+  username: '',
+  password: ''
+})
+
+// 计算属性
+const isFormValid = computed(() => {
+  return formData.username.length > 0 && formData.password.length > 0
+})
+
+// 方法
+const handleSubmit = async () => {
+  loading.value = true
   try {
-    const response = await fetch(`/api/v1${url}`, config);
-    const data = await response.json();
-    
-    if (data.code !== 0) {
-      throw new Error(data.message || '请求失败');
-    }
-    
-    return data;
+    await submitForm(formData)
   } catch (error) {
-    console.error('API请求错误:', error);
-    throw error;
+    console.error('提交失败:', error)
+  } finally {
+    loading.value = false
   }
-};
+}
+
+// 生命周期
+onMounted(() => {
+  initializeData()
+})
+</script>
 ```
 
-### 4.3 错误处理
-- **网络错误**: 显示友好提示，允许重试
-- **业务错误**: 根据错误码显示具体错误信息
-- **认证失败**: 自动跳转登录页面
-
-## 5. 页面结构规范
-
-### 5.1 用户端页面结构
-```html
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>数字惠农APP</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.0/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body class="bg-gray-50">
-    <!-- 顶部导航 -->
-    <header class="bg-green-600 text-white"></header>
-    
-    <!-- 主要内容 -->
-    <main class="container mx-auto px-4 py-6"></main>
-    
-    <!-- 底部导航 -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t"></nav>
-    
-    <script src="assets/js/common.js"></script>
-    <script src="assets/js/[页面名称].js"></script>
-</body>
-</html>
-```
-
-### 5.2 管理端页面结构
-```html
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>数字惠农OA后台</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.0/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body class="bg-gray-100">
-    <!-- 侧边栏 -->
-    <aside class="fixed left-0 top-0 h-full w-64 bg-gray-800 text-white"></aside>
-    
-    <!-- 主内容区 -->
-    <div class="ml-64">
-        <!-- 顶部栏 -->
-        <header class="bg-white border-b px-6 py-4"></header>
-        
-        <!-- 页面内容 -->
-        <main class="p-6"></main>
+#### 模板规范
+```vue
+<template>
+  <div class="user-management">
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <h2 class="page-title">用户管理</h2>
+      <div class="header-actions">
+        <el-button type="primary" @click="handleAdd">
+          <el-icon><Plus /></el-icon>
+          添加用户
+        </el-button>
+      </div>
     </div>
+
+    <!-- 内容区域 -->
+    <el-card class="content-card" shadow="never">
+      <el-table :data="users" v-loading="loading">
+        <el-table-column prop="username" label="用户名" />
+        <el-table-column prop="email" label="邮箱" />
+        <el-table-column label="操作" width="200">
+          <template #default="{ row }">
+            <el-button size="small" @click="handleEdit(row)">
+              编辑
+            </el-button>
+            <el-button 
+              size="small" 
+              type="danger" 
+              @click="handleDelete(row)"
+            >
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+  </div>
+</template>
+```
+
+#### 样式规范
+```vue
+<style scoped>
+.user-management {
+  padding: 0;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  margin: 0;
+  color: #333;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.content-card {
+  border-radius: 8px;
+}
+
+/* 深度选择器使用 :deep() */
+:deep(.el-table__header) {
+  background-color: #f8f9fa;
+}
+</style>
+```
+
+### API集成规范
+
+#### 接口定义
+```typescript
+// api/admin.ts
+export const getUsers = (params: {
+  page?: number
+  limit?: number
+  role?: string
+}): Promise<PaginationResponse<AdminUser>> => {
+  return api.get('/admin/users', { params })
+}
+
+export const createUser = (data: {
+  username: string
+  password: string
+  role: string
+  display_name: string
+  email: string
+}): Promise<AdminUser> => {
+  return api.post('/admin/users', data)
+}
+```
+
+#### 错误处理
+```typescript
+// api/index.ts - 响应拦截器
+api.interceptors.response.use(
+  (response) => {
+    const { code, message, data } = response.data
+    if (code === 0) {
+      return data
+    } else {
+      ElMessage.error(message || '请求失败')
+      return Promise.reject(new Error(message))
+    }
+  },
+  (error) => {
+    if (error.response?.status === 401) {
+      ElMessage.error('登录已过期，请重新登录')
+      router.push('/login')
+    } else if (error.response?.status === 403) {
+      ElMessage.error('没有权限访问该资源')
+    } else {
+      ElMessage.error(error.message || '网络错误')
+    }
+    return Promise.reject(error)
+  }
+)
+```
+
+### 状态管理规范
+
+#### Pinia Store定义
+```typescript
+// stores/auth.ts
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import type { AdminUser, LoginResponse } from '@/types'
+
+export const useAuthStore = defineStore('auth', () => {
+  // State
+  const token = ref<string>(localStorage.getItem('admin_token') || '')
+  const user = ref<AdminUser | null>(null)
+
+  // Getters
+  const isLoggedIn = computed(() => !!token.value)
+  const userRole = computed(() => user.value?.role)
+
+  // Actions
+  const login = async (credentials: LoginRequest) => {
+    const response = await adminLogin(credentials)
+    token.value = response.token
+    user.value = response.user
+    localStorage.setItem('admin_token', response.token)
+  }
+
+  const logout = () => {
+    token.value = ''
+    user.value = null
+    localStorage.removeItem('admin_token')
+  }
+
+  const hasPermission = (permission: string) => {
+    if (!user.value) return false
+    // 权限检查逻辑
+    return true
+  }
+
+  return {
+    token,
+    user,
+    isLoggedIn,
+    userRole,
+    login,
+    logout,
+    hasPermission
+  }
+})
+```
+
+### 路由配置规范
+
+#### 路由定义
+```typescript
+// router/index.ts
+const routes = [
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/views/LoginView.vue'),
+    meta: { 
+      requiresAuth: false,
+      title: '登录'
+    }
+  },
+  {
+    path: '/',
+    name: 'layout',
+    component: () => import('@/views/LayoutView.vue'),
+    meta: { requiresAuth: true },
+    redirect: '/dashboard',
+    children: [
+      {
+        path: '/dashboard',
+        name: 'dashboard',
+        component: () => import('@/views/DashboardView.vue'),
+        meta: { 
+          requiresAuth: true,
+          title: '工作台',
+          permission: 'dashboard:view'
+        }
+      }
+    ]
+  }
+]
+```
+
+#### 路由守卫
+```typescript
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore()
+  
+  // 认证检查
+  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
+    next('/login')
+    return
+  }
+  
+  // 权限检查
+  if (to.meta.permission && !authStore.hasPermission(to.meta.permission)) {
+    next('/403')
+    return
+  }
+  
+  next()
+})
+```
+
+## 组件开发规范
+
+### 组件设计原则
+1. **单一职责**: 每个组件只负责一个功能
+2. **可复用性**: 通过props和插槽实现复用
+3. **可组合性**: 组件可以组合使用
+4. **可测试性**: 组件逻辑清晰，易于测试
+
+### 通用组件示例
+```vue
+<!-- components/common/DataTable.vue -->
+<template>
+  <div class="data-table">
+    <el-table :data="data" v-loading="loading" v-bind="$attrs">
+      <slot></slot>
+    </el-table>
     
-    <script src="assets/js/admin-common.js"></script>
-    <script src="assets/js/[页面名称].js"></script>
-</body>
-</html>
-```
-
-## 6. 组件规范
-
-### 6.1 按钮组件
-```html
-<!-- 主要按钮 -->
-<button class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200">
-    确认
-</button>
-
-<!-- 次要按钮 -->
-<button class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors duration-200">
-    取消
-</button>
-
-<!-- 危险按钮 -->
-<button class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200">
-    删除
-</button>
-```
-
-### 6.2 表单组件
-```html
-<!-- 输入框 -->
-<div class="mb-4">
-    <label class="block text-gray-700 text-sm font-medium mb-2" for="field">
-        字段名称 <span class="text-red-500">*</span>
-    </label>
-    <input class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" 
-           type="text" id="field" name="field" required>
-    <p class="text-red-500 text-xs mt-1 hidden" id="field-error">错误提示信息</p>
-</div>
-
-<!-- 选择框 -->
-<div class="mb-4">
-    <label class="block text-gray-700 text-sm font-medium mb-2" for="select">
-        选择项目
-    </label>
-    <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
-        <option value="">请选择</option>
-        <option value="1">选项1</option>
-    </select>
-</div>
-```
-
-### 6.3 卡片组件
-```html
-<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-    <h3 class="text-lg font-semibold text-gray-900 mb-4">卡片标题</h3>
-    <div class="text-gray-600">
-        卡片内容
+    <div v-if="showPagination" class="pagination-wrapper">
+      <el-pagination
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :total="total"
+        :page-sizes="pageSizes"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
     </div>
-</div>
+  </div>
+</template>
+
+<script setup lang="ts">
+interface Props {
+  data: any[]
+  loading?: boolean
+  showPagination?: boolean
+  total?: number
+  pageSizes?: number[]
+}
+
+interface Emits {
+  (e: 'page-change', page: number, size: number): void
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  loading: false,
+  showPagination: true,
+  total: 0,
+  pageSizes: () => [10, 20, 50, 100]
+})
+
+const emit = defineEmits<Emits>()
+
+const currentPage = ref(1)
+const pageSize = ref(20)
+
+const handleSizeChange = () => {
+  emit('page-change', currentPage.value, pageSize.value)
+}
+
+const handleCurrentChange = () => {
+  emit('page-change', currentPage.value, pageSize.value)
+}
+</script>
 ```
 
-## 7. 响应式设计规范
+## 性能优化规范
 
-### 7.1 断点定义
-- **sm**: 640px+ (大屏手机)
-- **md**: 768px+ (平板)
-- **lg**: 1024px+ (桌面)
-- **xl**: 1280px+ (大屏桌面)
+### 懒加载
+```typescript
+// 路由懒加载
+const Dashboard = () => import('@/views/DashboardView.vue')
 
-### 7.2 布局适配
-```html
-<!-- 响应式网格 -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    <!-- 卡片内容 -->
-</div>
-
-<!-- 响应式容器 -->
-<div class="container mx-auto px-4 sm:px-6 lg:px-8">
-    <!-- 页面内容 -->
-</div>
+// 组件懒加载
+const AsyncComponent = defineAsyncComponent(() => 
+  import('@/components/HeavyComponent.vue')
+)
 ```
 
-## 8. 性能优化规范
+### 防抖和节流
+```typescript
+import { debounce, throttle } from 'lodash-es'
 
-### 8.1 资源加载
-- **CDN使用**: Tailwind CSS和FontAwesome使用CDN
-- **图片优化**: 使用WebP格式，设置合理的尺寸
-- **懒加载**: 非首屏图片使用懒加载
+// 搜索防抖
+const handleSearch = debounce((keyword: string) => {
+  searchUsers(keyword)
+}, 300)
 
-### 8.2 缓存策略
-- **静态资源**: 设置长期缓存
-- **API数据**: 合理使用localStorage缓存
-- **图片资源**: 利用浏览器缓存
+// 滚动节流
+const handleScroll = throttle(() => {
+  updateScrollPosition()
+}, 100)
+```
 
-## 9. 安全规范
+### 虚拟滚动
+```vue
+<template>
+  <el-virtual-list
+    :data="largeDataList"
+    :height="400"
+    :item-size="50"
+  >
+    <template #default="{ item }">
+      <div class="list-item">{{ item.name }}</div>
+    </template>
+  </el-virtual-list>
+</template>
+```
 
-### 9.1 输入验证
-- **前端验证**: 所有表单输入进行客户端验证
-- **XSS防护**: 动态内容转义处理
-- **CSRF保护**: 表单提交包含CSRF Token
+## 错误处理规范
 
-### 9.2 数据保护
-- **敏感信息**: 不在前端存储敏感数据
-- **Token管理**: 合理设置Token过期时间
-- **HTTPS**: 生产环境强制使用HTTPS
+### 全局错误处理
+```typescript
+// main.ts
+app.config.errorHandler = (err, vm, info) => {
+  console.error('Vue错误:', err)
+  console.error('错误信息:', info)
+  // 发送错误报告
+}
 
-## 10. 测试规范
+// 捕获Promise错误
+window.addEventListener('unhandledrejection', event => {
+  console.error('未处理的Promise拒绝:', event.reason)
+  event.preventDefault()
+})
+```
 
-### 10.1 功能测试
-- **页面加载**: 确保所有页面正常加载
-- **表单提交**: 验证表单数据提交流程
-- **响应式**: 测试不同设备尺寸下的显示效果
+### 组件错误边界
+```vue
+<template>
+  <div>
+    <div v-if="error" class="error-boundary">
+      <h3>抱歉，出现了错误</h3>
+      <p>{{ error.message }}</p>
+      <el-button @click="retry">重试</el-button>
+    </div>
+    <slot v-else></slot>
+  </div>
+</template>
 
-### 10.2 兼容性测试
-- **浏览器**: Chrome、Firefox、Safari、Edge
-- **移动端**: iOS Safari、Android Chrome
-- **网络环境**: 3G、4G、WiFi环境测试
+<script setup lang="ts">
+const error = ref<Error | null>(null)
 
-## 11. 部署规范
+const retry = () => {
+  error.value = null
+  // 重新加载组件
+}
 
-### 11.1 构建流程
-- **文件压缩**: HTML、CSS、JS文件压缩
-- **图片优化**: 自动压缩和格式转换
-- **版本控制**: 静态资源版本号管理
+onErrorCaptured((err) => {
+  error.value = err
+  return false
+})
+</script>
+```
 
-### 11.2 发布检查
-- **功能验证**: 核心功能流程测试
-- **性能检查**: 页面加载时间检测
-- **安全扫描**: 前端安全漏洞扫描
+## 测试规范
 
-这个规范文档将指导整个前端开发过程，确保项目的质量和一致性。 
+### 单元测试
+```typescript
+// tests/components/UserList.test.ts
+import { mount } from '@vue/test-utils'
+import { describe, it, expect } from 'vitest'
+import UserList from '@/components/UserList.vue'
+
+describe('UserList', () => {
+  it('renders user list correctly', () => {
+    const users = [
+      { id: '1', name: 'John Doe', email: 'john@example.com' }
+    ]
+    
+    const wrapper = mount(UserList, {
+      props: { users }
+    })
+    
+    expect(wrapper.text()).toContain('John Doe')
+    expect(wrapper.text()).toContain('john@example.com')
+  })
+  
+  it('emits edit event when edit button clicked', async () => {
+    const wrapper = mount(UserList)
+    await wrapper.find('.edit-button').trigger('click')
+    
+    expect(wrapper.emitted()).toHaveProperty('edit')
+  })
+})
+```
+
+### E2E测试
+```typescript
+// tests/e2e/login.spec.ts
+import { test, expect } from '@playwright/test'
+
+test('user can login successfully', async ({ page }) => {
+  await page.goto('/login')
+  
+  await page.fill('[data-testid="username"]', 'admin')
+  await page.fill('[data-testid="password"]', 'admin123')
+  await page.click('[data-testid="login-button"]')
+  
+  await expect(page).toHaveURL('/dashboard')
+  await expect(page.locator('h2')).toContainText('工作台')
+})
+```
+
+## 构建和部署规范
+
+### 环境配置
+```typescript
+// vite.config.ts
+export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['vue', 'vue-router', 'pinia'],
+          element: ['element-plus'],
+          utils: ['axios', 'dayjs', 'lodash-es']
+        }
+      }
+    }
+  },
+  optimizeDeps: {
+    include: ['element-plus/es/locale/lang/zh-cn']
+  }
+})
+```
+
+### 代码质量检查
+```json
+// package.json
+{
+  "scripts": {
+    "lint": "eslint src --ext .vue,.js,.ts --fix",
+    "type-check": "vue-tsc --noEmit",
+    "test": "vitest",
+    "test:e2e": "playwright test"
+  }
+}
+```
+
+## 安全规范
+
+### XSS防护
+```typescript
+// 使用v-html时进行内容清理
+import DOMPurify from 'dompurify'
+
+const sanitizeHtml = (dirty: string) => {
+  return DOMPurify.sanitize(dirty)
+}
+```
+
+### CSRF防护
+```typescript
+// api/index.ts
+api.defaults.xsrfCookieName = 'XSRF-TOKEN'
+api.defaults.xsrfHeaderName = 'X-XSRF-TOKEN'
+```
+
+### 敏感信息处理
+```typescript
+// 敏感信息脱敏
+const maskSensitiveInfo = (info: string, start = 3, end = 4) => {
+  if (info.length <= start + end) return info
+  return info.slice(0, start) + '*'.repeat(info.length - start - end) + info.slice(-end)
+}
+
+// 身份证号脱敏
+const maskedIdCard = maskSensitiveInfo(idCard, 4, 4)
+```
+
+## 监控和日志规范
+
+### 性能监控
+```typescript
+// utils/performance.ts
+export const trackPageLoad = (pageName: string) => {
+  const loadTime = performance.now()
+  console.log(`页面 ${pageName} 加载时间: ${loadTime}ms`)
+}
+
+export const trackUserAction = (action: string, data?: any) => {
+  console.log(`用户操作: ${action}`, data)
+}
+```
+
+### 错误日志
+```typescript
+// utils/logger.ts
+export const logger = {
+  error: (message: string, error?: Error) => {
+    console.error(`[ERROR] ${message}`, error)
+    // 发送到日志服务
+  },
+  warn: (message: string) => {
+    console.warn(`[WARN] ${message}`)
+  },
+  info: (message: string) => {
+    console.info(`[INFO] ${message}`)
+  }
+}
+```
+
+## 版本管理和发布规范
+
+### Git提交规范
+```
+feat: 新功能
+fix: 修复bug
+docs: 文档更新
+style: 代码格式调整
+refactor: 代码重构
+test: 测试相关
+chore: 构建工具或依赖库的更新
+```
+
+### 版本发布流程
+1. 更新版本号 (package.json)
+2. 更新 CHANGELOG.md
+3. 创建Git标签
+4. 执行构建和测试
+5. 部署到生产环境
+
+## 总结
+
+本规范文档涵盖了OA管理系统前端开发的各个方面，包括代码规范、组件开发、性能优化、测试、安全等。遵循这些规范可以确保代码质量，提高开发效率，降低维护成本。
+
+开发团队应该定期审查和更新这些规范，以适应技术发展和项目需求的变化。 
