@@ -124,6 +124,11 @@ func (d *Data) AutoMigrate() error {
 		&AIModelConfig{},
 		&ExternalDataQuery{},
 		&AIAgentLog{},
+		// 农机租赁审批相关表
+		&MachineryLeasingApplication{},
+		&MachineryLeasingApprovalHistory{},
+		&LessorQualification{},
+		&MachineryLeasingAIResult{},
 	)
 }
 

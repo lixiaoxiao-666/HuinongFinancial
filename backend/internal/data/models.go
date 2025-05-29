@@ -276,7 +276,97 @@ type AIAgentLog struct {
 	CreatedAt     time.Time       `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"createdAt"`
 }
 
-// 表名映射
+// MachineryLeasingApplication 农机租赁审批申请表
+type MachineryLeasingApplication struct {
+	ID                 uint       `gorm:"primarykey;autoIncrement" json:"id"`
+	ApplicationID      string     `gorm:"type:varchar(64);uniqueIndex;not null" json:"applicationId"`
+	LesseeUserID       string     `gorm:"type:varchar(64);not null;index" json:"lesseeUserId"`
+	LessorUserID       string     `gorm:"type:varchar(64);not null;index" json:"lessorUserId"`
+	MachineryID        string     `gorm:"type:varchar(64);not null;index" json:"machineryId"`
+	RequestedStartDate time.Time  `gorm:"type:date;not null" json:"requestedStartDate"`
+	RequestedEndDate   time.Time  `gorm:"type:date;not null" json:"requestedEndDate"`
+	RentalDays         int        `gorm:"type:int;not null" json:"rentalDays"`
+	TotalAmount        float64    `gorm:"type:decimal(10,2);not null" json:"totalAmount"`
+	DepositAmount      *float64   `gorm:"type:decimal(10,2)" json:"depositAmount"`
+	UsagePurpose       string     `gorm:"type:varchar(500)" json:"usagePurpose"`
+	LesseeNotes        string     `gorm:"type:text" json:"lesseeNotes"`
+	ApplicationStatus  string     `gorm:"type:varchar(50);not null;default:'PENDING_REVIEW';index" json:"applicationStatus"`
+	RiskLevel          string     `gorm:"type:varchar(20)" json:"riskLevel"`
+	AIRiskScore        *float64   `gorm:"type:decimal(5,4)" json:"aiRiskScore"`
+	AISuggestion       string     `gorm:"type:text" json:"aiSuggestion"`
+	ApprovalResult     string     `gorm:"type:varchar(50)" json:"approvalResult"`
+	ApprovalComments   string     `gorm:"type:text" json:"approvalComments"`
+	ApprovedBy         string     `gorm:"type:varchar(64)" json:"approvedBy"`
+	ApprovedAt         *time.Time `gorm:"type:datetime(3)" json:"approvedAt"`
+	SubmittedAt        time.Time  `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"submittedAt"`
+	CreatedAt          time.Time  `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"createdAt"`
+	UpdatedAt          time.Time  `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)" json:"updatedAt"`
+}
+
+// MachineryLeasingApprovalHistory 农机租赁审批历史记录表
+type MachineryLeasingApprovalHistory struct {
+	ID            uint      `gorm:"primarykey;autoIncrement" json:"id"`
+	ApplicationID string    `gorm:"type:varchar(64);not null;index" json:"applicationId"`
+	StatusFrom    string    `gorm:"type:varchar(50)" json:"statusFrom"`
+	StatusTo      string    `gorm:"type:varchar(50);not null" json:"statusTo"`
+	OperatorType  string    `gorm:"type:varchar(20);not null" json:"operatorType"`
+	OperatorID    string    `gorm:"type:varchar(64)" json:"operatorId"`
+	Comments      string    `gorm:"type:text" json:"comments"`
+	OccurredAt    time.Time `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"occurredAt"`
+}
+
+// LessorQualification 农机主资质审核表
+type LessorQualification struct {
+	ID                     uint       `gorm:"primarykey;autoIncrement" json:"id"`
+	UserID                 string     `gorm:"type:varchar(64);uniqueIndex;not null" json:"userId"`
+	RealName               string     `gorm:"type:varchar(100);not null" json:"realName"`
+	IDCardNumber           string     `gorm:"type:varchar(30);not null" json:"idCardNumber"`
+	Phone                  string     `gorm:"type:varchar(20);not null" json:"phone"`
+	Address                string     `gorm:"type:varchar(255)" json:"address"`
+	BusinessLicenseNumber  string     `gorm:"type:varchar(100)" json:"businessLicenseNumber"`
+	FarmScale              string     `gorm:"type:varchar(100)" json:"farmScale"`
+	VerificationStatus     string     `gorm:"type:varchar(20);not null;default:'PENDING';index" json:"verificationStatus"`
+	CreditRating           string     `gorm:"type:varchar(10)" json:"creditRating"`
+	TotalMachineryCount    int        `gorm:"type:int;not null;default:0" json:"totalMachineryCount"`
+	SuccessfulLeasingCount int        `gorm:"type:int;not null;default:0" json:"successfulLeasingCount"`
+	AverageRating          *float64   `gorm:"type:decimal(3,2)" json:"averageRating"`
+	VerifiedAt             *time.Time `gorm:"type:datetime(3)" json:"verifiedAt"`
+	CreatedAt              time.Time  `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"createdAt"`
+	UpdatedAt              time.Time  `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)" json:"updatedAt"`
+}
+
+// MachineryLeasingAIResult 农机租赁AI分析结果表
+type MachineryLeasingAIResult struct {
+	ID                   uint            `gorm:"primarykey;autoIncrement" json:"id"`
+	ApplicationID        string          `gorm:"type:varchar(64);not null;index" json:"applicationId"`
+	WorkflowExecutionID  string          `gorm:"type:varchar(64);uniqueIndex" json:"workflowExecutionId"`
+	RiskLevel            string          `gorm:"type:varchar(20);not null" json:"riskLevel"`
+	RiskScore            float64         `gorm:"type:decimal(5,4);not null" json:"riskScore"`
+	ConfidenceScore      float64         `gorm:"type:decimal(5,4);not null" json:"confidenceScore"`
+	AnalysisSummary      string          `gorm:"type:text" json:"analysisSummary"`
+	DetailedAnalysis     json.RawMessage `gorm:"type:json" json:"detailedAnalysis"`
+	RiskFactors          json.RawMessage `gorm:"type:json" json:"riskFactors"`
+	Recommendations      json.RawMessage `gorm:"type:json" json:"recommendations"`
+	AIDecision           string          `gorm:"type:varchar(50);not null" json:"aiDecision"`
+	SuggestedDepositRate *float64        `gorm:"type:decimal(5,4)" json:"suggestedDepositRate"`
+	SuggestedConditions  json.RawMessage `gorm:"type:json" json:"suggestedConditions"`
+	NextAction           string          `gorm:"type:varchar(50);not null" json:"nextAction"`
+	AIModelVersion       string          `gorm:"type:varchar(50);not null" json:"aiModelVersion"`
+	ProcessingTimeMs     int             `gorm:"type:int;not null" json:"processingTimeMs"`
+	ProcessedAt          time.Time       `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"processedAt"`
+	CreatedAt            time.Time       `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"createdAt"`
+	UpdatedAt            time.Time       `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)" json:"updatedAt"`
+}
+
+// TableName methods for machinery leasing approval models
+func (MachineryLeasingApplication) TableName() string { return "machinery_leasing_applications" }
+func (MachineryLeasingApprovalHistory) TableName() string {
+	return "machinery_leasing_approval_history"
+}
+func (LessorQualification) TableName() string      { return "lessor_qualifications" }
+func (MachineryLeasingAIResult) TableName() string { return "machinery_leasing_ai_results" }
+
+// TableName methods for existing models
 func (User) TableName() string                   { return "users" }
 func (UserProfile) TableName() string            { return "user_profiles" }
 func (LoanProduct) TableName() string            { return "loan_products" }

@@ -60,12 +60,14 @@ func (r *Router) SetupRoutes() *gin.Engine {
 	loanService := service.NewLoanService(r.data, r.log)
 	adminService := service.NewAdminService(r.data, r.jwtManager, r.log)
 	aiAgentService := service.NewAIAgentService(r.data, r.log)
+	machineryLeasingApprovalService := service.NewMachineryLeasingApprovalService(r.data, r.log)
 
 	// 创建处理器实例
 	userHandler := NewUserHandler(userService, r.log)
 	loanHandler := NewLoanHandler(loanService, r.log)
 	adminHandler := NewAdminHandler(adminService, loanService, r.log)
 	aiAgentHandler := NewAIAgentHandler(aiAgentService, r.log)
+	machineryLeasingApprovalHandler := NewMachineryLeasingApprovalHandler(machineryLeasingApprovalService, r.log)
 
 	// 创建认证中间件
 	authMiddleware := AuthMiddleware(r.jwtManager)
@@ -78,6 +80,7 @@ func (r *Router) SetupRoutes() *gin.Engine {
 	r.registerFileRoutes(v1, authMiddleware)
 	r.registerAdminRoutes(v1, adminHandler, adminAuthMiddleware)
 	r.registerAIAgentRoutes(v1, aiAgentHandler, aiAgentAuthMiddleware)
+	r.registerMachineryLeasingApprovalRoutes(v1, machineryLeasingApprovalHandler, authMiddleware)
 
 	return engine
 }
@@ -112,6 +115,12 @@ func (r *Router) registerAdminRoutes(v1 *gin.RouterGroup, adminHandler *AdminHan
 // registerAIAgentRoutes 注册AI智能体路由
 func (r *Router) registerAIAgentRoutes(v1 *gin.RouterGroup, aiAgentHandler *AIAgentHandler, aiAgentAuthMiddleware gin.HandlerFunc) {
 	RegisterAIAgentRoutes(v1, aiAgentHandler, aiAgentAuthMiddleware)
+}
+
+// registerMachineryLeasingApprovalRoutes 注册农机租赁审批路由
+func (r *Router) registerMachineryLeasingApprovalRoutes(v1 *gin.RouterGroup, handler *MachineryLeasingApprovalHandler, authMiddleware gin.HandlerFunc) {
+	leasingApprovals := v1.Group("/machinery-leasing-approvals")
+	RegisterMachineryLeasingApprovalRoutes(leasingApprovals, handler, authMiddleware)
 }
 
 // handleFileUpload 文件上传处理器（简化实现）

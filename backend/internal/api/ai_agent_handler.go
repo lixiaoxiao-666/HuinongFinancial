@@ -28,7 +28,7 @@ func NewAIAgentHandler(aiAgentService *service.AIAgentService, log *zap.Logger) 
 	}
 }
 
-// GetApplicationInfo 获取申请信息供Dify工作流调用
+// GetApplicationInfo 获取申请信息供Dify工作流调用（支持多种申请类型）
 func (h *AIAgentHandler) GetApplicationInfo(c *gin.Context) {
 	applicationID := c.Param("application_id")
 	if applicationID == "" {
@@ -38,8 +38,8 @@ func (h *AIAgentHandler) GetApplicationInfo(c *gin.Context) {
 
 	h.log.Info("处理获取申请信息请求", zap.String("applicationId", applicationID))
 
-	// 使用带日志记录的方法
-	info, err := h.aiAgentService.GetApplicationInfoWithLog(applicationID, c.Request)
+	// 使用支持多种申请类型的统一方法
+	info, err := h.aiAgentService.GetApplicationInfoWithSupport(applicationID, c.Request)
 	if err != nil {
 		h.log.Error("获取申请信息失败", zap.Error(err), zap.String("applicationId", applicationID))
 		pkg.InternalError(c, err.Error())
@@ -134,7 +134,7 @@ func (h *AIAgentHandler) SubmitAIDecision(c *gin.Context) {
 
 	// 验证决策枚举值
 	validDecisions := []string{"AUTO_APPROVED", "AUTO_REJECTED", "REQUIRE_HUMAN_REVIEW"}
-	if !contains(validDecisions, decision) {
+	if !pkg.Contains(validDecisions, decision) {
 		h.log.Warn("Invalid decision parameter", zap.String("decision", decision))
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    1001,
@@ -146,7 +146,7 @@ func (h *AIAgentHandler) SubmitAIDecision(c *gin.Context) {
 
 	// 验证风险等级枚举值
 	validRiskLevels := []string{"LOW", "MEDIUM", "HIGH"}
-	if riskLevel != "" && !contains(validRiskLevels, riskLevel) {
+	if riskLevel != "" && !pkg.Contains(validRiskLevels, riskLevel) {
 		h.log.Warn("Invalid risk_level parameter", zap.String("risk_level", riskLevel))
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    1001,
@@ -258,8 +258,8 @@ func (h *AIAgentHandler) SubmitAIDecision(c *gin.Context) {
 	// 设置request到context中，以便service层记录日志
 	ctx := context.WithValue(c.Request.Context(), "request", c.Request)
 
-	// 调用服务层处理
-	result, err := h.aiAgentService.SubmitAIDecisionQuery(ctx, request)
+	// 调用统一的AI决策处理方法，支持多种申请类型
+	result, err := h.aiAgentService.SubmitAIDecisionUnified(ctx, applicationID, request)
 	if err != nil {
 		h.log.Error("Failed to submit AI decision", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -277,16 +277,6 @@ func (h *AIAgentHandler) SubmitAIDecision(c *gin.Context) {
 		"message": "AI审批结果已成功处理",
 		"data":    result,
 	})
-}
-
-// 辅助函数：检查字符串是否在数组中
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
 }
 
 // 辅助函数：清理详细分析JSON中的schema信息

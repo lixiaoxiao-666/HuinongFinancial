@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // GenerateUUID 生成UUID
@@ -92,11 +92,21 @@ func GetIntParam(c *gin.Context, paramName string, defaultValue int) int {
 	if paramStr == "" {
 		return defaultValue
 	}
-	
+
 	value, err := strconv.Atoi(paramStr)
 	if err != nil {
 		return defaultValue
 	}
-	
+
 	return value
+}
+
+// Contains 检查切片中是否包含指定的字符串
+func Contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }

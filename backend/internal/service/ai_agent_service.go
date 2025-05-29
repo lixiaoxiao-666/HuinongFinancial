@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"backend/internal/data"
-	"backend/pkg"
-
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+
+	"backend/internal/data"
+	"backend/pkg"
 )
 
 // AIAgentService AI智能体服务
@@ -249,6 +249,84 @@ func (s *AIAgentService) GetApplicationInfoWithLog(applicationID string, req *ht
 // GetApplicationInfo 保持原方法签名用于向后兼容
 func (s *AIAgentService) GetApplicationInfo(applicationID string) (*ApplicationInfo, error) {
 	return s.getApplicationInfoInternal(applicationID)
+}
+
+// GetApplicationInfoWithSupport 支持多种申请类型的统一获取方法
+func (s *AIAgentService) GetApplicationInfoWithSupport(applicationID string, req *http.Request) (interface{}, error) {
+	startTime := time.Now()
+	s.log.Info("获取申请信息（多类型支持）", zap.String("applicationId", applicationID))
+
+	var result interface{}
+	var err error
+
+	// 检查是否为农机租赁申请
+	if s.isLeasingApplication(applicationID) {
+		// 获取农机租赁申请信息
+		var leasingService *MachineryLeasingApprovalService
+		if s.data != nil {
+			leasingService = NewMachineryLeasingApprovalService(s.data, s.log)
+		}
+
+		if leasingService != nil {
+			leasingInfo, leasingErr := leasingService.GetLeasingApplicationInfoWithLog(applicationID, req)
+			if leasingErr == nil {
+				result = leasingInfo
+			} else {
+				err = leasingErr
+			}
+		} else {
+			err = fmt.Errorf("农机租赁服务不可用")
+		}
+	} else {
+		// 获取贷款申请信息
+		loanInfo, loanErr := s.getApplicationInfoInternal(applicationID)
+		if loanErr == nil {
+			result = loanInfo
+		} else {
+			err = loanErr
+		}
+	}
+
+	// 计算处理时间
+	duration := int(time.Since(startTime).Milliseconds())
+
+	// 记录操作日志
+	status := "SUCCESS"
+	errorMessage := ""
+	if err != nil {
+		status = "ERROR"
+		errorMessage = err.Error()
+	}
+
+	applicationType := "LOAN_APPLICATION"
+	if s.isLeasingApplication(applicationID) {
+		applicationType = "LEASING_APPLICATION"
+	}
+
+	s.LogAIAgentAction(
+		"GET_APPLICATION_INFO_UNIFIED",
+		"DIFY_WORKFLOW",
+		applicationID,
+		map[string]interface{}{
+			"application_id":   applicationID,
+			"application_type": applicationType,
+		},
+		result,
+		status,
+		errorMessage,
+		duration,
+		req,
+	)
+
+	return result, err
+}
+
+// isLeasingApplication 检查是否为农机租赁申请
+func (s *AIAgentService) isLeasingApplication(applicationID string) bool {
+	// 检查农机租赁申请表
+	var count int64
+	s.data.DB.Model(&data.MachineryLeasingApplication{}).Where("application_id = ?", applicationID).Count(&count)
+	return count > 0
 }
 
 // getApplicationInfoInternal 内部方法，实际的业务逻辑
@@ -743,7 +821,7 @@ func (s *AIAgentService) getExternalDataInternal(userID, dataTypes string) (map[
 	}
 
 	// 模拟征信报告数据
-	if contains(strings.Split(dataTypes, ","), "credit_report") || strings.Contains(dataTypes, "credit") {
+	if pkg.Contains(strings.Split(dataTypes, ","), "credit_report") || strings.Contains(dataTypes, "credit") {
 		result["credit_report"] = map[string]interface{}{
 			"score":           750,
 			"grade":           "优秀",
@@ -754,7 +832,7 @@ func (s *AIAgentService) getExternalDataInternal(userID, dataTypes string) (map[
 	}
 
 	// 模拟银行流水数据
-	if contains(strings.Split(dataTypes, ","), "bank_flow") || strings.Contains(dataTypes, "bank") {
+	if pkg.Contains(strings.Split(dataTypes, ","), "bank_flow") || strings.Contains(dataTypes, "bank") {
 		result["bank_flow"] = map[string]interface{}{
 			"average_monthly_income": 6500,
 			"account_stability":      "稳定",
@@ -766,7 +844,7 @@ func (s *AIAgentService) getExternalDataInternal(userID, dataTypes string) (map[
 	}
 
 	// 模拟黑名单检查
-	if contains(strings.Split(dataTypes, ","), "blacklist_check") || strings.Contains(dataTypes, "blacklist") {
+	if pkg.Contains(strings.Split(dataTypes, ","), "blacklist_check") || strings.Contains(dataTypes, "blacklist") {
 		result["blacklist_check"] = map[string]interface{}{
 			"is_blacklisted": false,
 			"check_time":     time.Now().Format(time.RFC3339),
@@ -774,7 +852,7 @@ func (s *AIAgentService) getExternalDataInternal(userID, dataTypes string) (map[
 	}
 
 	// 模拟政府补贴信息
-	if contains(strings.Split(dataTypes, ","), "government_subsidy") || strings.Contains(dataTypes, "subsidy") {
+	if pkg.Contains(strings.Split(dataTypes, ","), "government_subsidy") || strings.Contains(dataTypes, "subsidy") {
 		result["government_subsidy"] = map[string]interface{}{
 			"received_subsidies": []map[string]interface{}{
 				{"year": 2023, "type": "种粮补贴", "amount": 1200},
@@ -853,6 +931,102 @@ func (s *AIAgentService) UpdateApplicationStatus(applicationID, status, operator
 	return nil
 }
 
+// SubmitAIDecisionUnified 统一的AI决策提交方法，支持贷款和农机租赁
+func (s *AIAgentService) SubmitAIDecisionUnified(ctx context.Context, applicationID string, params *AIDecisionParams) (*AIDecisionResult, error) {
+	startTime := time.Now()
+	s.log.Info("提交AI决策（统一接口）",
+		zap.String("applicationId", applicationID),
+		zap.String("decision", params.Decision))
+
+	var result *AIDecisionResult
+	var err error
+
+	// 检查申请类型并调用相应的处理方法
+	if s.isLeasingApplication(applicationID) {
+		// 处理农机租赁申请
+		var leasingService *MachineryLeasingApprovalService
+		if s.data != nil {
+			leasingService = NewMachineryLeasingApprovalService(s.data, s.log)
+		}
+
+		if leasingService != nil {
+			// 转换参数为农机租赁参数格式
+			leasingParams := &LeasingAIDecisionParams{
+				ApplicationID:       params.ApplicationID,
+				Decision:            params.Decision,
+				RiskScore:           params.RiskScore,
+				ConfidenceScore:     params.ConfidenceScore,
+				SuggestedDeposit:    params.ApprovedAmount, // 在农机租赁中，approved_amount 映射为建议押金
+				SuggestedConditions: params.Conditions,
+				RiskLevel:           params.RiskLevel,
+				AnalysisSummary:     params.AnalysisSummary,
+				DetailedAnalysis:    params.DetailedAnalysis,
+				Recommendations:     params.Recommendations,
+				AIModelVersion:      params.AIModelVersion,
+				WorkflowID:          params.WorkflowID,
+			}
+
+			leasingResult, leasingErr := leasingService.SubmitLeasingAIDecisionQuery(ctx, leasingParams)
+			if leasingErr == nil {
+				result = &AIDecisionResult{
+					ApplicationID: leasingResult.ApplicationID,
+					NewStatus:     leasingResult.NewStatus,
+					NextStep:      leasingResult.NextStep,
+				}
+			} else {
+				err = leasingErr
+			}
+		} else {
+			err = fmt.Errorf("农机租赁服务不可用")
+		}
+	} else {
+		// 处理贷款申请
+		result, err = s.submitAIDecisionQueryInternal(ctx, params)
+	}
+
+	// 计算处理时间
+	duration := int(time.Since(startTime).Milliseconds())
+
+	// 记录操作日志
+	status := "SUCCESS"
+	errorMessage := ""
+	if err != nil {
+		status = "ERROR"
+		errorMessage = err.Error()
+	}
+
+	applicationType := "LOAN_APPLICATION"
+	if s.isLeasingApplication(applicationID) {
+		applicationType = "LEASING_APPLICATION"
+	}
+
+	// 从context中获取request（如果有的话）
+	var req *http.Request
+	if ctx != nil {
+		if r, ok := ctx.Value("request").(*http.Request); ok {
+			req = r
+		}
+	}
+
+	s.LogAIAgentAction(
+		"SUBMIT_AI_DECISION_UNIFIED",
+		"DIFY_WORKFLOW",
+		applicationID,
+		map[string]interface{}{
+			"application_type": applicationType,
+			"decision":         params.Decision,
+			"risk_score":       params.RiskScore,
+		},
+		result,
+		status,
+		errorMessage,
+		duration,
+		req,
+	)
+
+	return result, err
+}
+
 // SubmitAIDecisionQuery 处理查询参数方式的AI决策提交
 func (s *AIAgentService) SubmitAIDecisionQuery(ctx context.Context, params *AIDecisionParams) (*AIDecisionResult, error) {
 	startTime := time.Now()
@@ -910,7 +1084,7 @@ func (s *AIAgentService) submitAIDecisionQueryInternal(ctx context.Context, para
 
 	// 2. 检查申请状态是否允许AI决策
 	allowedStatuses := []string{"SUBMITTED", "AI_TRIGGERED", "AI_REVIEWING", "pending_review"}
-	if !contains(allowedStatuses, application.Status) {
+	if !pkg.Contains(allowedStatuses, application.Status) {
 		return nil, fmt.Errorf("申请状态不允许AI决策: %s", application.Status)
 	}
 
@@ -1040,16 +1214,6 @@ func getNextAction(decision string) string {
 		return action
 	}
 	return "MANUAL_REVIEW"
-}
-
-// 辅助函数：检查字符串是否在切片中
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
 }
 
 // 辅助函数

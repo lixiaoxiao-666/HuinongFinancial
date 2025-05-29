@@ -9,14 +9,24 @@ import (
 	"syscall"
 	"time"
 
+	"go.uber.org/zap"
+
 	"backend/internal/api"
 	"backend/internal/conf"
 	"backend/internal/data"
 	"backend/internal/service"
 	"backend/pkg"
-
-	"go.uber.org/zap"
 )
+
+// timePtr 返回时间指针
+func timePtr(t time.Time) *time.Time {
+	return &t
+}
+
+// float64Ptr 返回float64指针
+func float64Ptr(f float64) *float64 {
+	return &f
+}
 
 func main() {
 	// 加载配置
@@ -524,6 +534,333 @@ func initSampleData(dataLayer *data.Data, logger *zap.Logger) error {
 		Description: "AI审批功能开关",
 	}
 	dataLayer.DB.Save(&aiConfig)
+
+	// === 农机租赁相关模拟数据 ===
+
+	// 1. 创建农机主用户
+	lessorUsers := []data.User{
+		{
+			UserID:       "lessor_001",
+			Phone:        "13900001001",
+			PasswordHash: userPasswordHash,
+			Nickname:     "农机主-李四",
+			Status:       0,
+		},
+		{
+			UserID:       "lessor_002",
+			Phone:        "13900001002",
+			PasswordHash: userPasswordHash,
+			Nickname:     "农机主-王五",
+			Status:       0,
+		},
+		{
+			UserID:       "lessor_003",
+			Phone:        "13900001003",
+			PasswordHash: userPasswordHash,
+			Nickname:     "农机主-赵六",
+			Status:       0,
+		},
+	}
+
+	for _, user := range lessorUsers {
+		if err := dataLayer.DB.Create(&user).Error; err != nil {
+			logger.Warn("创建农机主用户失败", zap.Error(err), zap.String("user_id", user.UserID))
+		}
+	}
+
+	// 2. 创建承租方用户
+	lesseeUsers := []data.User{
+		{
+			UserID:       "lessee_001",
+			Phone:        "13800002001",
+			PasswordHash: userPasswordHash,
+			Nickname:     "承租方-陈七",
+			Status:       0,
+		},
+		{
+			UserID:       "lessee_002",
+			Phone:        "13800002002",
+			PasswordHash: userPasswordHash,
+			Nickname:     "承租方-孙八",
+			Status:       0,
+		},
+	}
+
+	for _, user := range lesseeUsers {
+		if err := dataLayer.DB.Create(&user).Error; err != nil {
+			logger.Warn("创建承租方用户失败", zap.Error(err), zap.String("user_id", user.UserID))
+		}
+	}
+
+	// 3. 创建农机主资质数据
+	lessorQualifications := []data.LessorQualification{
+		{
+			UserID:                 "lessor_001",
+			RealName:               "李四",
+			IDCardNumber:           "370102198501151234",
+			Phone:                  "13900001001",
+			Address:                "山东省济南市历下区农机大户路88号",
+			BusinessLicenseNumber:  "91370102MA3K123456",
+			FarmScale:              "500亩",
+			VerificationStatus:     "VERIFIED",
+			CreditRating:           "AAA",
+			TotalMachineryCount:    8,
+			SuccessfulLeasingCount: 45,
+			AverageRating:          float64Ptr(4.8),
+			VerifiedAt:             timePtr(time.Now().AddDate(0, -2, 0)),
+		},
+		{
+			UserID:                 "lessor_002",
+			RealName:               "王五",
+			IDCardNumber:           "410102198703201567",
+			Phone:                  "13900001002",
+			Address:                "河南省郑州市中原区农业园区北路66号",
+			BusinessLicenseNumber:  "91410102MA45678901",
+			FarmScale:              "300亩",
+			VerificationStatus:     "VERIFIED",
+			CreditRating:           "AA",
+			TotalMachineryCount:    5,
+			SuccessfulLeasingCount: 32,
+			AverageRating:          float64Ptr(4.6),
+			VerifiedAt:             timePtr(time.Now().AddDate(0, -1, -15)),
+		},
+		{
+			UserID:                 "lessor_003",
+			RealName:               "赵六",
+			IDCardNumber:           "130102198909101890",
+			Phone:                  "13900001003",
+			Address:                "河北省石家庄市长安区现代农业示范区18号",
+			BusinessLicenseNumber:  "",
+			FarmScale:              "150亩",
+			VerificationStatus:     "PENDING",
+			CreditRating:           "A",
+			TotalMachineryCount:    3,
+			SuccessfulLeasingCount: 12,
+			AverageRating:          float64Ptr(4.3),
+			VerifiedAt:             nil,
+		},
+	}
+
+	for _, qualification := range lessorQualifications {
+		if err := dataLayer.DB.Create(&qualification).Error; err != nil {
+			logger.Warn("创建农机主资质失败", zap.Error(err), zap.String("user_id", qualification.UserID))
+		}
+	}
+
+	// 4. 创建农机设备数据
+	farmMachinery := []data.FarmMachinery{
+		{
+			MachineryID:  pkg.GenerateMachineryID(),
+			OwnerUserID:  "lessor_001",
+			Type:         "拖拉机",
+			BrandModel:   "约翰迪尔 5080R",
+			Description:  "80马力四驱拖拉机，配备GPS导航，适用于耕地、播种、收割等多种作业",
+			Images:       []byte(`["/images/tractor_001_1.jpg", "/images/tractor_001_2.jpg"]`),
+			DailyRent:    500.00,
+			Deposit:      float64Ptr(8000.00),
+			LocationText: "山东省济南市历下区",
+			LocationGeo:  "36.6512,117.1201",
+			Status:       "AVAILABLE",
+			PublishedAt:  timePtr(time.Now().AddDate(0, 0, -7)),
+		},
+		{
+			MachineryID:  pkg.GenerateMachineryID(),
+			OwnerUserID:  "lessor_001",
+			Type:         "收割机",
+			BrandModel:   "久保田 4LZ-2.5",
+			Description:  "履带式联合收割机，适用于水稻、小麦收割，效率高，损失率低",
+			Images:       []byte(`["/images/harvester_001_1.jpg", "/images/harvester_001_2.jpg"]`),
+			DailyRent:    800.00,
+			Deposit:      float64Ptr(15000.00),
+			LocationText: "山东省济南市历下区",
+			LocationGeo:  "36.6512,117.1201",
+			Status:       "AVAILABLE",
+			PublishedAt:  timePtr(time.Now().AddDate(0, 0, -5)),
+		},
+		{
+			MachineryID:  pkg.GenerateMachineryID(),
+			OwnerUserID:  "lessor_002",
+			Type:         "播种机",
+			BrandModel:   "东方红 2BQX-12",
+			Description:  "气力式精密播种机，12行，适用于玉米、大豆等作物播种",
+			Images:       []byte(`["/images/seeder_001_1.jpg"]`),
+			DailyRent:    350.00,
+			Deposit:      float64Ptr(5000.00),
+			LocationText: "河南省郑州市中原区",
+			LocationGeo:  "34.7578,113.6486",
+			Status:       "AVAILABLE",
+			PublishedAt:  timePtr(time.Now().AddDate(0, 0, -3)),
+		},
+		{
+			MachineryID:  pkg.GenerateMachineryID(),
+			OwnerUserID:  "lessor_002",
+			Type:         "旋耕机",
+			BrandModel:   "常发 1GQN-200",
+			Description:  "重型旋耕机，2米工作幅宽，适用于深耕整地作业",
+			Images:       []byte(`["/images/rotavator_001_1.jpg", "/images/rotavator_001_2.jpg"]`),
+			DailyRent:    280.00,
+			Deposit:      float64Ptr(3500.00),
+			LocationText: "河南省郑州市中原区",
+			LocationGeo:  "34.7578,113.6486",
+			Status:       "RENTED",
+			PublishedAt:  timePtr(time.Now().AddDate(0, 0, -10)),
+		},
+		{
+			MachineryID:  pkg.GenerateMachineryID(),
+			OwnerUserID:  "lessor_003",
+			Type:         "植保无人机",
+			BrandModel:   "大疆 T30",
+			Description:  "农用植保无人机，30升载药量，高效精准喷洒",
+			Images:       []byte(`["/images/drone_001_1.jpg"]`),
+			DailyRent:    450.00,
+			Deposit:      float64Ptr(12000.00),
+			LocationText: "河北省石家庄市长安区",
+			LocationGeo:  "38.0467,114.5143",
+			Status:       "AVAILABLE",
+			PublishedAt:  timePtr(time.Now().AddDate(0, 0, -1)),
+		},
+	}
+
+	for _, machinery := range farmMachinery {
+		if err := dataLayer.DB.Create(&machinery).Error; err != nil {
+			logger.Warn("创建农机设备失败", zap.Error(err), zap.String("machinery_id", machinery.MachineryID))
+		}
+	}
+
+	// 5. 创建农机租赁申请数据
+	startDate1 := time.Now().AddDate(0, 0, 7)  // 7天后开始
+	endDate1 := time.Now().AddDate(0, 0, 12)   // 12天后结束
+	startDate2 := time.Now().AddDate(0, 0, 15) // 15天后开始
+	endDate2 := time.Now().AddDate(0, 0, 20)   // 20天后结束
+
+	leasingApplications := []data.MachineryLeasingApplication{
+		{
+			ApplicationID:      pkg.GenerateApplicationID(),
+			LesseeUserID:       "lessee_001",
+			LessorUserID:       "lessor_001",
+			MachineryID:        farmMachinery[0].MachineryID, // 拖拉机
+			RequestedStartDate: startDate1,
+			RequestedEndDate:   endDate1,
+			RentalDays:         5,
+			TotalAmount:        2500.00, // 500 * 5天
+			DepositAmount:      float64Ptr(8000.00),
+			UsagePurpose:       "春季耕地作业",
+			LesseeNotes:        "希望能够提供操作培训，预计作业面积50亩",
+			ApplicationStatus:  "PENDING_REVIEW",
+			SubmittedAt:        time.Now().AddDate(0, 0, -1),
+		},
+		{
+			ApplicationID:      pkg.GenerateApplicationID(),
+			LesseeUserID:       "lessee_002",
+			LessorUserID:       "lessor_001",
+			MachineryID:        farmMachinery[1].MachineryID, // 收割机
+			RequestedStartDate: startDate2,
+			RequestedEndDate:   endDate2,
+			RentalDays:         5,
+			TotalAmount:        4000.00, // 800 * 5天
+			DepositAmount:      float64Ptr(15000.00),
+			UsagePurpose:       "小麦收割作业",
+			LesseeNotes:        "需要租赁期间包含周末，作业时间较紧",
+			ApplicationStatus:  "PENDING_REVIEW",
+			SubmittedAt:        time.Now().AddDate(0, 0, -2),
+		},
+		{
+			ApplicationID:      "ml_test_001", // 固定ID用于AI测试
+			LesseeUserID:       "lessee_001",
+			LessorUserID:       "lessor_002",
+			MachineryID:        farmMachinery[2].MachineryID, // 播种机
+			RequestedStartDate: time.Now().AddDate(0, 0, 3),
+			RequestedEndDate:   time.Now().AddDate(0, 0, 6),
+			RentalDays:         3,
+			TotalAmount:        1050.00, // 350 * 3天
+			DepositAmount:      float64Ptr(5000.00),
+			UsagePurpose:       "玉米播种作业",
+			LesseeNotes:        "需要AI智能审批测试",
+			ApplicationStatus:  "PENDING_REVIEW",
+			SubmittedAt:        time.Now(),
+		},
+	}
+
+	for _, application := range leasingApplications {
+		if err := dataLayer.DB.Create(&application).Error; err != nil {
+			logger.Warn("创建农机租赁申请失败", zap.Error(err), zap.String("application_id", application.ApplicationID))
+		}
+	}
+
+	// 6. 创建承租方用户详情
+	lesseeProfiles := []data.UserProfile{
+		{
+			UserID:           "lessee_001",
+			RealName:         "陈七",
+			IDCardNumber:     "320102199206151234",
+			Address:          "江苏省南京市玄武区农业合作社路28号",
+			Gender:           1,
+			BirthDate:        timePtr(time.Date(1992, 6, 15, 0, 0, 0, 0, time.UTC)),
+			Occupation:       "种植大户",
+			AnnualIncome:     180000.00,
+			CreditAuthAgreed: true,
+		},
+		{
+			UserID:           "lessee_002",
+			RealName:         "孙八",
+			IDCardNumber:     "430102199408201567",
+			Address:          "湖南省长沙市芙蓉区现代农业园区99号",
+			Gender:           1,
+			BirthDate:        timePtr(time.Date(1994, 8, 20, 0, 0, 0, 0, time.UTC)),
+			Occupation:       "农民专业合作社成员",
+			AnnualIncome:     120000.00,
+			CreditAuthAgreed: true,
+		},
+	}
+
+	for _, profile := range lesseeProfiles {
+		if err := dataLayer.DB.Create(&profile).Error; err != nil {
+			logger.Warn("创建承租方用户详情失败", zap.Error(err), zap.String("user_id", profile.UserID))
+		}
+	}
+
+	// 7. 创建农机主用户详情
+	lessorProfiles := []data.UserProfile{
+		{
+			UserID:           "lessor_001",
+			RealName:         "李四",
+			IDCardNumber:     "370102198501151234",
+			Address:          "山东省济南市历下区农机大户路88号",
+			Gender:           1,
+			BirthDate:        timePtr(time.Date(1985, 1, 15, 0, 0, 0, 0, time.UTC)),
+			Occupation:       "农机专业合作社理事长",
+			AnnualIncome:     350000.00,
+			CreditAuthAgreed: true,
+		},
+		{
+			UserID:           "lessor_002",
+			RealName:         "王五",
+			IDCardNumber:     "410102198703201567",
+			Address:          "河南省郑州市中原区农业园区北路66号",
+			Gender:           1,
+			BirthDate:        timePtr(time.Date(1987, 3, 20, 0, 0, 0, 0, time.UTC)),
+			Occupation:       "农机服务公司经理",
+			AnnualIncome:     280000.00,
+			CreditAuthAgreed: true,
+		},
+		{
+			UserID:           "lessor_003",
+			RealName:         "赵六",
+			IDCardNumber:     "130102198909101890",
+			Address:          "河北省石家庄市长安区现代农业示范区18号",
+			Gender:           1,
+			BirthDate:        timePtr(time.Date(1989, 9, 10, 0, 0, 0, 0, time.UTC)),
+			Occupation:       "农机大户",
+			AnnualIncome:     200000.00,
+			CreditAuthAgreed: true,
+		},
+	}
+
+	for _, profile := range lessorProfiles {
+		if err := dataLayer.DB.Create(&profile).Error; err != nil {
+			logger.Warn("创建农机主用户详情失败", zap.Error(err), zap.String("user_id", profile.UserID))
+		}
+	}
 
 	logger.Info("示例数据初始化完成")
 	return nil
