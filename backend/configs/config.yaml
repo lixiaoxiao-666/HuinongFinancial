@@ -1,13 +1,10 @@
-# 数字惠农APP后端服务配置
 app:
-  name: "digital-agriculture-backend"
+  name: "数字惠农后端服务"
   version: "1.0.0"
   env: "development"
-  
-server:
   port: 8080
   mode: "debug"  # debug, release, test
-  
+
 database:
   driver: "mysql"
   host: "10.10.10.10"
@@ -16,46 +13,71 @@ database:
   password: ""
   database: "app"
   charset: "utf8mb4"
-  parseTime: true
-  loc: "Local"
-  maxIdleConns: 10
-  maxOpenConns: 100
-  connMaxLifetime: "1h"
-  
+  max_idle_conns: 10
+  max_open_conns: 100
+  conn_max_lifetime: 3600
+
 redis:
   host: "10.10.10.10"
   port: 6379
   password: ""
-  db: 0
-  poolSize: 10
-  minIdleConns: 5
-  
+  database: 0
+  pool_size: 100
+  min_idle_conns: 10
+
 jwt:
-  secret: "digital-agriculture-jwt-secret-key-2024"
-  expire: "24h"
-  
-log:
-  level: "debug"
-  format: "json"
-  filename: "logs/app.log"
-  maxSize: 100
-  maxAge: 30
-  maxBackups: 3
-  compress: true
-  
+  secret_key: "huinong-jwt-secret-key-ChinaSkills@"
+  expires_in: 86400  # 24小时
+  refresh_expires_in: 604800  # 7天
+
+dify:
+  api_url: "http://172.18.120.57/v1"
+  api_key: "app-HvWb6RgrJ79otrbz9e9OIivp"
+  timeout: 30
+  retry_times: 3
+  workflows:
+    loan_approval: "loan-approval-workflow-id"
+
+sms:
+  provider: "aliyun"
+  access_key: "your-access-key"
+  access_secret: "your-access-secret"
+  sign_name: "数字惠农"
+  template_codes:
+    register: "SMS_123456789"
+    login: "SMS_123456790"
+    reset_password: "SMS_123456791"
+
 file:
-  uploadPath: "uploads/"
-  maxSize: "10MB"
-  allowedTypes: ["jpg", "jpeg", "png", "pdf", "doc", "docx"]
-  
-ai:
-  difyApiUrl: "http://172.18.120.57/v1/workflows/run"
-  difyApiKey: "app-your-dify-api-key-here"
-  higressGatewayUrl: "http://localhost:8002"
-  agentTokens:
-    - "ai_agent_secure_token_2024_v1"
-    - "dify_huinong_finance_token_001"
-    - "ai_risk_assessment_token_456"
-  systemTokens:
-    - "system_internal_api_token_2024"
-    - "huinong_backend_system_token" 
+  storage_type: "local"  # local, oss, qiniu
+  upload_path: "./uploads"
+  max_file_size: 10485760  # 10MB
+  allowed_types: ["jpg", "jpeg", "png", "pdf", "doc", "docx"]
+
+log:
+  level: "debug"  # debug, info, warn, error
+  format: "json"  # text, json
+  output: "both"  # console, file, both
+  file_path: "./logs/app.log"
+  max_size: 100  # MB
+  max_age: 7     # days
+  max_backups: 5
+
+cors:
+  allow_origins: ["*"]
+  allow_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+  allow_headers: ["Origin", "Content-Type", "Accept", "Authorization"]
+  expose_headers: ["Content-Length"]
+  allow_credentials: true
+  max_age: 12
+
+rate_limit:
+  enabled: true
+  requests_per_minute: 1000
+  burst: 100
+
+offline:
+  enabled: true
+  sync_interval: 300  # 5分钟同步一次
+  queue_size: 10000
+  retry_times: 3 
