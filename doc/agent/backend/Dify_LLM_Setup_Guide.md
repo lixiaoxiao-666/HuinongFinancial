@@ -653,21 +653,314 @@
 - **参数配置**：
   - application_id: `{{start.application_id}}`
 
-#### 节点2：获取外部数据（智能适配）
+#### 节点2：解析申请数据（智能解析）
+- **节点类型**：代码执行
+- **编程语言**：Python3
+- **输入变量**：
+  - application_info (String): `{{#获取申请信息.text}}`
+
+**Python解析脚本**：
+```python
+import json
+from typing import Dict, Any, Optional
+
+def main(application_info: str) -> dict:
+    """
+    智能解析申请信息 - 支持贷款申请和农机租赁申请
+    根据申请类型自动提取相应的关键字段
+    """
+    
+    print(f"[DEBUG] 开始解析申请信息，数据长度: {len(application_info)}")
+    
+    try:
+        # 1. 解析JSON响应
+        data = json.loads(application_info)
+        
+        # 2. 验证API响应状态
+        if data.get('code') != 0:
+            error_msg = data.get('message', '未知错误')
+            print(f"[ERROR] API返回错误: {error_msg}")
+            return create_error_response(application_info, f"API错误: {error_msg}")
+        
+        app_data = data.get('data', {})
+        if not app_data:
+            return create_error_response(application_info, "响应数据为空")
+        
+        # 3. 识别申请类型
+        application_type = app_data.get('application_type', 'UNKNOWN')
+        print(f"[INFO] 识别申请类型: {application_type}")
+        
+        # 4. 根据申请类型解析数据
+        if application_type == "LOAN_APPLICATION":
+            return parse_loan_application(app_data, application_info)
+        elif application_type == "MACHINERY_LEASING":
+            return parse_machinery_leasing(app_data, application_info)
+        else:
+            print(f"[WARNING] 未知申请类型: {application_type}")
+            return parse_generic_application(app_data, application_info)
+            
+    except json.JSONDecodeError as e:
+        print(f"[ERROR] JSON解析失败: {str(e)}")
+        return create_error_response(application_info, f"JSON解析错误: {str(e)}")
+    except Exception as e:
+        print(f"[ERROR] 解析异常: {str(e)}")
+        return create_error_response(application_info, f"解析异常: {str(e)}")
+
+def parse_loan_application(app_data: Dict[str, Any], raw_data: str) -> dict:
+    """解析贷款申请数据"""
+    
+    basic_info = app_data.get('basic_info', {})
+    business_info = app_data.get('business_info', {})
+    applicant_info = app_data.get('applicant_info', {})
+    financial_info = app_data.get('financial_info', {})
+    risk_assessment = app_data.get('risk_assessment', {})
+    
+    # 提取关键字段
+    user_id = app_data.get('user_id') or applicant_info.get('user_id', '')
+    amount = safe_float(basic_info.get('amount', 0))
+    term_months = safe_int(basic_info.get('term_months', 12))
+    purpose = basic_info.get('purpose', '')
+    
+    # 申请人信息
+    real_name = applicant_info.get('real_name', '')
+    phone = applicant_info.get('phone', '')
+    id_card = applicant_info.get('id_card_number', '')
+    address = applicant_info.get('address', '')
+    
+    # 财务信息
+    annual_income = safe_float(financial_info.get('annual_income', 0))
+    occupation = financial_info.get('occupation', '')
+    
+    # 产品信息
+    product_id = business_info.get('product_id', '')
+    product_name = business_info.get('product_name', '')
+    interest_rate = business_info.get('interest_rate_yearly', '')
+    max_amount = safe_float(business_info.get('max_amount', 0))
+    
+    # 风险评估
+    ai_risk_score = safe_float(risk_assessment.get('ai_risk_score', 0))
+    ai_suggestion = risk_assessment.get('ai_suggestion', '')
+    
+    print(f"[SUCCESS] 贷款申请解析完成 - 用户:{user_id}, 金额:{amount}, 年收入:{annual_income}")
+    
+    return {
+        # 统一字段
+        'application_type': 'LOAN_APPLICATION',
+        'application_id': app_data.get('application_id', ''),
+        'user_id': user_id,
+        'status': app_data.get('status', ''),
+        'submitted_at': app_data.get('submitted_at', ''),
+        
+        # 贷款申请特有字段
+        'loan_amount': amount,
+        'loan_term_months': term_months,
+        'loan_purpose': purpose,
+        'annual_income': annual_income,
+        'occupation': occupation,
+        'product_id': product_id,
+        'product_name': product_name,
+        'interest_rate': interest_rate,
+        'max_amount': max_amount,
+        
+        # 申请人信息
+        'applicant_name': real_name,
+        'applicant_phone': phone,
+        'applicant_id_card': id_card,
+        'applicant_address': address,
+        
+        # 风险评估
+        'ai_risk_score': ai_risk_score,
+        'ai_suggestion': ai_suggestion,
+        
+        # 原始数据和状态
+        'application_data': raw_data,
+        'success': True,
+        'error': None,
+        'parse_type': 'LOAN_APPLICATION'
+    }
+
+def parse_machinery_leasing(app_data: Dict[str, Any], raw_data: str) -> dict:
+    """解析农机租赁申请数据"""
+    
+    basic_info = app_data.get('basic_info', {})
+    business_info = app_data.get('business_info', {})
+    applicant_info = app_data.get('applicant_info', {})
+    financial_info = app_data.get('financial_info', {})
+    risk_assessment = app_data.get('risk_assessment', {})
+    
+    # 提取关键字段
+    user_id = app_data.get('user_id', '')
+    
+    # 租赁基础信息
+    start_date = basic_info.get('requested_start_date', '')
+    end_date = basic_info.get('requested_end_date', '')
+    rental_days = safe_int(basic_info.get('rental_days', 0))
+    total_amount = safe_float(basic_info.get('total_amount', 0))
+    deposit_amount = safe_float(basic_info.get('deposit_amount', 0))
+    usage_purpose = basic_info.get('usage_purpose', '')
+    
+    # 农机信息
+    machinery_id = business_info.get('machinery_id', '')
+    machinery_type = business_info.get('machinery_type', '')
+    brand_model = business_info.get('brand_model', '')
+    daily_rent = safe_float(business_info.get('daily_rent', 0))
+    location = business_info.get('location', '')
+    
+    # 申请人信息（承租方和出租方）
+    lessee_info = applicant_info.get('lessee_info', {})
+    lessor_info = applicant_info.get('lessor_info', {})
+    
+    lessee_user_id = lessee_info.get('user_id', '')
+    lessee_phone = lessee_info.get('phone', '')
+    lessor_user_id = lessor_info.get('user_id', '')
+    lessor_phone = lessor_info.get('phone', '')
+    
+    # 风险评估
+    ai_risk_score = safe_float(risk_assessment.get('ai_risk_score', 0))
+    ai_suggestion = risk_assessment.get('ai_suggestion', '')
+    risk_level = risk_assessment.get('risk_level', '')
+    
+    print(f"[SUCCESS] 农机租赁解析完成 - 承租方:{lessee_user_id}, 农机:{machinery_type}, 金额:{total_amount}")
+    
+    return {
+        # 统一字段
+        'application_type': 'MACHINERY_LEASING',
+        'application_id': app_data.get('application_id', ''),
+        'user_id': user_id,
+        'status': app_data.get('status', ''),
+        'submitted_at': app_data.get('submitted_at', ''),
+        
+        # 农机租赁特有字段
+        'lease_start_date': start_date,
+        'lease_end_date': end_date,
+        'rental_days': rental_days,
+        'total_amount': total_amount,
+        'deposit_amount': deposit_amount,
+        'usage_purpose': usage_purpose,
+        'daily_rent': daily_rent,
+        
+        # 农机信息
+        'machinery_id': machinery_id,
+        'machinery_type': machinery_type,
+        'machinery_brand_model': brand_model,
+        'machinery_location': location,
+        
+        # 参与方信息
+        'lessee_user_id': lessee_user_id,
+        'lessee_phone': lessee_phone,
+        'lessor_user_id': lessor_user_id,
+        'lessor_phone': lessor_phone,
+        
+        # 风险评估
+        'ai_risk_score': ai_risk_score,
+        'ai_suggestion': ai_suggestion,
+        'risk_level': risk_level,
+        
+        # 原始数据和状态
+        'application_data': raw_data,
+        'success': True,
+        'error': None,
+        'parse_type': 'MACHINERY_LEASING'
+    }
+
+def parse_generic_application(app_data: Dict[str, Any], raw_data: str) -> dict:
+    """通用申请数据解析（降级处理）"""
+    
+    print("[WARNING] 使用通用解析模式")
+    
+    # 尝试提取通用字段
+    user_id = app_data.get('user_id', '')
+    application_id = app_data.get('application_id', '')
+    application_type = app_data.get('application_type', 'UNKNOWN')
+    
+    # 尝试从不同结构中提取金额信息
+    amount = 0.0
+    basic_info = app_data.get('basic_info', {})
+    if 'amount' in basic_info:
+        amount = safe_float(basic_info['amount'])
+    elif 'total_amount' in basic_info:
+        amount = safe_float(basic_info['total_amount'])
+    
+    return {
+        'application_type': application_type,
+        'application_id': application_id,
+        'user_id': user_id,
+        'status': app_data.get('status', ''),
+        'amount': amount,
+        'application_data': raw_data,
+        'success': True,
+        'error': None,
+        'parse_type': 'GENERIC'
+    }
+
+def create_error_response(raw_data: str, error_msg: str) -> dict:
+    """创建错误响应"""
+    return {
+        'application_type': 'UNKNOWN',
+        'application_id': '',
+        'user_id': '',
+        'status': 'ERROR',
+        'amount': 0.0,
+        'application_data': raw_data,
+        'success': False,
+        'error': error_msg,
+        'parse_type': 'ERROR'
+    }
+
+def safe_float(value: Any) -> float:
+    """安全转换为浮点数"""
+    try:
+        if value is None or value == '':
+            return 0.0
+        return float(value)
+    except (ValueError, TypeError):
+        return 0.0
+
+def safe_int(value: Any) -> int:
+    """安全转换为整数"""
+    try:
+        if value is None or value == '':
+            return 0
+        return int(float(value))  # 先转float再转int，处理"12.0"这样的字符串
+    except (ValueError, TypeError):
+        return 0
+```
+
+**输出变量配置**：
+
+| 变量名 | 类型 | 描述 |
+|--------|------|------|
+| `application_type` | String | 申请类型 (LOAN_APPLICATION/MACHINERY_LEASING) |
+| `application_id` | String | 申请ID |
+| `user_id` | String | 用户ID |
+| `status` | String | 申请状态 |
+| `success` | Boolean | 解析是否成功 |
+| `error` | String | 错误信息（如有） |
+| `parse_type` | String | 解析类型标识 |
+| `loan_amount` | Number | 贷款金额（仅贷款申请） |
+| `loan_term_months` | Number | 贷款期限（仅贷款申请） |
+| `annual_income` | Number | 年收入（仅贷款申请） |
+| `total_amount` | Number | 租赁总金额（仅农机租赁） |
+| `deposit_amount` | Number | 押金金额（仅农机租赁） |
+| `machinery_type` | String | 农机类型（仅农机租赁） |
+| `ai_risk_score` | Number | AI风险评分 |
+| `application_data` | String | 原始申请数据 |
+
+#### 节点3：获取外部数据（智能适配）
 - **节点类型**：工具
 - **工具选择**：慧农金融统一AI智能体 → getExternalDataUnified
 - **参数配置**：
-  - user_id: `{{#获取申请信息.text | jq '.data.user_id' | trim}}`
+  - user_id: `{{#解析申请数据.user_id}}`
   - data_types: `credit_report,bank_flow,blacklist_check,government_subsidy,farming_qualification`
   - application_id: `{{start.application_id}}`
 
-#### 节点3：获取AI模型配置（动态适配）
+#### 节点4：获取AI模型配置（动态适配）
 - **节点类型**：工具
 - **工具选择**：慧农金融统一AI智能体 → getAIModelConfigUnified
 - **参数配置**：
-  - application_type: `{{#获取申请信息.text | jq '.data.application_type' | trim}}`
+  - application_type: `{{#解析申请数据.application_type}}`
 
-#### 节点4：LLM统一智能分析（增强版）
+#### 节点5：LLM统一智能分析（增强版）
 - **节点类型**：LLM
 - **模型选择**：Claude-3.5-sonnet（推荐）
 - **结构化输出**：启用
@@ -833,7 +1126,7 @@
 现在请分析以下申请：
 ```
 
-#### 节点5：智能决策提交（统一路由）
+#### 节点6：智能决策提交（统一路由）
 - **节点类型**：工具
 - **工具选择**：慧农金融统一AI智能体 → submitAIDecisionUnified
 - **参数配置**：
@@ -853,7 +1146,7 @@
   - ai_model_version: `LLM-v5.0-unified`
   - workflow_id: `dify-unified-v5`
 
-#### 节点6：结束节点
+#### 节点7：结束节点
 - **输出变量配置**：
 ```json
 {
