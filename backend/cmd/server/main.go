@@ -85,9 +85,9 @@ func main() {
 
 	// 初始化Service层
 	userService := service.NewUserService(userRepo, cfg.JWT.SecretKey)
-	loanService := service.NewLoanService(loanRepo, userRepo)
-	machineService := service.NewMachineService(machineRepo, userRepo)
 	difyService := service.NewDifyService(cfg, loanRepo)
+	loanService := service.NewLoanService(loanRepo, userRepo, difyService)
+	machineService := service.NewMachineService(machineRepo, userRepo)
 	// articleService := service.NewArticleService(articleRepo, userRepo, cacheClient)
 	// expertService := service.NewExpertService(expertRepo, userRepo)
 	// fileService := service.NewFileService(fileRepo, cfg.File.UploadPath)

@@ -1010,3 +1010,252 @@ API响应中的敏感信息将自动脱敏处理：
 - 手机号: `138****8000`
 - 身份证号: `110101********1234`
 - 银行卡号: `6222********1234` 
+
+## 贷款申请模块
+
+### 1. 创建贷款申请
+
+**接口描述**: 用户提交贷款申请，系统自动触发Dify AI工作流进行智能评估
+
+- **URL**: `/loan/applications`
+- **Method**: `POST`
+- **Headers**: 
+  - `Authorization: Bearer {token}`
+  - `Content-Type: application/json`
+
+**请求参数**:
+```json
+{
+  "product_id": 1,
+  "loan_amount": 50000000,
+  "term_months": 12,
+  "loan_purpose": "农作物种植资金",
+  "contact_phone": "13800138000",
+  "contact_email": "farmer@example.com",
+  "materials_json": "{\"id_card\":\"path/to/id.jpg\",\"income_proof\":\"path/to/income.pdf\"}",
+  "remarks": "急需用款"
+}
+```
+
+**响应数据**:
+```json
+{
+  "code": 200,
+  "message": "申请提交成功",
+  "data": {
+    "id": 12345,
+    "application_no": "LA172545600123456",
+    "status": "pending",
+    "created_at": "2024-01-01T12:00:00Z"
+  }
+}
+```
+
+**工作流触发**: 申请创建成功后，系统将自动异步触发Dify AI工作流进行智能评估，包括：
+- 信用评分计算
+- 风险等级评估
+- 还款能力分析
+- 智能审批建议
+
+### 2. 获取申请详情
+
+- **URL**: `/loan/applications/{id}`
+- **Method**: `GET`
+- **Headers**: `Authorization: Bearer {token}`
+
+**响应数据**:
+```json
+{
+  "code": 200,
+  "data": {
+    "application": {
+      "id": 12345,
+      "application_no": "LA172545600123456",
+      "status": "ai_approved",
+      "loan_amount": 50000000,
+      "ai_recommendation": "申请人信用良好，收入稳定，建议批准贷款",
+      "credit_score": 750,
+      "risk_level": "low",
+      "dify_conversation_id": "conv_123456",
+      "created_at": "2024-01-01T12:00:00Z"
+    },
+    "approval_logs": [
+      {
+        "id": 1,
+        "step": "ai_assessment",
+        "status": "approved",
+        "note": "AI智能评估通过，建议批准申请",
+        "created_at": "2024-01-01T12:01:00Z"
+      }
+    ],
+    "dify_logs": [
+      {
+        "id": 1,
+        "workflow_type": "loan_approval",
+        "status": "succeeded",
+        "result": "AI评估完成，建议批准",
+        "created_at": "2024-01-01T12:01:00Z"
+      }
+    ]
+  }
+}
+```
+
+### 3. 申请状态说明
+
+| 状态 | 描述 | 说明 |
+|-----|------|------|
+| `pending` | 待处理 | 申请刚提交，等待处理 |
+| `ai_processing` | AI评估中 | 正在进行AI智能评估 |
+| `ai_approved` | AI通过 | AI评估通过，建议批准 |
+| `ai_rejected` | AI拒绝 | AI评估不通过，建议拒绝 |
+| `ai_failed` | AI失败 | AI评估过程出现错误 |
+| `manual_review` | 人工审核 | 需要人工审核 |
+| `approved` | 已批准 | 最终批准 |
+| `rejected` | 已拒绝 | 最终拒绝 |
+
+## Dify AI工作流集成
+
+### 工作流触发机制
+
+当用户提交贷款申请时，系统会自动触发以下流程：
+
+1. **申请提交**: 用户填写申请表单并提交
+2. **数据验证**: 系统验证申请数据的完整性和合规性
+3. **申请入库**: 将申请数据保存到数据库，状态设为`pending`
+4. **异步触发**: 系统异步调用Dify AI工作流
+5. **状态更新**: 申请状态更新为`ai_processing`
+6. **AI评估**: Dify工作流进行智能分析和评估
+7. **结果处理**: 根据AI评估结果更新申请状态和相关信息
+
+### 工作流输入数据
+
+Dify工作流会接收以下申请数据：
+
+```json
+{
+  "application_id": "12345",
+  "user_id": "1001",
+  "application_no": "LA172545600123456",
+  "loan_amount": 50000000,
+  "term_months": 12,
+  "loan_purpose": "农作物种植资金",
+  "applicant_name": "张三",
+  "applicant_phone": "13800138000",
+  "monthly_income": 800000,
+  "yearly_income": 9600000,
+  "income_source": "农业种植",
+  "other_debts": 100000,
+  "farm_area": 50.5,
+  "crop_types": "[\"水稻\",\"玉米\"]",
+  "years_experience": 10,
+  "land_certificate": "有",
+  "product_name": "农户小额贷款",
+  "product_type": "micro_loan",
+  "interest_rate": 0.0650,
+  "min_amount": 10000000,
+  "max_amount": 100000000
+}
+```
+
+### 工作流输出格式
+
+AI工作流返回的评估结果格式：
+
+```json
+{
+  "result": {
+    "decision": "approve",
+    "recommendation": "申请人从事农业种植10年，经验丰富；月收入8000元，年收入稳定；申请金额在合理范围内，建议批准贷款。",
+    "credit_score": 750,
+    "risk_level": "low",
+    "approved_amount": 50000000,
+    "rejection_reason": null,
+    "confidence_score": 0.85
+  }
+}
+```
+
+**决策类型**:
+- `approve/approved`: 建议批准
+- `reject/rejected`: 建议拒绝  
+- `manual_review/manual`: 建议人工审核
+
+## 错误码说明
+
+| 错误码 | 描述 | 说明 |
+|--------|------|------|
+| 200 | 成功 | 请求处理成功 |
+| 400 | 请求错误 | 请求参数有误 |
+| 401 | 未授权 | 需要登录认证 |
+| 403 | 禁止访问 | 权限不足 |
+| 404 | 资源不存在 | 请求的资源不存在 |
+| 500 | 服务器错误 | 内部服务器错误 |
+
+## 安全说明
+
+1. **认证**: 所有API请求都需要有效的JWT Token
+2. **授权**: 用户只能访问自己的申请数据
+3. **数据加密**: 敏感数据传输使用HTTPS加密
+4. **审计日志**: 所有操作都有完整的审计日志记录
+
+## 示例代码
+
+### JavaScript (Fetch)
+
+```javascript
+// 提交贷款申请
+const submitLoanApplication = async (applicationData) => {
+  const response = await fetch('/api/loan/applications', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(applicationData)
+  });
+  
+  const result = await response.json();
+  return result;
+};
+
+// 查询申请状态
+const getApplicationStatus = async (applicationId) => {
+  const response = await fetch(`/api/loan/applications/${applicationId}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  const result = await response.json();
+  return result;
+};
+```
+
+### Python (Requests)
+
+```python
+import requests
+
+# 提交贷款申请
+def submit_loan_application(token, application_data):
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json'
+    }
+    response = requests.post(
+        'http://localhost:8080/api/loan/applications',
+        json=application_data,
+        headers=headers
+    )
+    return response.json()
+
+# 查询申请状态
+def get_application_status(token, application_id):
+    headers = {'Authorization': f'Bearer {token}'}
+    response = requests.get(
+        f'http://localhost:8080/api/loan/applications/{application_id}',
+        headers=headers
+    )
+    return response.json()
+``` 

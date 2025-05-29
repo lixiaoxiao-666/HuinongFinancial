@@ -11,18 +11,21 @@ import (
 
 // loanService 贷款服务实现
 type loanService struct {
-	loanRepo repository.LoanRepository
-	userRepo repository.UserRepository
+	loanRepo    repository.LoanRepository
+	userRepo    repository.UserRepository
+	difyService DifyService
 }
 
 // NewLoanService 创建贷款服务实例
 func NewLoanService(
 	loanRepo repository.LoanRepository,
 	userRepo repository.UserRepository,
+	difyService DifyService,
 ) LoanService {
 	return &loanService{
-		loanRepo: loanRepo,
-		userRepo: userRepo,
+		loanRepo:    loanRepo,
+		userRepo:    userRepo,
+		difyService: difyService,
 	}
 }
 
@@ -111,8 +114,15 @@ func (s *loanService) CreateApplication(ctx context.Context, req *CreateApplicat
 		return nil, fmt.Errorf("创建贷款申请失败: %v", err)
 	}
 
-	// TODO: 触发AI审批流程
-	// go s.TriggerAIAssessment(context.Background(), application.ID, "loan_approval")
+	// 异步触发AI审批流程
+	go func() {
+		// 使用新的context避免原context被取消
+		assessmentCtx := context.Background()
+		if triggerErr := s.TriggerAIAssessment(assessmentCtx, application.ID, "loan_approval"); triggerErr != nil {
+			// 记录错误日志，但不影响申请创建的响应
+			fmt.Printf("触发AI评估失败 - 申请ID: %d, 错误: %v\n", application.ID, triggerErr)
+		}
+	}()
 
 	return &CreateApplicationResponse{
 		ID:            uint(application.ID),
@@ -460,12 +470,226 @@ func (s *loanService) ReturnApplication(ctx context.Context, applicationID uint6
 
 // TriggerAIAssessment 触发AI评估
 func (s *loanService) TriggerAIAssessment(ctx context.Context, applicationID uint64, workflowType string) error {
-	// TODO: 调用Dify工作流API
-	// 1. 准备申请数据
-	// 2. 调用Dify API
-	// 3. 记录调用日志
+	// 获取申请详情
+	application, err := s.loanRepo.GetApplicationByID(ctx, uint(applicationID))
+	if err != nil {
+		return fmt.Errorf("获取申请详情失败: %v", err)
+	}
 
-	return fmt.Errorf("AI评估功能尚未实现")
+	// 更新申请状态为AI评估中
+	application.Status = "ai_processing"
+	if updateErr := s.loanRepo.UpdateApplication(ctx, application); updateErr != nil {
+		fmt.Printf("更新申请状态失败: %v\n", updateErr)
+	}
+
+	// 创建审批日志记录AI评估开始
+	startLog := &model.ApprovalLog{
+		ApplicationID:  application.ID,
+		ApproverID:     0, // AI系统
+		Action:         "submit",
+		Step:           "ai_assessment",
+		ApprovalLevel:  0,
+		Result:         "pending",
+		Status:         "pending",
+		Comment:        "开始AI智能评估",
+		Note:           "系统自动触发AI工作流进行贷款申请评估",
+		PreviousStatus: "pending",
+		NewStatus:      "ai_processing",
+		ActionTime:     time.Now(),
+	}
+	if logErr := s.loanRepo.CreateApprovalLog(ctx, startLog); logErr != nil {
+		fmt.Printf("创建审批日志失败: %v\n", logErr)
+	}
+
+	// 调用Dify工作流
+	response, err := s.difyService.CallLoanApprovalWorkflow(uint(applicationID), uint(application.UserID))
+	if err != nil {
+		// 更新申请状态为AI评估失败
+		application.Status = "ai_failed"
+		application.RejectionReason = fmt.Sprintf("AI评估失败: %v", err)
+		if updateErr := s.loanRepo.UpdateApplication(ctx, application); updateErr != nil {
+			fmt.Printf("更新失败状态失败: %v\n", updateErr)
+		}
+
+		// 记录失败日志
+		failLog := &model.ApprovalLog{
+			ApplicationID:  application.ID,
+			ApproverID:     0,
+			Action:         "reject",
+			Step:           "ai_assessment",
+			ApprovalLevel:  0,
+			Result:         "rejected",
+			Status:         "rejected",
+			Comment:        fmt.Sprintf("AI评估失败: %v", err),
+			Note:           "AI工作流调用失败",
+			PreviousStatus: "ai_processing",
+			NewStatus:      "ai_failed",
+			ActionTime:     time.Now(),
+		}
+		if logErr := s.loanRepo.CreateApprovalLog(ctx, failLog); logErr != nil {
+			fmt.Printf("创建失败日志失败: %v\n", logErr)
+		}
+
+		return fmt.Errorf("调用Dify工作流失败: %v", err)
+	}
+
+	// 处理AI评估结果
+	if err := s.processAIAssessmentResult(ctx, application, response); err != nil {
+		return fmt.Errorf("处理AI评估结果失败: %v", err)
+	}
+
+	return nil
+}
+
+// processAIAssessmentResult 处理AI评估结果
+func (s *loanService) processAIAssessmentResult(ctx context.Context, application *model.LoanApplication, response *DifyWorkflowResponse) error {
+	// 更新申请的Dify对话信息
+	application.DifyConversationID = response.ConversationID
+
+	// 根据AI响应状态处理结果
+	if response.Status == "succeeded" && response.Data != nil {
+		// 解析AI评估结果
+		result, ok := response.Data["result"]
+		if !ok {
+			return fmt.Errorf("AI响应中缺少result字段")
+		}
+
+		resultMap, ok := result.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("AI结果格式不正确")
+		}
+
+		// 获取AI建议
+		recommendation := ""
+		if rec, exists := resultMap["recommendation"]; exists {
+			recommendation = fmt.Sprintf("%v", rec)
+		}
+
+		// 获取AI决策
+		decision := ""
+		if dec, exists := resultMap["decision"]; exists {
+			decision = fmt.Sprintf("%v", dec)
+		}
+
+		// 获取信用评分
+		if score, exists := resultMap["credit_score"]; exists {
+			if scoreFloat, ok := score.(float64); ok {
+				application.CreditScore = int(scoreFloat)
+			}
+		}
+
+		// 获取风险等级
+		if risk, exists := resultMap["risk_level"]; exists {
+			application.RiskLevel = fmt.Sprintf("%v", risk)
+		}
+
+		// 更新AI建议
+		application.AIRecommendation = recommendation
+
+		// 根据AI决策更新申请状态
+		var newStatus string
+		var actionResult string
+		var actionComment string
+
+		switch decision {
+		case "approve", "approved":
+			newStatus = "ai_approved"
+			actionResult = "approved"
+			actionComment = "AI智能评估通过，建议批准申请"
+			application.AutoApprovalPassed = true
+
+			// 如果有推荐金额，设置批准金额
+			if approvedAmount, exists := resultMap["approved_amount"]; exists {
+				if amountFloat, ok := approvedAmount.(float64); ok {
+					amount := int64(amountFloat)
+					application.ApprovedAmount = &amount
+				}
+			}
+
+		case "reject", "rejected":
+			newStatus = "ai_rejected"
+			actionResult = "rejected"
+			actionComment = "AI智能评估不通过，建议拒绝申请"
+
+			// 设置拒绝原因
+			if reason, exists := resultMap["rejection_reason"]; exists {
+				application.RejectionReason = fmt.Sprintf("%v", reason)
+			} else {
+				application.RejectionReason = "AI评估认为不符合贷款条件"
+			}
+
+		case "manual_review", "manual":
+			newStatus = "manual_review"
+			actionResult = "returned"
+			actionComment = "AI智能评估建议人工审核"
+			application.ApprovalLevel = 1
+
+		default:
+			newStatus = "manual_review"
+			actionResult = "returned"
+			actionComment = "AI评估完成，建议人工审核"
+		}
+
+		application.Status = newStatus
+
+		// 更新申请记录
+		if err := s.loanRepo.UpdateApplication(ctx, application); err != nil {
+			return fmt.Errorf("更新申请记录失败: %v", err)
+		}
+
+		// 创建AI评估完成日志
+		resultLog := &model.ApprovalLog{
+			ApplicationID:  application.ID,
+			ApproverID:     0, // AI系统
+			Action:         actionResult,
+			Step:           "ai_assessment",
+			ApprovalLevel:  0,
+			Result:         actionResult,
+			Status:         actionResult,
+			Comment:        actionComment,
+			Note:           fmt.Sprintf("AI评估建议: %s", recommendation),
+			PreviousStatus: "ai_processing",
+			NewStatus:      newStatus,
+			ActionTime:     time.Now(),
+		}
+
+		if err := s.loanRepo.CreateApprovalLog(ctx, resultLog); err != nil {
+			fmt.Printf("创建AI评估结果日志失败: %v\n", err)
+		}
+
+	} else {
+		// AI评估失败
+		application.Status = "ai_failed"
+		application.RejectionReason = "AI评估过程中出现错误"
+
+		if err := s.loanRepo.UpdateApplication(ctx, application); err != nil {
+			return fmt.Errorf("更新失败状态失败: %v", err)
+		}
+
+		// 记录失败日志
+		failLog := &model.ApprovalLog{
+			ApplicationID:  application.ID,
+			ApproverID:     0,
+			Action:         "reject",
+			Step:           "ai_assessment",
+			ApprovalLevel:  0,
+			Result:         "rejected",
+			Status:         "rejected",
+			Comment:        "AI评估失败",
+			Note:           fmt.Sprintf("AI工作流状态: %s", response.Status),
+			PreviousStatus: "ai_processing",
+			NewStatus:      "ai_failed",
+			ActionTime:     time.Now(),
+		}
+
+		if err := s.loanRepo.CreateApprovalLog(ctx, failLog); err != nil {
+			fmt.Printf("创建失败日志失败: %v\n", err)
+		}
+
+		return fmt.Errorf("AI评估未成功完成，状态: %s", response.Status)
+	}
+
+	return nil
 }
 
 // ProcessDifyCallback 处理Dify回调

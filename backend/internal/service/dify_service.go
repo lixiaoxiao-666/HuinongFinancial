@@ -66,11 +66,42 @@ type DifyWorkflowResponse struct {
 
 // CallLoanApprovalWorkflow 调用贷款审批工作流
 func (s *difyService) CallLoanApprovalWorkflow(applicationID uint, userID uint) (*DifyWorkflowResponse, error) {
+	// 获取申请详情
+	application, err := s.loanRepository.GetApplicationByID(context.Background(), applicationID)
+	if err != nil {
+		return nil, fmt.Errorf("获取申请详情失败: %v", err)
+	}
+
+	// 获取产品详情
+	product, err := s.loanRepository.GetProductByID(context.Background(), uint(application.ProductID))
+	if err != nil {
+		return nil, fmt.Errorf("获取产品详情失败: %v", err)
+	}
+
 	// 构建请求数据
 	request := DifyWorkflowRequest{
 		Inputs: map[string]interface{}{
-			"application_id": fmt.Sprintf("%d", applicationID),
-			"user_id":        fmt.Sprintf("%d", userID),
+			"application_id":   fmt.Sprintf("%d", applicationID),
+			"user_id":          fmt.Sprintf("%d", userID),
+			"application_no":   application.ApplicationNo,
+			"loan_amount":      application.LoanAmount,
+			"term_months":      application.TermMonths,
+			"loan_purpose":     application.LoanPurpose,
+			"applicant_name":   application.ApplicantName,
+			"applicant_phone":  application.ApplicantPhone,
+			"monthly_income":   application.MonthlyIncome,
+			"yearly_income":    application.YearlyIncome,
+			"income_source":    application.IncomeSource,
+			"other_debts":      application.OtherDebts,
+			"farm_area":        application.FarmArea,
+			"crop_types":       application.CropTypes,
+			"years_experience": application.YearsOfExperience,
+			"land_certificate": application.LandCertificate,
+			"product_name":     product.ProductName,
+			"product_type":     product.ProductType,
+			"interest_rate":    product.InterestRate,
+			"min_amount":       product.MinAmount,
+			"max_amount":       product.MaxAmount,
 		},
 		ResponseMode: "blocking",
 		User:         fmt.Sprintf("user_%d", userID),
