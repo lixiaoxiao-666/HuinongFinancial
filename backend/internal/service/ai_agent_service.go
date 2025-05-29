@@ -1,7 +1,9 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -118,6 +120,31 @@ type ProcessingInfoData struct {
 	ProcessingTimeMs int       `json:"processing_time_ms"`
 	WorkflowID       string    `json:"workflow_id"`
 	ProcessedAt      time.Time `json:"processed_at"`
+}
+
+// AIDecisionParams 查询参数方式的AI决策参数
+type AIDecisionParams struct {
+	ApplicationID         string                 `json:"application_id"`
+	Decision              string                 `json:"decision"`
+	RiskScore             float64                `json:"risk_score"`
+	ConfidenceScore       float64                `json:"confidence_score"`
+	ApprovedAmount        float64                `json:"approved_amount"`
+	ApprovedTermMonths    int                    `json:"approved_term_months"`
+	SuggestedInterestRate string                 `json:"suggested_interest_rate"`
+	RiskLevel             string                 `json:"risk_level"`
+	AnalysisSummary       string                 `json:"analysis_summary"`
+	DetailedAnalysis      map[string]interface{} `json:"detailed_analysis"`
+	Recommendations       []string               `json:"recommendations"`
+	Conditions            []string               `json:"conditions"`
+	AIModelVersion        string                 `json:"ai_model_version"`
+	WorkflowID            string                 `json:"workflow_id"`
+}
+
+// AIDecisionResult AI决策处理结果
+type AIDecisionResult struct {
+	ApplicationID string `json:"application_id"`
+	NewStatus     string `json:"new_status"`
+	NextStep      string `json:"next_step"`
 }
 
 // GetApplicationInfo 获取申请详细信息供AI分析
@@ -577,6 +604,160 @@ func (s *AIAgentService) UpdateApplicationStatus(applicationID, status, operator
 	}
 
 	return nil
+}
+
+// SubmitAIDecisionQuery 处理查询参数方式的AI决策提交
+func (s *AIAgentService) SubmitAIDecisionQuery(ctx context.Context, params *AIDecisionParams) (*AIDecisionResult, error) {
+	s.log.Info("Processing AI decision with query parameters",
+		zap.String("application_id", params.ApplicationID),
+		zap.String("decision", params.Decision),
+		zap.Float64("risk_score", params.RiskScore))
+
+	// 1. 验证申请是否存在
+	var application data.LoanApplication
+	if err := s.data.DB.Where("application_id = ?", params.ApplicationID).First(&application).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("申请不存在: %s", params.ApplicationID)
+		}
+		return nil, fmt.Errorf("获取申请信息失败: %w", err)
+	}
+
+	// 2. 检查申请状态是否允许AI决策
+	allowedStatuses := []string{"SUBMITTED", "AI_TRIGGERED", "AI_REVIEWING", "pending_review"}
+	if !contains(allowedStatuses, application.Status) {
+		return nil, fmt.Errorf("申请状态不允许AI决策: %s", application.Status)
+	}
+
+	// 3. 构建AI分析结果数据
+	detailedAnalysisJSON, _ := json.Marshal(params.DetailedAnalysis)
+	recommendationsJSON, _ := json.Marshal(params.Recommendations)
+
+	// 4. 开始数据库事务
+	tx := s.data.DB.Begin()
+	if tx.Error != nil {
+		return nil, fmt.Errorf("开始事务失败: %w", tx.Error)
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 5. 创建AI分析结果记录
+	aiAnalysisResult := &data.AIAnalysisResult{
+		ApplicationID:         params.ApplicationID,
+		WorkflowExecutionID:   params.WorkflowID + "_" + fmt.Sprintf("%d", time.Now().Unix()),
+		RiskLevel:             params.RiskLevel,
+		RiskScore:             params.RiskScore,
+		ConfidenceScore:       params.ConfidenceScore,
+		AnalysisSummary:       params.AnalysisSummary,
+		DetailedAnalysis:      detailedAnalysisJSON,
+		RiskFactors:           recommendationsJSON, // 临时使用recommendations作为risk_factors
+		Recommendations:       recommendationsJSON,
+		AIDecision:            params.Decision,
+		ApprovedAmount:        &params.ApprovedAmount,
+		ApprovedTermMonths:    &params.ApprovedTermMonths,
+		SuggestedInterestRate: params.SuggestedInterestRate,
+		NextAction:            getNextAction(params.Decision),
+		AIModelVersion:        params.AIModelVersion,
+		ProcessingTimeMs:      2000, // 默认处理时间
+		ProcessedAt:           time.Now(),
+	}
+
+	if err := tx.Create(aiAnalysisResult).Error; err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("保存AI分析结果失败: %w", err)
+	}
+
+	// 6. 确定新的申请状态
+	var newStatus, nextStep string
+	oldStatus := application.Status
+
+	switch params.Decision {
+	case "AUTO_APPROVED":
+		newStatus = "AI_APPROVED"
+		nextStep = "AWAIT_FINAL_CONFIRMATION"
+		// 更新批准金额和期限
+		application.ApprovedAmount = &params.ApprovedAmount
+		application.ApprovedTermMonths = &params.ApprovedTermMonths
+	case "REQUIRE_HUMAN_REVIEW":
+		newStatus = "MANUAL_REVIEW_REQUIRED"
+		nextStep = "AWAIT_HUMAN_REVIEW"
+	case "AUTO_REJECTED":
+		newStatus = "AI_REJECTED"
+		nextStep = "PROCESS_COMPLETED"
+	default:
+		newStatus = "AI_PROCESSED"
+		nextStep = "AWAIT_NEXT_ACTION"
+	}
+
+	// 7. 更新申请状态
+	application.Status = newStatus
+	application.AISuggestion = params.AnalysisSummary
+	application.UpdatedAt = time.Now()
+
+	if err := tx.Save(&application).Error; err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("更新申请状态失败: %w", err)
+	}
+
+	// 8. 记录状态变更历史
+	historyRecord := &data.LoanApplicationHistory{
+		ApplicationID: params.ApplicationID,
+		StatusFrom:    oldStatus,
+		StatusTo:      newStatus,
+		OperatorType:  "AI_SYSTEM",
+		OperatorID:    "ai_agent",
+		Comments:      fmt.Sprintf("AI决策: %s, 风险评分: %.2f", params.Decision, params.RiskScore),
+		OccurredAt:    time.Now(),
+	}
+
+	if err := tx.Create(historyRecord).Error; err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("记录状态历史失败: %w", err)
+	}
+
+	// 9. 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("提交事务失败: %w", err)
+	}
+
+	s.log.Info("AI decision processed successfully",
+		zap.String("application_id", params.ApplicationID),
+		zap.String("new_status", newStatus),
+		zap.String("decision", params.Decision))
+
+	// 10. 返回处理结果
+	result := &AIDecisionResult{
+		ApplicationID: params.ApplicationID,
+		NewStatus:     newStatus,
+		NextStep:      nextStep,
+	}
+
+	return result, nil
+}
+
+// getNextAction 根据决策确定下一步行动
+func getNextAction(decision string) string {
+	actionMap := map[string]string{
+		"AUTO_APPROVED":        "GENERATE_CONTRACT",
+		"AUTO_REJECTED":        "SEND_REJECTION_NOTICE",
+		"REQUIRE_HUMAN_REVIEW": "ASSIGN_TO_REVIEWER",
+	}
+	if action, exists := actionMap[decision]; exists {
+		return action
+	}
+	return "MANUAL_REVIEW"
+}
+
+// 辅助函数：检查字符串是否在切片中
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }
 
 // 辅助函数
