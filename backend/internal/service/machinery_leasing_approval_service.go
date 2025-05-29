@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 
 	"backend/internal/data"
+	"backend/pkg"
 )
 
 type MachineryLeasingApprovalService struct {
@@ -23,16 +24,6 @@ func NewMachineryLeasingApprovalService(data *data.Data, log *zap.Logger) *Machi
 		data: data,
 		log:  log,
 	}
-}
-
-// MachineryLeasingApplicationInfo 农机租赁申请完整信息
-type MachineryLeasingApplicationInfo struct {
-	ApplicationID   string                  `json:"application_id"`
-	LesseeInfo      LesseeInfo              `json:"lessee_info"`
-	LessorInfo      LessorInfo              `json:"lessor_info"`
-	MachineryInfo   MachineryInfo           `json:"machinery_info"`
-	ApplicationInfo LeasingApplicationInfo  `json:"application_info"`
-	ExternalData    LeasingExternalDataInfo `json:"external_data"`
 }
 
 type LesseeInfo struct {
@@ -146,7 +137,7 @@ func (s *MachineryLeasingApprovalService) LogLeasingAIAgentAction(actionType, ag
 	requestJSON, _ := json.Marshal(requestData)
 	responseJSON, _ := json.Marshal(responseData)
 
-	clientIP := getClientIP(req)
+	clientIP := pkg.GetClientIP(req)
 	userAgent := req.Header.Get("User-Agent")
 
 	aiLog := &data.AIAgentLog{
@@ -230,57 +221,60 @@ func (s *MachineryLeasingApprovalService) getLeasingApplicationInfoInternal(appl
 		return nil, fmt.Errorf("农机信息不存在: %w", err)
 	}
 
-	// 5. 构建响应数据
+	// 5. 构建响应数据，使用map[string]interface{}格式
 	info := &MachineryLeasingApplicationInfo{
 		ApplicationID: applicationID,
-		LesseeInfo: LesseeInfo{
-			UserID:       lesseeUser.UserID,
-			RealName:     maskName(lesseeProfile.RealName),
-			IDCardNumber: maskIDCard(lesseeProfile.IDCardNumber),
-			Phone:        maskPhone(lesseeUser.Phone),
-			Address:      lesseeProfile.Address,
-			CreditRating: "良好", // 模拟信用等级
-			IsVerified:   true, // 模拟认证状态
+		LesseeInfo: map[string]interface{}{
+			"user_id":        lesseeUser.UserID,
+			"real_name":      pkg.MaskName(lesseeProfile.RealName),
+			"id_card_number": pkg.MaskIDCard(lesseeProfile.IDCardNumber),
+			"phone":          pkg.MaskPhone(lesseeUser.Phone),
+			"address":        lesseeProfile.Address,
+			"credit_rating":  "良好", // 模拟信用等级
+			"is_verified":    true, // 模拟认证状态
 		},
-		LessorInfo: LessorInfo{
-			UserID:                 lessorUser.UserID,
-			RealName:               maskName(lessorQualification.RealName),
-			Phone:                  maskPhone(lessorUser.Phone),
-			VerificationStatus:     lessorQualification.VerificationStatus,
-			CreditRating:           lessorQualification.CreditRating,
-			TotalMachineryCount:    lessorQualification.TotalMachineryCount,
-			SuccessfulLeasingCount: lessorQualification.SuccessfulLeasingCount,
-			AverageRating:          *lessorQualification.AverageRating,
+		LessorInfo: map[string]interface{}{
+			"user_id":                  lessorUser.UserID,
+			"real_name":                pkg.MaskName(lessorQualification.RealName),
+			"phone":                    pkg.MaskPhone(lessorUser.Phone),
+			"verification_status":      lessorQualification.VerificationStatus,
+			"credit_rating":            lessorQualification.CreditRating,
+			"total_machinery_count":    lessorQualification.TotalMachineryCount,
+			"successful_leasing_count": lessorQualification.SuccessfulLeasingCount,
+			"average_rating":           getFloatValue(lessorQualification.AverageRating),
 		},
-		MachineryInfo: MachineryInfo{
-			MachineryID:  machinery.MachineryID,
-			Type:         machinery.Type,
-			BrandModel:   machinery.BrandModel,
-			DailyRent:    machinery.DailyRent,
-			Deposit:      *machinery.Deposit,
-			Status:       machinery.Status,
-			LocationText: machinery.LocationText,
+		MachineryInfo: map[string]interface{}{
+			"machinery_id":  machinery.MachineryID,
+			"type":          machinery.Type,
+			"brand_model":   machinery.BrandModel,
+			"daily_rent":    machinery.DailyRent,
+			"deposit":       getFloatValue(machinery.Deposit),
+			"status":        machinery.Status,
+			"location_text": machinery.LocationText,
 		},
-		ApplicationInfo: LeasingApplicationInfo{
-			RequestedStartDate: application.RequestedStartDate,
-			RequestedEndDate:   application.RequestedEndDate,
-			RentalDays:         application.RentalDays,
-			TotalAmount:        application.TotalAmount,
-			DepositAmount:      *application.DepositAmount,
-			UsagePurpose:       application.UsagePurpose,
-			LesseeNotes:        application.LesseeNotes,
-			SubmittedAt:        application.SubmittedAt,
-			Status:             application.ApplicationStatus,
+		LeasingDetails: map[string]interface{}{
+			"requested_start_date": application.RequestedStartDate,
+			"requested_end_date":   application.RequestedEndDate,
+			"rental_days":          application.RentalDays,
+			"total_amount":         application.TotalAmount,
+			"deposit_amount":       getFloatValue(application.DepositAmount),
+			"usage_purpose":        application.UsagePurpose,
+			"lessee_notes":         application.LesseeNotes,
+			"submitted_at":         application.SubmittedAt,
 		},
-		ExternalData: LeasingExternalDataInfo{
-			LesseeHistoryCount: 3,    // 模拟承租历史次数
-			LessorReliability:  0.92, // 模拟出租方可靠性
-			MachineryCondition: "良好", // 模拟农机状况
-			SeasonalDemand:     "高",  // 模拟季节性需求
-		},
+		Status:      application.ApplicationStatus,
+		SubmittedAt: application.SubmittedAt,
 	}
 
 	return info, nil
+}
+
+// getFloatValue 安全地获取float64指针的值
+func getFloatValue(val *float64) float64 {
+	if val != nil {
+		return *val
+	}
+	return 0.0
 }
 
 // SubmitLeasingAIDecisionWithLog 提交农机租赁AI决策（带日志）

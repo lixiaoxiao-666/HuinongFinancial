@@ -382,3 +382,36 @@ func (WorkflowExecution) TableName() string      { return "workflow_executions" 
 func (AIModelConfig) TableName() string          { return "ai_model_configs" }
 func (ExternalDataQuery) TableName() string      { return "external_data_queries" }
 func (AIAgentLog) TableName() string             { return "ai_agent_logs" }
+
+// FileUpload 文件上传记录表
+type FileUpload struct {
+	ID           uint      `gorm:"primarykey;autoIncrement" json:"id"`
+	FileID       string    `gorm:"type:varchar(64);uniqueIndex;not null" json:"fileId"`
+	UserID       string    `gorm:"type:varchar(64);not null;index" json:"userId"`
+	FileName     string    `gorm:"type:varchar(255);not null" json:"fileName"`
+	FileSize     int64     `gorm:"type:bigint" json:"fileSize"`
+	FileType     string    `gorm:"type:varchar(50)" json:"fileType"`
+	BusinessType string    `gorm:"type:varchar(50)" json:"businessType"`
+	StoragePath  string    `gorm:"type:varchar(512);not null" json:"storagePath"`
+	Status       int8      `gorm:"type:tinyint;not null;default:1" json:"status"`
+	UploadedAt   time.Time `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"uploadedAt"`
+	CreatedAt    time.Time `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"createdAt"`
+	UpdatedAt    time.Time `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)" json:"updatedAt"`
+}
+
+// AIOperationLog AI操作日志表
+type AIOperationLog struct {
+	ID              uint      `gorm:"primarykey;autoIncrement" json:"id"`
+	OperationID     string    `gorm:"type:varchar(64);uniqueIndex;not null" json:"operationId"`
+	ApplicationID   string    `gorm:"type:varchar(64);index" json:"applicationId"`
+	ApplicationType string    `gorm:"type:varchar(50);not null;index" json:"applicationType"`
+	Operation       string    `gorm:"type:varchar(50);not null;index" json:"operation"`
+	Result          string    `gorm:"type:varchar(50);not null" json:"result"`
+	Details         string    `gorm:"type:text" json:"details"`
+	Timestamp       time.Time `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"timestamp"`
+	CreatedAt       time.Time `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3)" json:"createdAt"`
+	UpdatedAt       time.Time `gorm:"type:datetime(3);not null;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)" json:"updatedAt"`
+}
+
+func (FileUpload) TableName() string     { return "file_uploads" }
+func (AIOperationLog) TableName() string { return "ai_operation_logs" }

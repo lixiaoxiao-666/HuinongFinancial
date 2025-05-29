@@ -3,17 +3,13 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 
 	"backend/internal/data"
-	"backend/pkg"
 )
 
 // AIAgentService AI智能体服务
@@ -22,7 +18,7 @@ type AIAgentService struct {
 	log  *zap.Logger
 }
 
-// NewAIAgentService 创建AI智能体服务实例
+// NewAIAgentService 创建AI智能体服务
 func NewAIAgentService(data *data.Data, log *zap.Logger) *AIAgentService {
 	return &AIAgentService{
 		data: data,
@@ -91,1170 +87,461 @@ type ExternalDataInfo struct {
 	LandOwnershipVerified bool          `json:"land_ownership_verified"`
 }
 
-// AIDecisionRequest AI决策请求结构
+// AIDecisionRequest AI决策请求
 type AIDecisionRequest struct {
-	AIAnalysis     AIAnalysisData     `json:"ai_analysis"`
-	AIDecision     AIDecisionData     `json:"ai_decision"`
-	ProcessingInfo ProcessingInfoData `json:"processing_info"`
-}
-
-type AIAnalysisData struct {
-	RiskLevel        string                   `json:"risk_level"`
-	RiskScore        float64                  `json:"risk_score"`
-	ConfidenceScore  float64                  `json:"confidence_score"`
-	AnalysisSummary  string                   `json:"analysis_summary"`
-	DetailedAnalysis map[string]interface{}   `json:"detailed_analysis"`
-	RiskFactors      []map[string]interface{} `json:"risk_factors"`
-	Recommendations  []string                 `json:"recommendations"`
-}
-
-type AIDecisionData struct {
+	ApplicationID         string   `json:"application_id"`
+	ApplicationType       string   `json:"application_type"`
 	Decision              string   `json:"decision"`
-	ApprovedAmount        float64  `json:"approved_amount"`
-	ApprovedTermMonths    int      `json:"approved_term_months"`
-	SuggestedInterestRate string   `json:"suggested_interest_rate"`
-	Conditions            []string `json:"conditions"`
-	NextAction            string   `json:"next_action"`
+	RiskScore             float64  `json:"risk_score"`
+	RiskLevel             string   `json:"risk_level"`
+	ConfidenceScore       float64  `json:"confidence_score"`
+	AnalysisSummary       string   `json:"analysis_summary"`
+	ApprovedAmount        *float64 `json:"approved_amount,omitempty"`
+	ApprovedTermMonths    *int     `json:"approved_term_months,omitempty"`
+	SuggestedInterestRate string   `json:"suggested_interest_rate,omitempty"`
+	SuggestedDeposit      *float64 `json:"suggested_deposit,omitempty"`
+	DetailedAnalysis      string   `json:"detailed_analysis,omitempty"`
+	Recommendations       []string `json:"recommendations,omitempty"`
+	Conditions            []string `json:"conditions,omitempty"`
+	AIModelVersion        string   `json:"ai_model_version,omitempty"`
+	WorkflowID            string   `json:"workflow_id,omitempty"`
 }
 
-type ProcessingInfoData struct {
-	AIModelVersion   string    `json:"ai_model_version"`
-	ProcessingTimeMs int       `json:"processing_time_ms"`
-	WorkflowID       string    `json:"workflow_id"`
-	ProcessedAt      time.Time `json:"processed_at"`
+// AIDecisionResponse AI决策响应
+type AIDecisionResponse struct {
+	Success         bool   `json:"success"`
+	AIOperationID   string `json:"ai_operation_id"`
+	ProcessedAt     string `json:"processed_at"`
+	NextStepMessage string `json:"next_step_message"`
 }
 
-// AIDecisionParams 查询参数方式的AI决策参数
-type AIDecisionParams struct {
-	ApplicationID         string                 `json:"application_id"`
-	Decision              string                 `json:"decision"`
-	RiskScore             float64                `json:"risk_score"`
-	ConfidenceScore       float64                `json:"confidence_score"`
-	ApprovedAmount        float64                `json:"approved_amount"`
-	ApprovedTermMonths    int                    `json:"approved_term_months"`
-	SuggestedInterestRate string                 `json:"suggested_interest_rate"`
-	RiskLevel             string                 `json:"risk_level"`
-	AnalysisSummary       string                 `json:"analysis_summary"`
-	DetailedAnalysis      map[string]interface{} `json:"detailed_analysis"`
-	Recommendations       []string               `json:"recommendations"`
-	Conditions            []string               `json:"conditions"`
-	AIModelVersion        string                 `json:"ai_model_version"`
-	WorkflowID            string                 `json:"workflow_id"`
+// AIApplicationInfo AI申请信息
+type AIApplicationInfo struct {
+	ApplicationType string                 `json:"application_type"`
+	ApplicationID   string                 `json:"application_id"`
+	UserID          string                 `json:"user_id"`
+	Status          string                 `json:"status"`
+	BasicInfo       map[string]interface{} `json:"basic_info"`
+	FinancialInfo   map[string]interface{} `json:"financial_info"`
+	ProductInfo     map[string]interface{} `json:"product_info"`
+	Documents       []DocumentInfo         `json:"documents"`
+	SubmittedAt     time.Time              `json:"submitted_at"`
 }
 
-// AIDecisionResult AI决策处理结果
-type AIDecisionResult struct {
-	ApplicationID string `json:"application_id"`
-	NewStatus     string `json:"new_status"`
-	NextStep      string `json:"next_step"`
+// ExternalDataResponse 外部数据响应
+type ExternalDataResponse struct {
+	UserID         string                 `json:"user_id"`
+	DataTypes      []string               `json:"data_types"`
+	CreditData     map[string]interface{} `json:"credit_data,omitempty"`
+	BankData       map[string]interface{} `json:"bank_data,omitempty"`
+	BlacklistData  map[string]interface{} `json:"blacklist_data,omitempty"`
+	GovernmentData map[string]interface{} `json:"government_data,omitempty"`
+	FarmingData    map[string]interface{} `json:"farming_data,omitempty"`
+	RetrievedAt    time.Time              `json:"retrieved_at"`
 }
 
-// LogAIAgentAction 记录AI智能体操作日志
-func (s *AIAgentService) LogAIAgentAction(actionType, agentType, applicationID string, requestData, responseData interface{}, status string, errorMessage string, duration int, req *http.Request) {
-	logID := pkg.GenerateUUID()
-
-	var reqBytes, respBytes []byte
-	if requestData != nil {
-		reqBytes, _ = json.Marshal(requestData)
-	}
-	if responseData != nil {
-		respBytes, _ = json.Marshal(responseData)
-	}
-
-	ipAddress := ""
-	userAgent := ""
-	if req != nil {
-		ipAddress = getClientIP(req)
-		userAgent = req.UserAgent()
-	}
-
-	aiLog := &data.AIAgentLog{
-		LogID:         logID,
-		ApplicationID: applicationID,
-		ActionType:    actionType,
-		AgentType:     agentType,
-		RequestData:   reqBytes,
-		ResponseData:  respBytes,
-		Status:        status,
-		ErrorMessage:  errorMessage,
-		Duration:      duration,
-		IPAddress:     ipAddress,
-		UserAgent:     userAgent,
-		OccurredAt:    time.Now(),
-		CreatedAt:     time.Now(),
-	}
-
-	if err := s.data.DB.Create(aiLog).Error; err != nil {
-		s.log.Error("记录AI Agent日志失败",
-			zap.Error(err),
-			zap.String("logId", logID),
-			zap.String("actionType", actionType),
-			zap.String("applicationId", applicationID),
-		)
-	}
+// AIModelConfigResponse AI模型配置响应
+type AIModelConfigResponse struct {
+	Models         []AIModelConfig        `json:"models"`
+	RiskThresholds map[string]float64     `json:"risk_thresholds"`
+	BusinessRules  map[string]interface{} `json:"business_rules"`
+	UpdatedAt      time.Time              `json:"updated_at"`
 }
 
-// getClientIP 获取客户端IP地址
-func getClientIP(req *http.Request) string {
-	// 尝试从X-Forwarded-For头获取
-	if ip := req.Header.Get("X-Forwarded-For"); ip != "" {
-		return ip
-	}
-	// 尝试从X-Real-IP头获取
-	if ip := req.Header.Get("X-Real-IP"); ip != "" {
-		return ip
-	}
-	// 返回RemoteAddr
-	return req.RemoteAddr
+// AIModelConfig AI模型配置
+type AIModelConfig struct {
+	ModelName string `json:"model_name"`
+	Version   string `json:"version"`
+	Type      string `json:"type"`
+	Enabled   bool   `json:"enabled"`
 }
 
-// GetApplicationInfo 获取申请详细信息供AI分析
-func (s *AIAgentService) GetApplicationInfoWithLog(applicationID string, req *http.Request) (*ApplicationInfo, error) {
-	startTime := time.Now()
-	s.log.Info("获取申请信息", zap.String("applicationId", applicationID))
-
-	// 记录请求日志
-	requestData := map[string]interface{}{
-		"application_id": applicationID,
-	}
-
-	info, err := s.getApplicationInfoInternal(applicationID)
-
-	// 计算处理时间
-	duration := int(time.Since(startTime).Milliseconds())
-
-	// 记录操作日志
-	status := "SUCCESS"
-	errorMessage := ""
-	if err != nil {
-		status = "ERROR"
-		errorMessage = err.Error()
-	}
-
-	s.LogAIAgentAction(
-		"GET_APPLICATION_INFO",
-		"DIFY_WORKFLOW",
-		applicationID,
-		requestData,
-		info,
-		status,
-		errorMessage,
-		duration,
-		req,
-	)
-
-	return info, err
+// MachineryLeasingApplicationInfo 农机租赁申请信息
+type MachineryLeasingApplicationInfo struct {
+	ApplicationID  string                 `json:"application_id"`
+	LesseeInfo     map[string]interface{} `json:"lessee_info"`
+	LessorInfo     map[string]interface{} `json:"lessor_info"`
+	MachineryInfo  map[string]interface{} `json:"machinery_info"`
+	LeasingDetails map[string]interface{} `json:"leasing_details"`
+	Status         string                 `json:"status"`
+	SubmittedAt    time.Time              `json:"submitted_at"`
 }
 
-// GetApplicationInfo 保持原方法签名用于向后兼容
-func (s *AIAgentService) GetApplicationInfo(applicationID string) (*ApplicationInfo, error) {
-	return s.getApplicationInfoInternal(applicationID)
+// AIOperationLog AI操作日志
+type AIOperationLog struct {
+	OperationID     string    `json:"operation_id"`
+	ApplicationID   string    `json:"application_id"`
+	ApplicationType string    `json:"application_type"`
+	Operation       string    `json:"operation"`
+	Result          string    `json:"result"`
+	Details         string    `json:"details"`
+	Timestamp       time.Time `json:"timestamp"`
 }
 
-// GetApplicationInfoWithSupport 支持多种申请类型的统一获取方法
-func (s *AIAgentService) GetApplicationInfoWithSupport(applicationID string, req *http.Request) (interface{}, error) {
-	startTime := time.Now()
-	s.log.Info("获取申请信息（多类型支持）", zap.String("applicationId", applicationID))
-
-	var result interface{}
-	var err error
-
-	// 检查是否为农机租赁申请
-	if s.isLeasingApplication(applicationID) {
-		// 获取农机租赁申请信息
-		var leasingService *MachineryLeasingApprovalService
-		if s.data != nil {
-			leasingService = NewMachineryLeasingApprovalService(s.data, s.log)
-		}
-
-		if leasingService != nil {
-			leasingInfo, leasingErr := leasingService.GetLeasingApplicationInfoWithLog(applicationID, req)
-			if leasingErr == nil {
-				result = leasingInfo
-			} else {
-				err = leasingErr
-			}
-		} else {
-			err = fmt.Errorf("农机租赁服务不可用")
-		}
-	} else {
-		// 获取贷款申请信息
-		loanInfo, loanErr := s.getApplicationInfoInternal(applicationID)
-		if loanErr == nil {
-			result = loanInfo
-		} else {
-			err = loanErr
-		}
-	}
-
-	// 计算处理时间
-	duration := int(time.Since(startTime).Milliseconds())
-
-	// 记录操作日志
-	status := "SUCCESS"
-	errorMessage := ""
-	if err != nil {
-		status = "ERROR"
-		errorMessage = err.Error()
-	}
-
-	applicationType := "LOAN_APPLICATION"
-	if s.isLeasingApplication(applicationID) {
-		applicationType = "LEASING_APPLICATION"
-	}
-
-	s.LogAIAgentAction(
-		"GET_APPLICATION_INFO_UNIFIED",
-		"DIFY_WORKFLOW",
-		applicationID,
-		map[string]interface{}{
-			"application_id":   applicationID,
-			"application_type": applicationType,
-		},
-		result,
-		status,
-		errorMessage,
-		duration,
-		req,
-	)
-
-	return result, err
+// AIOperationLogsResponse AI操作日志响应
+type AIOperationLogsResponse struct {
+	Logs       []AIOperationLog `json:"logs"`
+	Pagination Pagination       `json:"pagination"`
 }
 
-// isLeasingApplication 检查是否为农机租赁申请
-func (s *AIAgentService) isLeasingApplication(applicationID string) bool {
-	// 检查农机租赁申请表
-	var count int64
-	s.data.DB.Model(&data.MachineryLeasingApplication{}).Where("application_id = ?", applicationID).Count(&count)
-	return count > 0
+// Pagination 分页信息
+type Pagination struct {
+	CurrentPage int `json:"current_page"`
+	TotalPages  int `json:"total_pages"`
+	TotalCount  int `json:"total_count"`
+	Limit       int `json:"limit"`
 }
 
-// getApplicationInfoInternal 内部方法，实际的业务逻辑
-func (s *AIAgentService) getApplicationInfoInternal(applicationID string) (*ApplicationInfo, error) {
-	// 查询申请基本信息
-	var application data.LoanApplication
-	if err := s.data.DB.Where("application_id = ?", applicationID).First(&application).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("申请不存在")
-		}
-		return nil, fmt.Errorf("查询申请失败: %w", err)
-	}
+// GetApplicationInfoUnified 获取申请信息（统一接口）
+func (s *AIAgentService) GetApplicationInfoUnified(ctx context.Context, applicationID string) (*AIApplicationInfo, error) {
+	// 根据申请ID格式判断申请类型
+	applicationType := s.detectApplicationType(applicationID)
 
-	// 查询产品信息
-	var product data.LoanProduct
-	if err := s.data.DB.Where("product_id = ?", application.ProductID).First(&product).Error; err != nil {
-		return nil, fmt.Errorf("查询产品失败: %w", err)
-	}
-
-	// 查询用户信息
-	var user data.User
-	if err := s.data.DB.Where("user_id = ?", application.UserID).First(&user).Error; err != nil {
-		return nil, fmt.Errorf("查询用户失败: %w", err)
-	}
-
-	// 查询用户画像信息
-	var profile data.UserProfile
-	profileExists := true
-	if err := s.data.DB.Where("user_id = ?", application.UserID).First(&profile).Error; err != nil {
-		if err != gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("查询用户画像失败: %w", err)
-		}
-		profileExists = false
-	}
-
-	// 查询上传文件
-	var files []data.UploadedFile
-	s.data.DB.Where("user_id = ? AND related_id = ?", application.UserID, applicationID).Find(&files)
-
-	// 构建响应
-	info := &ApplicationInfo{
-		ApplicationID: applicationID,
-		ProductInfo: ProductInfo{
-			ProductID:          product.ProductID,
-			Name:               product.Name,
-			Category:           product.Category,
-			MaxAmount:          product.MaxAmount,
-			InterestRateYearly: product.InterestRateYearly,
-		},
-		ApplicationInfo: AppInfo{
-			Amount:      application.AmountApplied,
-			TermMonths:  application.TermMonthsApplied,
-			Purpose:     application.Purpose,
-			SubmittedAt: application.SubmittedAt,
-			Status:      application.Status,
-		},
-		ApplicantInfo: ApplicantInfo{
-			UserID:       user.UserID,
-			RealName:     maskName(profile.RealName),
-			IDCardNumber: maskIDCard(profile.IDCardNumber),
-			Phone:        maskPhone(user.Phone),
-			Address:      profile.Address,
-			Age:          calculateAge(profile.BirthDate),
-			IsVerified:   profile.IDCardNumber != "",
-		},
-		FinancialInfo: FinancialInfo{
-			AnnualIncome:      profile.AnnualIncome,
-			ExistingLoans:     0,     // 需要实际计算
-			CreditScore:       750,   // 模拟数据
-			AccountBalance:    15000, // 模拟数据
-			LandArea:          "10亩", // 模拟数据
-			FarmingExperience: "10年", // 模拟数据
-		},
-		UploadedDocuments: make([]AIDocumentInfo, 0),
-		ExternalData: ExternalDataInfo{
-			CreditBureauScore:     750,
-			BlacklistCheck:        false,
-			PreviousLoanHistory:   []interface{}{},
-			LandOwnershipVerified: true,
-		},
-	}
-
-	// 处理文件信息
-	for _, file := range files {
-		docInfo := AIDocumentInfo{
-			DocType: file.Purpose,
-			FileID:  file.FileID,
-			FileURL: file.StoragePath,
-		}
-
-		// 模拟OCR结果
-		if file.Purpose == "id_card_front" {
-			docInfo.OCRResult = map[string]string{
-				"name":      profile.RealName,
-				"id_number": maskIDCard(profile.IDCardNumber),
-				"address":   profile.Address,
-			}
-		}
-
-		info.UploadedDocuments = append(info.UploadedDocuments, docInfo)
-	}
-
-	if !profileExists {
-		// 如果用户画像不存在，提供默认值
-		info.ApplicantInfo.RealName = "未完善"
-		info.ApplicantInfo.IDCardNumber = ""
-		info.ApplicantInfo.Address = ""
-		info.ApplicantInfo.Age = 0
-		info.ApplicantInfo.IsVerified = false
-	}
-
-	return info, nil
-}
-
-// SubmitAIDecision 提交AI审批决策
-func (s *AIAgentService) SubmitAIDecision(applicationID string, request *AIDecisionRequest) error {
-	return s.SubmitAIDecisionWithLog(applicationID, request, nil)
-}
-
-// SubmitAIDecisionWithLog 提交AI审批决策（包含日志记录）
-func (s *AIAgentService) SubmitAIDecisionWithLog(applicationID string, request *AIDecisionRequest, req *http.Request) error {
-	startTime := time.Now()
-	s.log.Info("提交AI审批决策", zap.String("applicationId", applicationID))
-
-	err := s.submitAIDecisionInternal(applicationID, request)
-
-	// 计算处理时间
-	duration := int(time.Since(startTime).Milliseconds())
-
-	// 记录操作日志
-	status := "SUCCESS"
-	errorMessage := ""
-	if err != nil {
-		status = "ERROR"
-		errorMessage = err.Error()
-	}
-
-	responseData := &AIDecisionResult{
-		ApplicationID: applicationID,
-		NewStatus:     getNewStatusFromDecision(request.AIDecision.Decision),
-		NextStep:      request.AIDecision.NextAction,
-	}
-
-	s.LogAIAgentAction(
-		"SUBMIT_AI_DECISION",
-		"DIFY_WORKFLOW",
-		applicationID,
-		request,
-		responseData,
-		status,
-		errorMessage,
-		duration,
-		req,
-	)
-
-	return err
-}
-
-// submitAIDecisionInternal 内部方法，实际的业务逻辑
-func (s *AIAgentService) submitAIDecisionInternal(applicationID string, request *AIDecisionRequest) error {
-	// 开始事务
-	tx := s.data.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	// 检查申请是否存在
-	var application data.LoanApplication
-	if err := tx.Where("application_id = ?", applicationID).First(&application).Error; err != nil {
-		tx.Rollback()
-		if err == gorm.ErrRecordNotFound {
-			return fmt.Errorf("申请不存在")
-		}
-		return fmt.Errorf("查询申请失败: %w", err)
-	}
-
-	// 保存AI分析结果
-	detailedAnalysisBytes, _ := json.Marshal(request.AIAnalysis.DetailedAnalysis)
-	riskFactorsBytes, _ := json.Marshal(request.AIAnalysis.RiskFactors)
-	recommendationsBytes, _ := json.Marshal(request.AIAnalysis.Recommendations)
-
-	aiResult := &data.AIAnalysisResult{
-		ApplicationID:         applicationID,
-		WorkflowExecutionID:   request.ProcessingInfo.WorkflowID,
-		RiskLevel:             request.AIAnalysis.RiskLevel,
-		RiskScore:             request.AIAnalysis.RiskScore,
-		ConfidenceScore:       request.AIAnalysis.ConfidenceScore,
-		AnalysisSummary:       request.AIAnalysis.AnalysisSummary,
-		DetailedAnalysis:      detailedAnalysisBytes,
-		RiskFactors:           riskFactorsBytes,
-		Recommendations:       recommendationsBytes,
-		AIDecision:            request.AIDecision.Decision,
-		ApprovedAmount:        &request.AIDecision.ApprovedAmount,
-		ApprovedTermMonths:    &request.AIDecision.ApprovedTermMonths,
-		SuggestedInterestRate: request.AIDecision.SuggestedInterestRate,
-		NextAction:            request.AIDecision.NextAction,
-		AIModelVersion:        request.ProcessingInfo.AIModelVersion,
-		ProcessingTimeMs:      request.ProcessingInfo.ProcessingTimeMs,
-		ProcessedAt:           request.ProcessingInfo.ProcessedAt,
-	}
-
-	if err := tx.Create(aiResult).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("保存AI分析结果失败: %w", err)
-	}
-
-	// 更新申请状态
-	newStatus := getNewStatusFromDecision(request.AIDecision.Decision)
-
-	// 更新申请记录
-	updateData := map[string]interface{}{
-		"status":        newStatus,
-		"ai_risk_score": int(request.AIAnalysis.RiskScore * 1000), // 转换为千分制
-		"ai_suggestion": request.AIAnalysis.AnalysisSummary,
-		"updated_at":    time.Now(),
-	}
-
-	if request.AIDecision.Decision == "AUTO_APPROVED" {
-		updateData["approved_amount"] = request.AIDecision.ApprovedAmount
-		updateData["approved_term_months"] = request.AIDecision.ApprovedTermMonths
-		updateData["final_decision"] = "APPROVED"
-		updateData["decision_reason"] = "AI自动审批通过"
-		updateData["processed_by"] = "AI_SYSTEM"
-		updateData["processed_at"] = time.Now()
-	} else if request.AIDecision.Decision == "AUTO_REJECTED" {
-		updateData["final_decision"] = "REJECTED"
-		updateData["decision_reason"] = request.AIAnalysis.AnalysisSummary
-		updateData["processed_by"] = "AI_SYSTEM"
-		updateData["processed_at"] = time.Now()
-	}
-
-	if err := tx.Model(&application).Updates(updateData).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("更新申请状态失败: %w", err)
-	}
-
-	// 记录状态变更历史
-	history := &data.LoanApplicationHistory{
-		ApplicationID: applicationID,
-		StatusFrom:    application.Status,
-		StatusTo:      newStatus,
-		OperatorType:  "AI_SYSTEM",
-		OperatorID:    "ai_agent",
-		Comments:      fmt.Sprintf("AI决策: %s, 风险评分: %.2f", request.AIDecision.Decision, request.AIAnalysis.RiskScore),
-		OccurredAt:    time.Now(),
-	}
-
-	if err := tx.Create(history).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("记录状态历史失败: %w", err)
-	}
-
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("提交事务失败: %w", err)
-	}
-
-	s.log.Info("AI审批决策处理完成",
-		zap.String("applicationId", applicationID),
-		zap.String("decision", request.AIDecision.Decision),
-		zap.String("newStatus", newStatus),
-	)
-
-	return nil
-}
-
-// getNewStatusFromDecision 根据AI决策获取新状态
-func getNewStatusFromDecision(decision string) string {
-	switch decision {
-	case "AUTO_APPROVED":
-		return "AI_APPROVED"
-	case "REQUIRE_HUMAN_REVIEW":
-		return "MANUAL_REVIEW_REQUIRED"
-	case "AUTO_REJECTED":
-		return "AI_REJECTED"
+	switch applicationType {
+	case "LOAN_APPLICATION":
+		return s.getLoanApplicationInfo(ctx, applicationID)
+	case "MACHINERY_LEASING":
+		return s.getMachineryLeasingInfo(ctx, applicationID)
 	default:
-		return "AI_PROCESSED"
+		return nil, fmt.Errorf("申请不存在")
 	}
 }
 
-// TriggerWorkflow 触发AI审批工作流
-func (s *AIAgentService) TriggerWorkflow(applicationID, workflowType, priority, callbackURL string) (*data.WorkflowExecution, error) {
-	s.log.Info("触发AI工作流",
-		zap.String("applicationId", applicationID),
-		zap.String("workflowType", workflowType),
-	)
-
-	// 检查申请是否存在
-	var application data.LoanApplication
-	if err := s.data.DB.Where("application_id = ?", applicationID).First(&application).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("申请不存在")
-		}
-		return nil, fmt.Errorf("查询申请失败: %w", err)
-	}
-
-	// 创建工作流执行记录
-	execution := &data.WorkflowExecution{
-		ExecutionID:         pkg.GenerateUUID(),
-		ApplicationID:       applicationID,
-		WorkflowType:        workflowType,
-		Status:              "RUNNING",
-		Priority:            priority,
-		StartedAt:           time.Now(),
-		EstimatedCompletion: timePtr(time.Now().Add(5 * time.Minute)),
-		CurrentStage:        "DATA_COLLECTION",
-		Progress:            0,
-		CallbackURL:         callbackURL,
-		RetryCount:          0,
-	}
-
-	if err := s.data.DB.Create(execution).Error; err != nil {
-		return nil, fmt.Errorf("创建工作流记录失败: %w", err)
-	}
-
-	// 更新申请状态为AI处理中
-	if err := s.data.DB.Model(&application).Updates(map[string]interface{}{
-		"status":     "AI_TRIGGERED",
-		"updated_at": time.Now(),
-	}).Error; err != nil {
-		s.log.Error("更新申请状态失败", zap.Error(err))
-	}
-
-	// 记录状态变更历史
-	history := &data.LoanApplicationHistory{
-		ApplicationID: applicationID,
-		StatusFrom:    application.Status,
-		StatusTo:      "AI_TRIGGERED",
-		OperatorType:  "SYSTEM",
-		OperatorID:    "workflow_trigger",
-		Comments:      fmt.Sprintf("触发AI工作流: %s", workflowType),
-		OccurredAt:    time.Now(),
-	}
-	s.data.DB.Create(history)
-
-	s.log.Info("AI工作流触发成功",
-		zap.String("executionId", execution.ExecutionID),
-		zap.String("applicationId", applicationID),
-	)
-
-	return execution, nil
-}
-
-// GetAIModelConfig 获取AI模型配置
-func (s *AIAgentService) GetAIModelConfig() (map[string]interface{}, error) {
-	return s.GetAIModelConfigWithLog(nil)
-}
-
-// GetAIModelConfigWithLog 获取AI模型配置（包含日志记录）
-func (s *AIAgentService) GetAIModelConfigWithLog(req *http.Request) (map[string]interface{}, error) {
-	startTime := time.Now()
-	s.log.Info("获取AI模型配置")
-
-	// 记录请求日志
-	requestData := map[string]interface{}{
-		"action": "get_model_config",
-	}
-
-	config, err := s.getAIModelConfigInternal()
-
-	// 计算处理时间
-	duration := int(time.Since(startTime).Milliseconds())
-
-	// 记录操作日志
-	status := "SUCCESS"
-	errorMessage := ""
+// SubmitAIDecisionUnified 提交AI决策结果（统一接口）
+func (s *AIAgentService) SubmitAIDecisionUnified(ctx context.Context, request *AIDecisionRequest) (*AIDecisionResponse, error) {
+	// 验证申请是否存在
+	exists, err := s.validateApplicationExists(request.ApplicationID, request.ApplicationType)
 	if err != nil {
-		status = "ERROR"
-		errorMessage = err.Error()
+		return nil, err
+	}
+	if !exists {
+		return nil, fmt.Errorf("申请不存在")
 	}
 
-	s.LogAIAgentAction(
-		"GET_AI_MODEL_CONFIG",
-		"DIFY_WORKFLOW",
-		"", // 这里没有application_id
-		requestData,
-		config,
-		status,
-		errorMessage,
-		duration,
-		req,
-	)
+	// 生成操作ID
+	operationID := fmt.Sprintf("ai_op_%d", time.Now().Unix())
 
-	return config, err
+	// 记录AI决策日志
+	aiLog := data.AIOperationLog{
+		OperationID:     operationID,
+		ApplicationID:   request.ApplicationID,
+		ApplicationType: request.ApplicationType,
+		Operation:       "AI_DECISION",
+		Result:          request.Decision,
+		Details:         request.AnalysisSummary,
+		Timestamp:       time.Now(),
+	}
+
+	if err := s.data.DB.Create(&aiLog).Error; err != nil {
+		s.log.Error("保存AI决策日志失败", zap.Error(err))
+		return nil, fmt.Errorf("AI服务暂时不可用")
+	}
+
+	// 根据申请类型更新申请状态
+	switch request.ApplicationType {
+	case "LOAN_APPLICATION":
+		err = s.updateLoanApplicationDecision(request)
+	case "MACHINERY_LEASING":
+		err = s.updateMachineryLeasingDecision(request)
+	default:
+		return nil, fmt.Errorf("不支持的申请类型")
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &AIDecisionResponse{
+		Success:         true,
+		AIOperationID:   operationID,
+		ProcessedAt:     time.Now().Format(time.RFC3339),
+		NextStepMessage: "AI决策已成功处理，系统将继续后续流程",
+	}, nil
 }
 
-// getAIModelConfigInternal 内部方法，实际的业务逻辑
-func (s *AIAgentService) getAIModelConfigInternal() (map[string]interface{}, error) {
-	// 模拟配置数据，实际项目中从数据库或配置文件读取
-	config := map[string]interface{}{
-		"active_models": []map[string]interface{}{
+// GetExternalDataUnified 获取外部数据（多类型支持）
+func (s *AIAgentService) GetExternalDataUnified(ctx context.Context, userID string, dataTypes []string) (*ExternalDataResponse, error) {
+	// 验证用户是否存在
+	var user data.User
+	if err := s.data.DB.Where("user_id = ?", userID).First(&user).Error; err != nil {
+		return nil, fmt.Errorf("用户不存在")
+	}
+
+	response := &ExternalDataResponse{
+		UserID:      userID,
+		DataTypes:   dataTypes,
+		RetrievedAt: time.Now(),
+	}
+
+	// 根据请求的数据类型获取相应数据
+	for _, dataType := range dataTypes {
+		switch dataType {
+		case "credit_report":
+			response.CreditData = s.getCreditReportData(userID)
+		case "bank_flow":
+			response.BankData = s.getBankFlowData(userID)
+		case "blacklist_check":
+			response.BlacklistData = s.getBlacklistData(userID)
+		case "government_subsidy":
+			response.GovernmentData = s.getGovernmentSubsidyData(userID)
+		case "farming_qualification":
+			response.FarmingData = s.getFarmingQualificationData(userID)
+		default:
+			return nil, fmt.Errorf("不支持的数据类型")
+		}
+	}
+
+	return response, nil
+}
+
+// GetAIModelConfigUnified 获取AI模型配置（多类型支持）
+func (s *AIAgentService) GetAIModelConfigUnified(ctx context.Context) (*AIModelConfigResponse, error) {
+	return &AIModelConfigResponse{
+		Models: []AIModelConfig{
 			{
-				"model_id":   "risk_assessment_v2",
-				"model_type": "RISK_EVALUATION",
-				"version":    "2.1.0",
-				"status":     "ACTIVE",
-				"thresholds": map[string]float64{
-					"low_risk":    0.3,
-					"medium_risk": 0.7,
-					"high_risk":   0.9,
-				},
+				ModelName: "claude-3.5-sonnet",
+				Version:   "v1.0",
+				Type:      "LOAN_APPLICATION",
+				Enabled:   true,
 			},
 			{
-				"model_id":    "fraud_detection_v1",
-				"model_type":  "FRAUD_DETECTION",
-				"version":     "1.5.2",
-				"status":      "ACTIVE",
-				"sensitivity": 0.85,
+				ModelName: "gpt-4o",
+				Version:   "v1.0",
+				Type:      "MACHINERY_LEASING",
+				Enabled:   true,
 			},
 		},
-		"approval_rules": map[string]interface{}{
-			"auto_approval_threshold":  0.3,
-			"auto_rejection_threshold": 0.8,
-			"max_auto_approval_amount": 50000,
-			"required_human_review_conditions": []string{
-				"申请金额超过5万元",
-				"信用评分低于700分",
-				"存在潜在欺诈风险",
-			},
+		RiskThresholds: map[string]float64{
+			"low_risk_threshold":     0.3,
+			"medium_risk_threshold":  0.7,
+			"auto_approve_threshold": 0.2,
+			"auto_reject_threshold":  0.8,
 		},
-		"business_parameters": map[string]interface{}{
-			"max_debt_to_income_ratio": 0.5,
-			"min_credit_score":         600,
-			"max_loan_amount_by_category": map[string]float64{
-				"种植贷": 50000,
-				"设备贷": 200000,
-				"其他":  30000,
-			},
+		BusinessRules: map[string]interface{}{
+			"max_loan_amount":       1000000,
+			"min_credit_score":      600,
+			"max_leasing_term_days": 365,
+			"required_documents":    []string{"id_card", "income_proof"},
 		},
-	}
-
-	return config, nil
+		UpdatedAt: time.Now(),
+	}, nil
 }
 
-// GetExternalData 获取外部数据
-func (s *AIAgentService) GetExternalData(userID, dataTypes string) (map[string]interface{}, error) {
-	return s.GetExternalDataWithLog(userID, dataTypes, nil)
+// GetMachineryLeasingApplicationInfo 获取农机租赁申请信息（专用接口）
+func (s *AIAgentService) GetMachineryLeasingApplicationInfo(ctx context.Context, applicationID string) (*MachineryLeasingApplicationInfo, error) {
+	// 这里应该查询农机租赁申请数据
+	// 目前返回模拟数据
+	return &MachineryLeasingApplicationInfo{
+		ApplicationID: applicationID,
+		LesseeInfo: map[string]interface{}{
+			"name":    "张三",
+			"id_card": "123456789012345678",
+			"phone":   "13800138000",
+		},
+		LessorInfo: map[string]interface{}{
+			"company_name": "农机租赁公司",
+			"contact":      "李四",
+		},
+		MachineryInfo: map[string]interface{}{
+			"type":  "拖拉机",
+			"model": "东方红LX1000",
+			"value": 150000,
+		},
+		LeasingDetails: map[string]interface{}{
+			"rental_amount": 5000,
+			"term_days":     30,
+			"deposit":       10000,
+		},
+		Status:      "SUBMITTED",
+		SubmittedAt: time.Now(),
+	}, nil
 }
 
-// GetExternalDataWithLog 获取外部数据（包含日志记录）
-func (s *AIAgentService) GetExternalDataWithLog(userID, dataTypes string, req *http.Request) (map[string]interface{}, error) {
-	startTime := time.Now()
-	s.log.Info("获取外部数据",
-		zap.String("userId", userID),
-		zap.String("dataTypes", dataTypes),
-	)
+// GetAIOperationLogs 获取AI操作日志
+func (s *AIAgentService) GetAIOperationLogs(ctx context.Context, applicationID, applicationType string, page, limit int) ([]AIOperationLog, int64, error) {
+	query := s.data.DB.Model(&data.AIOperationLog{})
 
-	// 记录请求日志
-	requestData := map[string]interface{}{
-		"user_id":    userID,
-		"data_types": dataTypes,
+	if applicationID != "" {
+		query = query.Where("application_id = ?", applicationID)
+	}
+	if applicationType != "" {
+		query = query.Where("application_type = ?", applicationType)
 	}
 
-	result, err := s.getExternalDataInternal(userID, dataTypes)
-
-	// 计算处理时间
-	duration := int(time.Since(startTime).Milliseconds())
-
-	// 记录操作日志
-	status := "SUCCESS"
-	errorMessage := ""
-	if err != nil {
-		status = "ERROR"
-		errorMessage = err.Error()
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
 	}
 
-	s.LogAIAgentAction(
-		"GET_EXTERNAL_DATA",
-		"DIFY_WORKFLOW",
-		"", // 这里没有application_id，使用空字符串
-		requestData,
-		result,
-		status,
-		errorMessage,
-		duration,
-		req,
-	)
+	var logs []data.AIOperationLog
+	offset := (page - 1) * limit
+	if err := query.Order("timestamp DESC").Offset(offset).Limit(limit).Find(&logs).Error; err != nil {
+		return nil, 0, err
+	}
 
-	return result, err
+	var result []AIOperationLog
+	for _, log := range logs {
+		result = append(result, AIOperationLog{
+			OperationID:     log.OperationID,
+			ApplicationID:   log.ApplicationID,
+			ApplicationType: log.ApplicationType,
+			Operation:       log.Operation,
+			Result:          log.Result,
+			Details:         log.Details,
+			Timestamp:       log.Timestamp,
+		})
+	}
+
+	return result, total, nil
 }
 
-// getExternalDataInternal 内部方法，实际的业务逻辑
-func (s *AIAgentService) getExternalDataInternal(userID, dataTypes string) (map[string]interface{}, error) {
-	if dataTypes == "" {
-		dataTypes = "credit_report,bank_flow,blacklist_check,government_subsidy"
+// 辅助方法
+
+// detectApplicationType 根据申请ID检测申请类型
+func (s *AIAgentService) detectApplicationType(applicationID string) string {
+	if strings.Contains(applicationID, "ml_") || strings.Contains(applicationID, "leasing_") {
+		return "MACHINERY_LEASING"
 	}
-
-	result := map[string]interface{}{
-		"user_id": userID,
+	if strings.Contains(applicationID, "app_") || strings.Contains(applicationID, "loan_") || strings.Contains(applicationID, "test_app_") {
+		return "LOAN_APPLICATION"
 	}
-
-	// 模拟征信报告数据
-	if pkg.Contains(strings.Split(dataTypes, ","), "credit_report") || strings.Contains(dataTypes, "credit") {
-		result["credit_report"] = map[string]interface{}{
-			"score":           750,
-			"grade":           "优秀",
-			"report_date":     "2024-03-01",
-			"loan_history":    []interface{}{},
-			"overdue_records": 0,
-		}
-	}
-
-	// 模拟银行流水数据
-	if pkg.Contains(strings.Split(dataTypes, ","), "bank_flow") || strings.Contains(dataTypes, "bank") {
-		result["bank_flow"] = map[string]interface{}{
-			"average_monthly_income": 6500,
-			"account_stability":      "稳定",
-			"last_6_months_flow": []map[string]interface{}{
-				{"month": "2024-02", "income": 7200, "expense": 4800},
-				{"month": "2024-01", "income": 6800, "expense": 5100},
-			},
-		}
-	}
-
-	// 模拟黑名单检查
-	if pkg.Contains(strings.Split(dataTypes, ","), "blacklist_check") || strings.Contains(dataTypes, "blacklist") {
-		result["blacklist_check"] = map[string]interface{}{
-			"is_blacklisted": false,
-			"check_time":     time.Now().Format(time.RFC3339),
-		}
-	}
-
-	// 模拟政府补贴信息
-	if pkg.Contains(strings.Split(dataTypes, ","), "government_subsidy") || strings.Contains(dataTypes, "subsidy") {
-		result["government_subsidy"] = map[string]interface{}{
-			"received_subsidies": []map[string]interface{}{
-				{"year": 2023, "type": "种粮补贴", "amount": 1200},
-				{"year": 2022, "type": "农机购置补贴", "amount": 3000},
-			},
-		}
-	}
-
-	// 记录查询结果到数据库
-	queryID := pkg.GenerateUUID()
-	queryResult, _ := json.Marshal(result)
-
-	externalQuery := &data.ExternalDataQuery{
-		QueryID:       queryID,
-		UserID:        userID,
-		ApplicationID: "", // 这里可能需要传入application_id
-		DataTypes:     dataTypes,
-		QueryResult:   queryResult,
-		Status:        "SUCCESS",
-		ErrorMessage:  "",
-		QueryDuration: int(time.Since(time.Now()).Milliseconds()),
-		QueriedAt:     time.Now(),
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
-	}
-
-	if err := s.data.DB.Create(externalQuery).Error; err != nil {
-		s.log.Error("记录外部数据查询失败", zap.Error(err))
-	}
-
-	return result, nil
+	return "UNKNOWN"
 }
 
-// UpdateApplicationStatus 更新申请状态
-func (s *AIAgentService) UpdateApplicationStatus(applicationID, status, operator, remarks string, metadata map[string]interface{}) error {
-	s.log.Info("更新申请状态",
-		zap.String("applicationId", applicationID),
-		zap.String("status", status),
-		zap.String("operator", operator),
-	)
-
-	// 查询当前申请
+// getLoanApplicationInfo 获取贷款申请信息
+func (s *AIAgentService) getLoanApplicationInfo(ctx context.Context, applicationID string) (*AIApplicationInfo, error) {
 	var application data.LoanApplication
 	if err := s.data.DB.Where("application_id = ?", applicationID).First(&application).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return fmt.Errorf("申请不存在")
-		}
-		return fmt.Errorf("查询申请失败: %w", err)
+		return nil, fmt.Errorf("申请不存在")
 	}
 
-	oldStatus := application.Status
-
-	// 更新申请状态
-	if err := s.data.DB.Model(&application).Updates(map[string]interface{}{
-		"status":     status,
-		"updated_at": time.Now(),
-	}).Error; err != nil {
-		return fmt.Errorf("更新申请状态失败: %w", err)
+	// 解析申请人信息
+	var applicantInfo map[string]interface{}
+	if application.ApplicantSnapshot != nil {
+		json.Unmarshal(application.ApplicantSnapshot, &applicantInfo)
 	}
 
-	// 记录状态变更历史
-	history := &data.LoanApplicationHistory{
-		ApplicationID: applicationID,
-		StatusFrom:    oldStatus,
-		StatusTo:      status,
-		OperatorType:  "AI_SYSTEM",
-		OperatorID:    operator,
-		Comments:      remarks,
-		OccurredAt:    time.Now(),
+	// 获取产品信息
+	var product data.LoanProduct
+	s.data.DB.Where("product_id = ?", application.ProductID).First(&product)
+
+	return &AIApplicationInfo{
+		ApplicationType: "LOAN_APPLICATION",
+		ApplicationID:   application.ApplicationID,
+		UserID:          application.UserID,
+		Status:          application.Status,
+		BasicInfo: map[string]interface{}{
+			"amount":      application.AmountApplied,
+			"term_months": application.TermMonthsApplied,
+			"purpose":     application.Purpose,
+		},
+		FinancialInfo: applicantInfo,
+		ProductInfo: map[string]interface{}{
+			"product_id":   product.ProductID,
+			"product_name": product.Name,
+			"category":     product.Category,
+		},
+		SubmittedAt: application.SubmittedAt,
+	}, nil
+}
+
+// getMachineryLeasingInfo 获取农机租赁申请信息
+func (s *AIAgentService) getMachineryLeasingInfo(ctx context.Context, applicationID string) (*AIApplicationInfo, error) {
+	// 这里应该查询真实的农机租赁数据
+	// 目前返回模拟数据
+	return &AIApplicationInfo{
+		ApplicationType: "MACHINERY_LEASING",
+		ApplicationID:   applicationID,
+		UserID:          "user_123",
+		Status:          "SUBMITTED",
+		BasicInfo: map[string]interface{}{
+			"machinery_type": "拖拉机",
+			"rental_amount":  5000,
+			"term_days":      30,
+		},
+		SubmittedAt: time.Now(),
+	}, nil
+}
+
+// validateApplicationExists 验证申请是否存在
+func (s *AIAgentService) validateApplicationExists(applicationID, applicationType string) (bool, error) {
+	switch applicationType {
+	case "LOAN_APPLICATION":
+		var count int64
+		err := s.data.DB.Model(&data.LoanApplication{}).Where("application_id = ?", applicationID).Count(&count).Error
+		return count > 0, err
+	case "MACHINERY_LEASING":
+		// 这里应该查询农机租赁表
+		// 目前直接返回true
+		return true, nil
+	}
+	return false, nil
+}
+
+// updateLoanApplicationDecision 更新贷款申请决策
+func (s *AIAgentService) updateLoanApplicationDecision(request *AIDecisionRequest) error {
+	updates := map[string]interface{}{
+		"status":        "AI_PROCESSED",
+		"ai_risk_score": int(request.RiskScore * 100),
+		"ai_suggestion": request.AnalysisSummary,
 	}
 
-	if err := s.data.DB.Create(history).Error; err != nil {
-		s.log.Error("记录状态历史失败", zap.Error(err))
+	if request.ApprovedAmount != nil {
+		updates["approved_amount"] = *request.ApprovedAmount
+	}
+	if request.ApprovedTermMonths != nil {
+		updates["approved_term_months"] = *request.ApprovedTermMonths
 	}
 
+	return s.data.DB.Model(&data.LoanApplication{}).
+		Where("application_id = ?", request.ApplicationID).
+		Updates(updates).Error
+}
+
+// updateMachineryLeasingDecision 更新农机租赁决策
+func (s *AIAgentService) updateMachineryLeasingDecision(request *AIDecisionRequest) error {
+	// 这里应该更新农机租赁申请
+	// 目前直接返回成功
 	return nil
 }
 
-// SubmitAIDecisionUnified 统一的AI决策提交方法，支持贷款和农机租赁
-func (s *AIAgentService) SubmitAIDecisionUnified(ctx context.Context, applicationID string, params *AIDecisionParams) (*AIDecisionResult, error) {
-	startTime := time.Now()
-	s.log.Info("提交AI决策（统一接口）",
-		zap.String("applicationId", applicationID),
-		zap.String("decision", params.Decision))
+// 外部数据获取方法
 
-	var result *AIDecisionResult
-	var err error
-
-	// 检查申请类型并调用相应的处理方法
-	if s.isLeasingApplication(applicationID) {
-		// 处理农机租赁申请
-		var leasingService *MachineryLeasingApprovalService
-		if s.data != nil {
-			leasingService = NewMachineryLeasingApprovalService(s.data, s.log)
-		}
-
-		if leasingService != nil {
-			// 转换参数为农机租赁参数格式
-			leasingParams := &LeasingAIDecisionParams{
-				ApplicationID:       params.ApplicationID,
-				Decision:            params.Decision,
-				RiskScore:           params.RiskScore,
-				ConfidenceScore:     params.ConfidenceScore,
-				SuggestedDeposit:    params.ApprovedAmount, // 在农机租赁中，approved_amount 映射为建议押金
-				SuggestedConditions: params.Conditions,
-				RiskLevel:           params.RiskLevel,
-				AnalysisSummary:     params.AnalysisSummary,
-				DetailedAnalysis:    params.DetailedAnalysis,
-				Recommendations:     params.Recommendations,
-				AIModelVersion:      params.AIModelVersion,
-				WorkflowID:          params.WorkflowID,
-			}
-
-			leasingResult, leasingErr := leasingService.SubmitLeasingAIDecisionQuery(ctx, leasingParams)
-			if leasingErr == nil {
-				result = &AIDecisionResult{
-					ApplicationID: leasingResult.ApplicationID,
-					NewStatus:     leasingResult.NewStatus,
-					NextStep:      leasingResult.NextStep,
-				}
-			} else {
-				err = leasingErr
-			}
-		} else {
-			err = fmt.Errorf("农机租赁服务不可用")
-		}
-	} else {
-		// 处理贷款申请
-		result, err = s.submitAIDecisionQueryInternal(ctx, params)
+func (s *AIAgentService) getCreditReportData(userID string) map[string]interface{} {
+	return map[string]interface{}{
+		"credit_score":  750,
+		"credit_grade":  "A",
+		"overdue_count": 0,
 	}
-
-	// 计算处理时间
-	duration := int(time.Since(startTime).Milliseconds())
-
-	// 记录操作日志
-	status := "SUCCESS"
-	errorMessage := ""
-	if err != nil {
-		status = "ERROR"
-		errorMessage = err.Error()
-	}
-
-	applicationType := "LOAN_APPLICATION"
-	if s.isLeasingApplication(applicationID) {
-		applicationType = "LEASING_APPLICATION"
-	}
-
-	// 从context中获取request（如果有的话）
-	var req *http.Request
-	if ctx != nil {
-		if r, ok := ctx.Value("request").(*http.Request); ok {
-			req = r
-		}
-	}
-
-	s.LogAIAgentAction(
-		"SUBMIT_AI_DECISION_UNIFIED",
-		"DIFY_WORKFLOW",
-		applicationID,
-		map[string]interface{}{
-			"application_type": applicationType,
-			"decision":         params.Decision,
-			"risk_score":       params.RiskScore,
-		},
-		result,
-		status,
-		errorMessage,
-		duration,
-		req,
-	)
-
-	return result, err
 }
 
-// SubmitAIDecisionQuery 处理查询参数方式的AI决策提交
-func (s *AIAgentService) SubmitAIDecisionQuery(ctx context.Context, params *AIDecisionParams) (*AIDecisionResult, error) {
-	startTime := time.Now()
-	s.log.Info("Processing AI decision with query parameters",
-		zap.String("application_id", params.ApplicationID),
-		zap.String("decision", params.Decision),
-		zap.Float64("risk_score", params.RiskScore))
-
-	result, err := s.submitAIDecisionQueryInternal(ctx, params)
-
-	// 计算处理时间
-	duration := int(time.Since(startTime).Milliseconds())
-
-	// 记录操作日志
-	status := "SUCCESS"
-	errorMessage := ""
-	if err != nil {
-		status = "ERROR"
-		errorMessage = err.Error()
+func (s *AIAgentService) getBankFlowData(userID string) map[string]interface{} {
+	return map[string]interface{}{
+		"monthly_income":  15000,
+		"monthly_expense": 8000,
+		"balance":         50000,
 	}
-
-	// 从context中获取request（如果有的话）
-	var req *http.Request
-	if ctx != nil {
-		if r, ok := ctx.Value("request").(*http.Request); ok {
-			req = r
-		}
-	}
-
-	s.LogAIAgentAction(
-		"SUBMIT_AI_DECISION_QUERY",
-		"DIFY_WORKFLOW",
-		params.ApplicationID,
-		params,
-		result,
-		status,
-		errorMessage,
-		duration,
-		req,
-	)
-
-	return result, err
 }
 
-// submitAIDecisionQueryInternal 内部方法，实际的业务逻辑
-func (s *AIAgentService) submitAIDecisionQueryInternal(ctx context.Context, params *AIDecisionParams) (*AIDecisionResult, error) {
-	// 1. 验证申请是否存在
-	var application data.LoanApplication
-	if err := s.data.DB.Where("application_id = ?", params.ApplicationID).First(&application).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("申请不存在: %s", params.ApplicationID)
-		}
-		return nil, fmt.Errorf("获取申请信息失败: %w", err)
+func (s *AIAgentService) getBlacklistData(userID string) map[string]interface{} {
+	return map[string]interface{}{
+		"is_blacklisted": false,
+		"risk_level":     "LOW",
 	}
-
-	// 2. 检查申请状态是否允许AI决策
-	allowedStatuses := []string{"SUBMITTED", "AI_TRIGGERED", "AI_REVIEWING", "pending_review"}
-	if !pkg.Contains(allowedStatuses, application.Status) {
-		return nil, fmt.Errorf("申请状态不允许AI决策: %s", application.Status)
-	}
-
-	// 3. 构建AI分析结果数据
-	detailedAnalysisJSON, _ := json.Marshal(params.DetailedAnalysis)
-	recommendationsJSON, _ := json.Marshal(params.Recommendations)
-	riskFactorsJSON, _ := json.Marshal([]map[string]interface{}{
-		{
-			"factor":      "risk_score",
-			"value":       params.RiskScore,
-			"description": params.AnalysisSummary,
-		},
-	})
-
-	// 4. 保存AI分析结果
-	aiResult := &data.AIAnalysisResult{
-		ApplicationID:         params.ApplicationID,
-		WorkflowExecutionID:   params.WorkflowID,
-		RiskLevel:             params.RiskLevel,
-		RiskScore:             params.RiskScore,
-		ConfidenceScore:       params.ConfidenceScore,
-		AnalysisSummary:       params.AnalysisSummary,
-		DetailedAnalysis:      detailedAnalysisJSON,
-		RiskFactors:           riskFactorsJSON,
-		Recommendations:       recommendationsJSON,
-		AIDecision:            params.Decision,
-		ApprovedAmount:        &params.ApprovedAmount,
-		ApprovedTermMonths:    &params.ApprovedTermMonths,
-		SuggestedInterestRate: params.SuggestedInterestRate,
-		NextAction:            getNextAction(params.Decision),
-		AIModelVersion:        params.AIModelVersion,
-		ProcessingTimeMs:      2000, // 模拟处理时间
-		ProcessedAt:           time.Now(),
-		CreatedAt:             time.Now(),
-		UpdatedAt:             time.Now(),
-	}
-
-	// 5. 开始数据库事务
-	tx := s.data.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	// 保存AI分析结果
-	if err := tx.Create(aiResult).Error; err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("保存AI分析结果失败: %w", err)
-	}
-
-	// 6. 确定新状态
-	newStatus := getNewStatusFromDecision(params.Decision)
-
-	// 7. 更新申请状态
-	updateData := map[string]interface{}{
-		"status":        newStatus,
-		"ai_risk_score": int(params.RiskScore * 1000), // 转换为千分制
-		"ai_suggestion": params.AnalysisSummary,
-		"updated_at":    time.Now(),
-	}
-
-	// 根据决策类型更新其他字段
-	if params.Decision == "AUTO_APPROVED" {
-		updateData["approved_amount"] = params.ApprovedAmount
-		updateData["approved_term_months"] = params.ApprovedTermMonths
-		updateData["final_decision"] = "APPROVED"
-		updateData["decision_reason"] = "AI自动审批通过"
-		updateData["processed_by"] = "AI_SYSTEM"
-		updateData["processed_at"] = time.Now()
-	} else if params.Decision == "AUTO_REJECTED" {
-		updateData["final_decision"] = "REJECTED"
-		updateData["decision_reason"] = params.AnalysisSummary
-		updateData["processed_by"] = "AI_SYSTEM"
-		updateData["processed_at"] = time.Now()
-	}
-
-	if err := tx.Model(&application).Updates(updateData).Error; err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("更新申请状态失败: %w", err)
-	}
-
-	// 8. 记录状态变更历史
-	history := &data.LoanApplicationHistory{
-		ApplicationID: params.ApplicationID,
-		StatusFrom:    application.Status,
-		StatusTo:      newStatus,
-		OperatorType:  "AI_SYSTEM",
-		OperatorID:    "ai_agent",
-		Comments:      fmt.Sprintf("AI决策: %s, 风险评分: %.2f", params.Decision, params.RiskScore),
-		OccurredAt:    time.Now(),
-	}
-
-	if err := tx.Create(history).Error; err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("记录状态历史失败: %w", err)
-	}
-
-	// 9. 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("提交事务失败: %w", err)
-	}
-
-	// 10. 构建响应
-	result := &AIDecisionResult{
-		ApplicationID: params.ApplicationID,
-		NewStatus:     newStatus,
-		NextStep:      getNextAction(params.Decision),
-	}
-
-	s.log.Info("AI decision processed successfully",
-		zap.String("application_id", params.ApplicationID),
-		zap.String("decision", params.Decision),
-		zap.String("new_status", newStatus))
-
-	return result, nil
 }
 
-// getNextAction 根据决策确定下一步行动
-func getNextAction(decision string) string {
-	actionMap := map[string]string{
-		"AUTO_APPROVED":        "GENERATE_CONTRACT",
-		"AUTO_REJECTED":        "SEND_REJECTION_NOTICE",
-		"REQUIRE_HUMAN_REVIEW": "ASSIGN_TO_REVIEWER",
+func (s *AIAgentService) getGovernmentSubsidyData(userID string) map[string]interface{} {
+	return map[string]interface{}{
+		"has_subsidy":    true,
+		"subsidy_amount": 5000,
+		"subsidy_type":   "农业补贴",
 	}
-	if action, exists := actionMap[decision]; exists {
-		return action
-	}
-	return "MANUAL_REVIEW"
 }
 
-// 辅助函数
-func maskPhone(phone string) string {
-	if len(phone) < 7 {
-		return phone
+func (s *AIAgentService) getFarmingQualificationData(userID string) map[string]interface{} {
+	return map[string]interface{}{
+		"is_qualified":        true,
+		"qualification_level": "专业农户",
+		"farming_years":       10,
 	}
-	return phone[:3] + "****" + phone[len(phone)-4:]
-}
-
-func maskIDCard(idCard string) string {
-	if len(idCard) < 10 {
-		return idCard
-	}
-	return idCard[:3] + "***********" + idCard[len(idCard)-4:]
-}
-
-func timePtr(t time.Time) *time.Time {
-	return &t
-}
-
-// maskName 脱敏姓名
-func maskName(name string) string {
-	if len(name) == 0 {
-		return ""
-	}
-	if len(name) <= 2 {
-		return "*" + name[len(name)-1:]
-	}
-	return name[:1] + "*" + name[len(name)-1:]
-}
-
-// calculateAge 计算年龄
-func calculateAge(birthDate *time.Time) int {
-	if birthDate == nil {
-		return 0
-	}
-	now := time.Now()
-	age := now.Year() - birthDate.Year()
-	if now.YearDay() < birthDate.YearDay() {
-		age--
-	}
-	return age
 }

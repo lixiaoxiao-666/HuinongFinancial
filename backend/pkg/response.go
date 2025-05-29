@@ -94,8 +94,18 @@ func BadRequest(c *gin.Context, message string, details ...string) {
 	Error(c, 1001, message, details...)
 }
 
+// BadRequestWithMessage 400错误响应（自定义消息）
+func BadRequestWithMessage(c *gin.Context, message string, details ...string) {
+	Error(c, 1001, message, details...)
+}
+
 // Unauthorized 401错误响应
 func Unauthorized(c *gin.Context, message string, details ...string) {
+	Error(c, 2001, message, details...)
+}
+
+// UnauthorizedWithMessage 401错误响应（自定义消息）
+func UnauthorizedWithMessage(c *gin.Context, message string, details ...string) {
 	Error(c, 2001, message, details...)
 }
 
@@ -104,9 +114,19 @@ func Forbidden(c *gin.Context, message string, details ...string) {
 	Error(c, 3001, message, details...)
 }
 
+// ForbiddenWithMessage 403错误响应（自定义消息）
+func ForbiddenWithMessage(c *gin.Context, message string, details ...string) {
+	Error(c, 3001, message, details...)
+}
+
 // NotFound 404错误响应
 func NotFound(c *gin.Context, message string, details ...string) {
 	Error(c, 4001, message, details...)
+}
+
+// NotFoundWithMessage 资源不存在响应（自定义消息）
+func NotFoundWithMessage(c *gin.Context, message string) {
+	Error(c, 4001, message)
 }
 
 // InternalError 500错误响应
@@ -117,4 +137,9 @@ func InternalError(c *gin.Context, message string, details ...string) {
 // ValidationError 参数验证错误响应
 func ValidationError(c *gin.Context, details string) {
 	Error(c, 1002, "Invalid input parameters", details)
+}
+
+// InternalErrorWithMessage 内部错误响应（自定义消息）
+func InternalErrorWithMessage(c *gin.Context, message string) {
+	Error(c, 5001, message)
 }

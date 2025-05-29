@@ -58,16 +58,27 @@ func (r *Router) SetupRoutes() *gin.Engine {
 	// 创建服务实例
 	userService := service.NewUserService(r.data, r.jwtManager, r.log)
 	loanService := service.NewLoanService(r.data, r.log)
+	fileService := service.NewFileService(r.data, r.log)
 	adminService := service.NewAdminService(r.data, r.jwtManager, r.log)
 	aiAgentService := service.NewAIAgentService(r.data, r.log)
-	machineryLeasingApprovalService := service.NewMachineryLeasingApprovalService(r.data, r.log)
+	leasingService := service.NewMachineryLeasingApprovalService(r.data, r.log)
 
-	// 创建处理器实例
+	// 🔥 关键：创建统一处理器，整合所有服务
+	unifiedProcessor := service.NewUnifiedApplicationProcessor(
+		r.data,
+		loanService,
+		leasingService,
+		aiAgentService,
+		r.log,
+	)
+
+	// 实例化所有处理器
 	userHandler := NewUserHandler(userService, r.log)
 	loanHandler := NewLoanHandler(loanService, r.log)
+	fileHandler := NewFileHandler(fileService, r.log)
 	adminHandler := NewAdminHandler(adminService, loanService, r.log)
-	aiAgentHandler := NewAIAgentHandler(aiAgentService, r.log)
-	machineryLeasingApprovalHandler := NewMachineryLeasingApprovalHandler(machineryLeasingApprovalService, r.log)
+	aiAgentHandler := NewAIAgentHandler(aiAgentService, unifiedProcessor, r.log)
+	machineryLeasingApprovalHandler := NewMachineryLeasingApprovalHandler(leasingService, r.log)
 
 	// 创建认证中间件
 	authMiddleware := AuthMiddleware(r.jwtManager)
@@ -77,7 +88,7 @@ func (r *Router) SetupRoutes() *gin.Engine {
 	// 注册路由
 	r.registerUserRoutes(v1, userHandler, authMiddleware)
 	r.registerLoanRoutes(v1, loanHandler, authMiddleware)
-	r.registerFileRoutes(v1, authMiddleware)
+	r.registerFileRoutes(v1, fileHandler, authMiddleware)
 	r.registerAdminRoutes(v1, adminHandler, adminAuthMiddleware)
 	r.registerAIAgentRoutes(v1, aiAgentHandler, aiAgentAuthMiddleware)
 	r.registerMachineryLeasingApprovalRoutes(v1, machineryLeasingApprovalHandler, authMiddleware)
@@ -98,7 +109,7 @@ func (r *Router) registerLoanRoutes(v1 *gin.RouterGroup, handler *LoanHandler, a
 }
 
 // registerFileRoutes 注册文件路由
-func (r *Router) registerFileRoutes(v1 *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
+func (r *Router) registerFileRoutes(v1 *gin.RouterGroup, handler *FileHandler, authMiddleware gin.HandlerFunc) {
 	files := v1.Group("/files")
 	files.Use(authMiddleware)
 	{
