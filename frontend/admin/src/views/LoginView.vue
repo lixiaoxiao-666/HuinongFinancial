@@ -120,16 +120,33 @@ const handleLogin = async () => {
 <style scoped>
 .login-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-image: url('@/assets/背景.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  position: relative;
+}
+
+.login-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.1);
+  z-index: 1;
 }
 
 .login-content {
   width: 100%;
   max-width: 400px;
+  position: relative;
+  z-index: 2;
 }
 
 .login-header {
@@ -139,67 +156,142 @@ const handleLogin = async () => {
 }
 
 .login-header h1 {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 600;
-  margin-bottom: 8px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  margin-bottom: 10px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .login-header p {
-  font-size: 14px;
-  opacity: 0.9;
+  font-size: 16px;
+  opacity: 0.95;
   margin: 0;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
 .login-card {
-  border-radius: 12px;
+  border-radius: 16px;
   border: none;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  background-color: rgba(255, 255, 255, 0.85);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.login-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
 }
 
 .card-header {
   text-align: center;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 600;
   color: #333;
+  padding: 15px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .login-tips {
-  margin-top: 20px;
-  padding: 16px;
-  background: #f8f9fa;
+  margin-top: 15px;
+  padding: 12px;
+  background: #f1f8e9;
   border-radius: 8px;
-  border-left: 4px solid #409eff;
+  border-left: 4px solid #4CAF50;
 }
 
 .login-tips h4 {
-  margin: 0 0 12px 0;
-  color: #333;
+  margin: 0 0 8px 0;
+  color: #2E7D32;
   font-size: 14px;
   font-weight: 600;
 }
 
 .login-tips p {
-  margin: 6px 0;
-  color: #666;
+  margin: 4px 0;
+  color: #555;
   font-size: 13px;
   line-height: 1.4;
 }
 
 .login-tips strong {
-  color: #409eff;
+  color: #2E7D32;
+  font-weight: 600;
 }
 
 :deep(.el-form-item) {
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 :deep(.el-input__inner) {
   border-radius: 8px;
+  height: 42px;
+  font-size: 14px;
+  border: none;
+  transition: all 0.3s ease;
+  background-color: #f9f9f9;
+}
+
+:deep(.el-input__wrapper) {
+  box-shadow: none;
+  border: none;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+:deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px rgba(76, 175, 80, 0.3);
+}
+
+:deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px rgba(76, 175, 80, 0.5);
+}
+
+:deep(.el-input__wrapper:hover .el-input__inner) {
+  border-color: transparent;
+}
+
+:deep(.el-input__wrapper.is-focus .el-input__inner) {
+  border-color: transparent;
 }
 
 :deep(.el-button) {
   border-radius: 8px;
   font-weight: 500;
+  background-color: #4CAF50;
+  border-color: #4CAF50;
+  height: 42px;
+  font-size: 15px;
+  letter-spacing: 2px;
+  transition: all 0.3s ease;
+}
+
+:deep(.el-button:hover) {
+  background-color: #388E3C;
+  border-color: #388E3C;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(76, 175, 80, 0.4);
+}
+
+:deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
+  background-color: #4CAF50;
+  border-color: #4CAF50;
+}
+
+:deep(.el-input__prefix-inner) {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  color: #4CAF50;
+}
+
+:deep(.el-form) {
+  padding: 5px 25px 20px;
+}
+
+:deep(.el-checkbox) {
+  height: 30px;
 }
 </style> 

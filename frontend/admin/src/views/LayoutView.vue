@@ -5,7 +5,7 @@
       <el-header height="60px" class="header">
         <div class="header-left">
           <div class="logo-container">
-            <img src="/favicon.ico" alt="Logo" class="logo" />
+            <img src="@/assets/icons/blue-oa-logo.png" alt="Logo" class="logo" />
             <span class="logo-text">数字惠农OA</span>
           </div>
           <el-icon @click="toggleCollapse" class="collapse-btn">
@@ -237,19 +237,32 @@ onMounted(() => {
 .logo-container {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  transition: all 0.3s ease;
+}
+
+.logo-container:hover .logo {
+  transform: rotate(10deg);
 }
 
 .logo {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.15));
+  border: 2px solid #e6e6e6;
+  padding: 2px;
+  background-color: #ffffff;
 }
 
 .logo-text {
   font-size: 18px;
   font-weight: 600;
-  color: #409eff;
+  color: #1976D2;
   white-space: nowrap;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .collapse-btn {
