@@ -15,9 +15,9 @@ type RouterConfig struct {
 	UserService    service.UserService
 	LoanService    service.LoanService
 	MachineService service.MachineService
-	ArticleService service.ArticleService
-	ExpertService  service.ExpertService
-	FileService    service.FileService
+	ArticleService service.ContentService
+	ExpertService  service.ContentService
+	FileService    service.SystemService
 	SystemService  service.SystemService
 	OAService      service.OAService
 	DifyService    service.DifyService
@@ -40,19 +40,22 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 
 	// 创建Handler实例
 	userHandler := handler.NewUserHandler(config.UserService)
+	loanHandler := handler.NewLoanHandler(config.LoanService)
+	oaLoanHandler := handler.NewOALoanHandler(config.LoanService, config.OAService)
+	fileHandler := handler.NewFileHandler(config.SystemService)
+	userAuthHandler := handler.NewUserAuthHandler(config.UserService, config.OAService)
+	machineHandler := handler.NewMachineHandler(config.MachineService)
+
+	// 新增的Handler实例
+	articleHandler := handler.NewArticleHandler(config.ArticleService)
+	expertHandler := handler.NewExpertHandler(config.ExpertService)
+	systemHandler := handler.NewSystemHandler(config.SystemService)
+
 	difyHandler := handler.NewDifyHandler(
 		config.UserService,
 		config.LoanService,
 		config.MachineService,
 	)
-	// TODO: 创建其他Handler实例
-	// loanHandler := handler.NewLoanHandler(config.LoanService)
-	// machineHandler := handler.NewMachineHandler(config.MachineService)
-	// articleHandler := handler.NewArticleHandler(config.ArticleService)
-	// expertHandler := handler.NewExpertHandler(config.ExpertService)
-	// fileHandler := handler.NewFileHandler(config.FileService)
-	// systemHandler := handler.NewSystemHandler(config.SystemService)
-	// oaHandler := handler.NewOAHandler(config.OAService)
 
 	// 健康检查
 	r.GET("/health", func(c *gin.Context) {
@@ -68,13 +71,8 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 		// 公开API（无需认证）
 		public := api.Group("/public")
 		{
-			public.GET("/version", func(c *gin.Context) {
-				c.JSON(200, gin.H{
-					"version":     "1.0.0",
-					"name":        "数字惠农API",
-					"description": "数字惠农APP及OA后台管理系统API接口",
-				})
-			})
+			public.GET("/version", systemHandler.GetSystemVersion)
+			public.GET("/configs", systemHandler.GetPublicConfigs)
 		}
 
 		// 内部API（供Dify工作流调用）
@@ -143,63 +141,74 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			user.POST("/tags", userHandler.AddUserTag)
 			user.DELETE("/tags/:tag_key", userHandler.RemoveUserTag)
 
-			// TODO: 贷款相关API
-			// loan := user.Group("/loan")
-			// {
-			//     loan.GET("/products", loanHandler.GetProducts)
-			//     loan.POST("/applications", loanHandler.SubmitApplication)
-			//     loan.GET("/applications", loanHandler.GetUserApplications)
-			//     loan.GET("/applications/:id", loanHandler.GetApplication)
-			//     loan.PUT("/applications/:id", loanHandler.UpdateApplication)
-			//     loan.DELETE("/applications/:id", loanHandler.CancelApplication)
-			// }
+			// 贷款相关API
+			loan := user.Group("/loan")
+			{
+				// 产品相关
+				loan.GET("/products", loanHandler.GetProducts)
+				loan.GET("/products/:id", loanHandler.GetProductDetail)
 
-			// TODO: 农机相关API
-			// machine := user.Group("/machine")
-			// {
-			//     machine.POST("/register", machineHandler.RegisterMachine)
-			//     machine.GET("/list", machineHandler.GetUserMachines)
-			//     machine.GET("/:id", machineHandler.GetMachine)
-			//     machine.PUT("/:id", machineHandler.UpdateMachine)
-			//     machine.DELETE("/:id", machineHandler.DeleteMachine)
-			//     machine.GET("/search", machineHandler.SearchMachines)
-			//     machine.POST("/orders", machineHandler.CreateOrder)
-			//     machine.GET("/orders", machineHandler.GetUserOrders)
-			//     machine.PUT("/orders/:id/confirm", machineHandler.ConfirmOrder)
-			//     machine.PUT("/orders/:id/pay", machineHandler.PayOrder)
-			//     machine.PUT("/orders/:id/complete", machineHandler.CompleteOrder)
-			//     machine.PUT("/orders/:id/cancel", machineHandler.CancelOrder)
-			//     machine.POST("/orders/:id/rate", machineHandler.RateOrder)
-			// }
+				// 申请相关
+				loan.POST("/applications", loanHandler.SubmitApplication)
+				loan.GET("/applications", loanHandler.GetUserApplications)
+				loan.GET("/applications/:id", loanHandler.GetApplicationDetail)
+				loan.DELETE("/applications/:id", loanHandler.CancelApplication)
+			}
 
-			// TODO: 文件上传API
-			// file := user.Group("/file")
-			// {
-			//     file.POST("/upload", fileHandler.UploadFile)
-			//     file.POST("/upload/multiple", fileHandler.UploadMultipleFiles)
-			//     file.GET("/:id", fileHandler.GetFile)
-			//     file.DELETE("/:id", fileHandler.DeleteFile)
-			//     file.GET("/:id/download", fileHandler.DownloadFile)
-			// }
+			// 文件上传API
+			file := user.Group("/files")
+			{
+				file.POST("/upload", fileHandler.UploadFile)
+				file.POST("/upload/batch", fileHandler.UploadMultipleFiles)
+				file.GET("/:id", fileHandler.GetFile)
+				file.DELETE("/:id", fileHandler.DeleteFile)
+			}
+
+			// 农机相关API
+			machine := user.Group("/machines")
+			{
+				machine.POST("", machineHandler.RegisterMachine)
+				machine.GET("", machineHandler.GetUserMachines)
+				machine.GET("/search", machineHandler.SearchMachines)
+				machine.GET("/:id", machineHandler.GetMachine)
+				machine.POST("/:id/orders", machineHandler.CreateOrder)
+				// TODO: 添加农机更新和删除功能
+				// machine.PUT("/:id", machineHandler.UpdateMachine)
+				// machine.DELETE("/:id", machineHandler.DeleteMachine)
+			}
+
+			// 农机订单API
+			orders := user.Group("/orders")
+			{
+				orders.GET("", machineHandler.GetUserOrders)
+				orders.PUT("/:id/confirm", machineHandler.ConfirmOrder)
+				orders.POST("/:id/pay", machineHandler.PayOrder)
+				orders.PUT("/:id/complete", machineHandler.CompleteOrder)
+				orders.PUT("/:id/cancel", machineHandler.CancelOrder)
+				orders.POST("/:id/rate", machineHandler.RateOrder)
+			}
+
+			// 专家咨询API
+			consultations := user.Group("/consultations")
+			{
+				consultations.POST("", expertHandler.SubmitConsultation)
+				consultations.GET("", expertHandler.GetConsultations)
+			}
 		}
 
 		// 公共内容API（可选认证）
 		content := api.Group("/content")
 		content.Use(authMiddleware.OptionalAuth())
 		{
-			// TODO: 文章相关API
-			// content.GET("/articles", articleHandler.ListArticles)
-			// content.GET("/articles/:id", articleHandler.GetArticle)
-			// content.GET("/articles/:id/view", articleHandler.ViewArticle)
-			// content.POST("/articles/:id/like", articleHandler.LikeArticle)
-			// content.POST("/articles/:id/share", articleHandler.ShareArticle)
-			// content.GET("/categories", articleHandler.ListCategories)
+			// 文章相关API
+			content.GET("/articles", articleHandler.ListArticles)
+			content.GET("/articles/featured", articleHandler.GetFeaturedArticles)
+			content.GET("/articles/:id", articleHandler.GetArticle)
+			content.GET("/categories", articleHandler.GetCategories)
 
-			// TODO: 专家相关API
-			// content.GET("/experts", expertHandler.ListExperts)
-			// content.GET("/experts/:id", expertHandler.GetExpert)
-			// content.POST("/experts/:id/consult", expertHandler.RequestConsultation)
-			// content.POST("/experts/:id/rate", expertHandler.RateExpert)
+			// 专家相关API
+			content.GET("/experts", expertHandler.ListExperts)
+			content.GET("/experts/:id", expertHandler.GetExpert)
 		}
 
 		// 管理员API（需要管理员认证）
@@ -211,26 +220,66 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			{
 				adminUser.GET("", userHandler.ListUsers)
 				adminUser.GET("/statistics", userHandler.GetUserStatistics)
+				adminUser.GET("/:user_id/auth-status", userAuthHandler.GetUserAuthStatus)
 				// TODO: 添加其他管理员用户接口
 				// adminUser.PUT("/:id/freeze", userHandler.FreezeUser)
 				// adminUser.PUT("/:id/unfreeze", userHandler.UnfreezeUser)
 				// adminUser.GET("/:id/auth", userHandler.GetUserAuth)
-				// adminUser.PUT("/auth/:id/review", userHandler.ReviewAuth)
 			}
 
-			// TODO: 贷款管理
-			// adminLoan := admin.Group("/loan")
-			// {
-			//     adminLoan.POST("/products", loanHandler.CreateProduct)
-			//     adminLoan.PUT("/products/:id", loanHandler.UpdateProduct)
-			//     adminLoan.DELETE("/products/:id", loanHandler.DeleteProduct)
-			//     adminLoan.GET("/applications", loanHandler.ListApplications)
-			//     adminLoan.PUT("/applications/:id/approve", loanHandler.ApproveApplication)
-			//     adminLoan.PUT("/applications/:id/reject", loanHandler.RejectApplication)
-			//     adminLoan.PUT("/applications/:id/return", loanHandler.ReturnApplication)
-			//     adminLoan.GET("/statistics", loanHandler.GetLoanStatistics)
-			//     adminLoan.GET("/reports", loanHandler.GenerateReports)
-			// }
+			// 贷款审批管理
+			adminLoan := admin.Group("/loans")
+			{
+				adminLoan.GET("/applications", oaLoanHandler.GetApplications)
+				adminLoan.GET("/applications/:id", oaLoanHandler.GetApplicationDetail)
+				adminLoan.POST("/applications/:id/approve", oaLoanHandler.ApproveApplication)
+				adminLoan.POST("/applications/:id/reject", oaLoanHandler.RejectApplication)
+				adminLoan.POST("/applications/:id/return", oaLoanHandler.ReturnApplication)
+				adminLoan.POST("/applications/:id/start-review", oaLoanHandler.StartReview)
+				adminLoan.POST("/applications/:id/retry-ai", oaLoanHandler.RetryAIAssessment)
+				adminLoan.GET("/statistics", oaLoanHandler.GetStatistics)
+			}
+
+			// 认证审核管理
+			adminAuth := admin.Group("/auth")
+			{
+				adminAuth.GET("/list", userAuthHandler.GetAuthList)
+				adminAuth.GET("/:id", userAuthHandler.GetAuthDetail)
+				adminAuth.POST("/:id/review", userAuthHandler.ReviewAuth)
+				adminAuth.POST("/batch-review", userAuthHandler.BatchReviewAuth)
+				adminAuth.GET("/statistics", userAuthHandler.GetAuthStatistics)
+				adminAuth.GET("/export", userAuthHandler.ExportAuthData)
+			}
+
+			// 内容管理
+			adminContent := admin.Group("/content")
+			{
+				// 文章管理
+				adminContent.POST("/articles", articleHandler.CreateArticle)
+				adminContent.PUT("/articles/:id", articleHandler.UpdateArticle)
+				adminContent.DELETE("/articles/:id", articleHandler.DeleteArticle)
+				adminContent.POST("/articles/:id/publish", articleHandler.PublishArticle)
+
+				// 分类管理
+				adminContent.POST("/categories", articleHandler.CreateCategory)
+				adminContent.PUT("/categories/:id", articleHandler.UpdateCategory)
+				adminContent.DELETE("/categories/:id", articleHandler.DeleteCategory)
+
+				// 专家管理
+				adminContent.POST("/experts", expertHandler.CreateExpert)
+				adminContent.PUT("/experts/:id", expertHandler.UpdateExpert)
+				adminContent.DELETE("/experts/:id", expertHandler.DeleteExpert)
+			}
+
+			// 系统管理
+			adminSystem := admin.Group("/system")
+			{
+				adminSystem.GET("/config", systemHandler.GetConfig)
+				adminSystem.PUT("/config", systemHandler.SetConfig)
+				adminSystem.GET("/configs", systemHandler.GetConfigs)
+				adminSystem.GET("/health", systemHandler.HealthCheck)
+				adminSystem.GET("/statistics", systemHandler.GetSystemStats)
+			}
 
 			// TODO: 农机管理
 			// adminMachine := admin.Group("/machine")
@@ -238,41 +287,6 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			//     adminMachine.GET("/list", machineHandler.ListAllMachines)
 			//     adminMachine.GET("/statistics", machineHandler.GetMachineStatistics)
 			//     adminMachine.GET("/orders", machineHandler.ListAllOrders)
-			// }
-
-			// TODO: 内容管理
-			// adminContent := admin.Group("/content")
-			// {
-			//     adminContent.POST("/articles", articleHandler.CreateArticle)
-			//     adminContent.PUT("/articles/:id", articleHandler.UpdateArticle)
-			//     adminContent.DELETE("/articles/:id", articleHandler.DeleteArticle)
-			//     adminContent.PUT("/articles/:id/publish", articleHandler.PublishArticle)
-			//     adminContent.POST("/categories", articleHandler.CreateCategory)
-			//     adminContent.PUT("/categories/:id", articleHandler.UpdateCategory)
-			//     adminContent.DELETE("/categories/:id", articleHandler.DeleteCategory)
-			// }
-
-			// TODO: 专家管理
-			// adminExpert := admin.Group("/expert")
-			// {
-			//     adminExpert.POST("/register", expertHandler.RegisterExpert)
-			//     adminExpert.PUT("/:id", expertHandler.UpdateExpert)
-			//     adminExpert.PUT("/:id/verify", expertHandler.VerifyExpert)
-			//     adminExpert.GET("/list", expertHandler.ListAllExperts)
-			// }
-
-			// TODO: 系统管理
-			// adminSystem := admin.Group("/system")
-			// {
-			//     adminSystem.GET("/config", systemHandler.GetConfigs)
-			//     adminSystem.PUT("/config", systemHandler.SetConfig)
-			//     adminSystem.GET("/logs", systemHandler.GetAPILogs)
-			//     adminSystem.GET("/statistics", systemHandler.GetAPIStatistics)
-			//     adminSystem.DELETE("/logs/cleanup", systemHandler.CleanupLogs)
-			//     adminSystem.GET("/health", systemHandler.HealthCheck)
-			//     adminSystem.GET("/status", systemHandler.GetSystemStatus)
-			//     adminSystem.GET("/offline-queue", systemHandler.GetOfflineQueue)
-			//     adminSystem.POST("/offline-queue/process", systemHandler.ProcessOfflineQueue)
 			// }
 		}
 

@@ -162,6 +162,12 @@ type SystemService interface {
 
 	// 系统统计
 	GetSystemStats(ctx context.Context) (*SystemStatsResponse, error)
+
+	// 系统版本
+	GetSystemVersion(ctx context.Context) (*SystemVersionResponse, error)
+
+	// 获取公共配置
+	GetPublicConfigs(ctx context.Context) (map[string]string, error)
 }
 
 // OAService OA后台服务接口
@@ -910,6 +916,14 @@ type SystemStatsResponse struct {
 	MachineCount     int64 `json:"machine_count"`
 	OrderCount       int64 `json:"order_count"`
 	ArticleCount     int64 `json:"article_count"`
+}
+
+type SystemVersionResponse struct {
+	Version     string `json:"version"`
+	BuildTime   string `json:"build_time"`
+	GitCommit   string `json:"git_commit"`
+	GoVersion   string `json:"go_version"`
+	Environment string `json:"environment"`
 }
 
 // ==================== OA管理相关结构体 ====================

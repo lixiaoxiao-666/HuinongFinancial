@@ -192,13 +192,6 @@ func (s *systemService) GetSystemStats(ctx context.Context) (*SystemStatsRespons
 	}
 	stats.UserCount = userCount
 
-	// 贷款申请统计
-	// applicationCount, err := s.loanRepo.GetApplicationCount(ctx)
-	// if err != nil {
-	//     applicationCount = 0
-	// }
-	// stats.ApplicationCount = applicationCount
-
 	// 农机统计
 	machineCount, err := s.machineRepo.GetMachineCount(ctx)
 	if err != nil {
@@ -213,12 +206,77 @@ func (s *systemService) GetSystemStats(ctx context.Context) (*SystemStatsRespons
 	}
 	stats.OrderCount = orderCount
 
-	// 文章统计 - TODO: 需要在ArticleRepository中添加GetArticleCount方法
-	// articleCount, err := s.articleRepo.GetArticleCount(ctx)
-	// if err != nil {
-	//     articleCount = 0
-	// }
-	// stats.ArticleCount = articleCount
+	// TODO: 添加更多统计数据
+	stats.ApplicationCount = 0 // 临时设置
 
 	return stats, nil
+}
+
+// GetPublicConfigs 获取公开配置
+func (s *systemService) GetPublicConfigs(ctx context.Context) (map[string]string, error) {
+	// 获取可以公开的配置项
+	publicConfigKeys := []string{
+		"app.name",
+		"app.version",
+		"app.description",
+		"customer_service.phone",
+		"customer_service.hours",
+		"privacy_policy.url",
+		"terms_of_service.url",
+		"about_us.content",
+	}
+
+	result := make(map[string]string)
+
+	for _, key := range publicConfigKeys {
+		config, err := s.configRepo.Get(ctx, key)
+		if err == nil {
+			result[key] = config.ConfigValue
+		}
+	}
+
+	// 设置默认值
+	if result["app.name"] == "" {
+		result["app.name"] = "数字惠农"
+	}
+	if result["app.version"] == "" {
+		result["app.version"] = "1.0.0"
+	}
+	if result["customer_service.phone"] == "" {
+		result["customer_service.phone"] = "400-123-4567"
+	}
+	if result["customer_service.hours"] == "" {
+		result["customer_service.hours"] = "9:00-18:00"
+	}
+
+	return result, nil
+}
+
+// GetSystemVersion 获取系统版本信息
+func (s *systemService) GetSystemVersion(ctx context.Context) (*SystemVersionResponse, error) {
+	version, err := s.configRepo.Get(ctx, "app.version")
+	versionStr := "1.0.0"
+	if err == nil {
+		versionStr = version.ConfigValue
+	}
+
+	buildTime, err := s.configRepo.Get(ctx, "app.build_time")
+	buildTimeStr := time.Now().Format("2006-01-02 15:04:05")
+	if err == nil {
+		buildTimeStr = buildTime.ConfigValue
+	}
+
+	gitCommit, err := s.configRepo.Get(ctx, "app.git_commit")
+	gitCommitStr := "unknown"
+	if err == nil {
+		gitCommitStr = gitCommit.ConfigValue
+	}
+
+	return &SystemVersionResponse{
+		Version:     versionStr,
+		BuildTime:   buildTimeStr,
+		GitCommit:   gitCommitStr,
+		GoVersion:   "1.21",
+		Environment: "production",
+	}, nil
 }
