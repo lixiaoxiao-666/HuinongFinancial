@@ -1,0 +1,101 @@
+# 数字惠农后端配置文件示例
+# 复制此文件为 config.yaml 并修改相应配置
+
+app:
+  name: "数字惠农后端服务"
+  version: "1.0.0"
+  env: "development"          # development, production, test
+  port: 8080                  # HTTP服务端口
+  mode: "debug"               # debug, release, test
+
+# 数据库配置
+database:
+  driver: "mysql"
+  host: "localhost"           # 数据库主机地址
+  port: 3306                  # 数据库端口
+  username: "root"            # 数据库用户名
+  password: "your_password"   # 数据库密码 - 请修改为实际密码
+  database: "app"             # 数据库名称 - 请修改为实际数据库名
+  charset: "utf8mb4"
+  max_idle_conns: 10          # 最大空闲连接数
+  max_open_conns: 100         # 最大打开连接数
+  conn_max_lifetime: 3600     # 连接最大生存时间(秒)
+
+# Redis缓存配置(可选)
+redis:
+  host: "localhost"           # Redis主机地址
+  port: 6379                  # Redis端口
+  password: ""                # Redis密码(如果没有密码则留空)
+  database: 0                 # Redis数据库编号
+  pool_size: 100              # 连接池大小
+  min_idle_conns: 10          # 最小空闲连接数
+
+# JWT认证配置
+jwt:
+  secret_key: "your-super-secret-key-change-this-in-production"  # JWT密钥 - 生产环境请使用强密钥
+  expires_in: 86400           # AccessToken过期时间(秒) - 24小时
+  refresh_expires_in: 604800  # RefreshToken过期时间(秒) - 7天
+
+# Dify AI平台配置
+dify:
+  api_url: "https://api.dify.ai/v1"               # Dify API地址 - 请修改为实际地址
+  api_key: "app-your-dify-api-key"                # Dify API密钥 - 请修改为实际密钥
+  timeout: 30                                     # API调用超时时间(秒)
+  retry_times: 3                                  # 失败重试次数
+  workflows:
+    loan_approval: "your-loan-approval-workflow-id"  # 贷款审批工作流ID
+    risk_assessment: "your-risk-assessment-workflow-id"  # 风险评估工作流ID
+
+# 短信服务配置
+sms:
+  provider: "aliyun"                              # 短信服务商: aliyun, tencent
+  access_key: "your-sms-access-key"               # 访问密钥
+  access_secret: "your-sms-access-secret"         # 访问密钥密码
+  sign_name: "数字惠农"                           # 短信签名
+  template_codes:
+    register: "SMS_123456789"                     # 注册验证码模板
+    login: "SMS_123456790"                        # 登录验证码模板
+    reset_password: "SMS_123456791"               # 重置密码模板
+
+# 文件上传配置
+file:
+  storage_type: "local"                           # 存储类型: local, oss, qiniu
+  upload_path: "./uploads"                        # 本地存储路径
+  max_file_size: 10485760                         # 最大文件大小(字节) - 10MB
+  allowed_types: ["jpg", "jpeg", "png", "pdf", "doc", "docx"]  # 允许的文件类型
+
+# 日志配置
+log:
+  level: "debug"                                  # 日志级别: debug, info, warn, error
+  format: "json"                                  # 日志格式: text, json
+  output: "both"                                  # 输出位置: console, file, both
+  file_path: "./logs/app.log"                     # 日志文件路径
+  max_size: 100                                   # 单个日志文件最大大小(MB)
+  max_age: 7                                      # 日志文件保存天数
+  max_backups: 5                                  # 日志文件备份数量
+
+# 跨域配置
+cors:
+  allow_origins: ["*"]                            # 允许的来源域名
+  allow_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]  # 允许的HTTP方法
+  allow_headers: ["Origin", "Content-Type", "Accept", "Authorization"]  # 允许的请求头
+  expose_headers: ["Content-Length"]              # 暴露的响应头
+  allow_credentials: true                         # 是否允许发送凭据
+  max_age: 12                                     # 预检请求缓存时间(小时)
+
+# 限流配置
+rate_limit:
+  enabled: true                                   # 是否启用限流
+  requests_per_minute: 1000                       # 每分钟请求数限制
+  burst: 100                                      # 突发请求数
+
+# 离线队列配置
+offline:
+  enabled: true                                   # 是否启用离线队列
+  sync_interval: 300                              # 同步间隔(秒) - 5分钟
+  queue_size: 10000                               # 队列大小
+  retry_times: 3                                  # 重试次数
+
+# 数据库连接测试SQL
+# 在应用启动时会执行此查询来测试数据库连接
+test_sql: "SELECT 1" 

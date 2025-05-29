@@ -1,0 +1,355 @@
+package router
+
+import (
+	"huinong-backend/internal/handler"
+	"huinong-backend/internal/middleware"
+	"huinong-backend/internal/service"
+
+	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+)
+
+// RouterConfig 路由配置
+type RouterConfig struct {
+	UserService    service.UserService
+	LoanService    service.LoanService
+	MachineService service.MachineService
+	ArticleService service.ContentService
+	ExpertService  service.ContentService
+	FileService    service.SystemService
+	SystemService  service.SystemService
+	OAService      service.OAService
+	DifyService    service.DifyService
+	JWTSecret      string
+	DifyAPIToken   string
+}
+
+// SetupRouter 设置路由
+func SetupRouter(config *RouterConfig) *gin.Engine {
+	// 创建Gin实例
+	r := gin.New()
+
+	// 基础中间件
+	r.Use(middleware.Recovery())
+	r.Use(middleware.RequestLogger())
+	r.Use(middleware.CORS())
+
+	// 创建认证中间件
+	authMiddleware := middleware.NewAuthMiddleware(config.JWTSecret)
+
+	// 创建Handler实例
+	userHandler := handler.NewUserHandler(config.UserService)
+	loanHandler := handler.NewLoanHandler(config.LoanService)
+	oaLoanHandler := handler.NewOALoanHandler(config.LoanService, config.OAService)
+	fileHandler := handler.NewFileHandler(config.SystemService)
+	userAuthHandler := handler.NewUserAuthHandler(config.UserService, config.OAService)
+	machineHandler := handler.NewMachineHandler(config.MachineService)
+
+	// 新增的Handler实例
+	articleHandler := handler.NewArticleHandler(config.ArticleService)
+	expertHandler := handler.NewExpertHandler(config.ExpertService)
+	systemHandler := handler.NewSystemHandler(config.SystemService)
+
+	difyHandler := handler.NewDifyHandler(
+		config.UserService,
+		config.LoanService,
+		config.MachineService,
+	)
+
+	// 健康检查
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status":  "ok",
+			"message": "数字惠农API服务正在运行",
+		})
+	})
+
+	// API版本分组
+	api := r.Group("/api")
+	{
+		// 公开API（无需认证）
+		public := api.Group("/public")
+		{
+			public.GET("/version", systemHandler.GetSystemVersion)
+			public.GET("/configs", systemHandler.GetPublicConfigs)
+		}
+
+		// 内部API（供Dify工作流调用）
+		internal := api.Group("/internal")
+		internal.Use(middleware.DifyAuthMiddleware(config.DifyAPIToken))
+		{
+			// Dify工作流回调接口
+			dify := internal.Group("/dify")
+			{
+				// 贷款相关接口
+				loan := dify.Group("/loan")
+				{
+					loan.POST("/get-application-details", difyHandler.GetLoanApplicationDetails)
+					loan.POST("/submit-assessment", difyHandler.SubmitRiskAssessment)
+				}
+
+				// 农机相关接口
+				machine := dify.Group("/machine")
+				{
+					machine.POST("/get-rental-details", difyHandler.GetMachineRentalDetails)
+				}
+
+				// 征信相关接口
+				credit := dify.Group("/credit")
+				{
+					credit.POST("/query", difyHandler.QueryCreditReport)
+				}
+			}
+		}
+
+		// 认证相关API（无需认证）
+		auth := api.Group("/auth")
+		{
+			auth.POST("/register", userHandler.Register)
+			auth.POST("/login", userHandler.Login)
+			auth.POST("/refresh", userHandler.RefreshToken)
+			// TODO: 添加其他认证接口
+			// auth.POST("/forgot-password", userHandler.ForgotPassword)
+			// auth.POST("/reset-password", userHandler.ResetPassword)
+			// auth.POST("/verify-sms", userHandler.VerifySMS)
+			// auth.POST("/send-sms", userHandler.SendSMS)
+		}
+
+		// 用户API（需要认证）
+		user := api.Group("/user")
+		user.Use(authMiddleware.RequireAuth())
+		{
+			// 用户资料管理
+			user.GET("/profile", userHandler.GetProfile)
+			user.PUT("/profile", userHandler.UpdateProfile)
+			user.PUT("/password", userHandler.ChangePassword)
+			user.POST("/logout", userHandler.Logout)
+
+			// 用户认证
+			userAuth := user.Group("/auth")
+			{
+				userAuth.POST("/real-name", userHandler.SubmitRealNameAuth)
+				userAuth.POST("/bank-card", userHandler.SubmitBankCardAuth)
+				// TODO: 添加其他认证接口
+				// userAuth.GET("/status", userHandler.GetAuthStatus)
+				// userAuth.POST("/credit", userHandler.SubmitCreditAuth)
+			}
+
+			// 用户标签
+			user.GET("/tags", userHandler.GetUserTags)
+			user.POST("/tags", userHandler.AddUserTag)
+			user.DELETE("/tags/:tag_key", userHandler.RemoveUserTag)
+
+			// 贷款相关API
+			loan := user.Group("/loan")
+			{
+				// 产品相关
+				loan.GET("/products", loanHandler.GetProducts)
+				loan.GET("/products/:id", loanHandler.GetProductDetail)
+
+				// 申请相关
+				loan.POST("/applications", loanHandler.SubmitApplication)
+				loan.GET("/applications", loanHandler.GetUserApplications)
+				loan.GET("/applications/:id", loanHandler.GetApplicationDetail)
+				loan.DELETE("/applications/:id", loanHandler.CancelApplication)
+			}
+
+			// 文件上传API
+			file := user.Group("/files")
+			{
+				file.POST("/upload", fileHandler.UploadFile)
+				file.POST("/upload/batch", fileHandler.UploadMultipleFiles)
+				file.GET("/:id", fileHandler.GetFile)
+				file.DELETE("/:id", fileHandler.DeleteFile)
+			}
+
+			// 农机相关API
+			machine := user.Group("/machines")
+			{
+				machine.POST("", machineHandler.RegisterMachine)
+				machine.GET("", machineHandler.GetUserMachines)
+				machine.GET("/search", machineHandler.SearchMachines)
+				machine.GET("/:id", machineHandler.GetMachine)
+				machine.POST("/:id/orders", machineHandler.CreateOrder)
+				// TODO: 添加农机更新和删除功能
+				// machine.PUT("/:id", machineHandler.UpdateMachine)
+				// machine.DELETE("/:id", machineHandler.DeleteMachine)
+			}
+
+			// 农机订单API
+			orders := user.Group("/orders")
+			{
+				orders.GET("", machineHandler.GetUserOrders)
+				orders.PUT("/:id/confirm", machineHandler.ConfirmOrder)
+				orders.POST("/:id/pay", machineHandler.PayOrder)
+				orders.PUT("/:id/complete", machineHandler.CompleteOrder)
+				orders.PUT("/:id/cancel", machineHandler.CancelOrder)
+				orders.POST("/:id/rate", machineHandler.RateOrder)
+			}
+
+			// 专家咨询API
+			consultations := user.Group("/consultations")
+			{
+				consultations.POST("", expertHandler.SubmitConsultation)
+				consultations.GET("", expertHandler.GetConsultations)
+			}
+		}
+
+		// 公共内容API（可选认证）
+		content := api.Group("/content")
+		content.Use(authMiddleware.OptionalAuth())
+		{
+			// 文章相关API
+			content.GET("/articles", articleHandler.ListArticles)
+			content.GET("/articles/featured", articleHandler.GetFeaturedArticles)
+			content.GET("/articles/:id", articleHandler.GetArticle)
+			content.GET("/categories", articleHandler.GetCategories)
+
+			// 专家相关API
+			content.GET("/experts", expertHandler.ListExperts)
+			content.GET("/experts/:id", expertHandler.GetExpert)
+		}
+
+		// 管理员API（需要管理员认证）
+		admin := api.Group("/admin")
+		admin.Use(authMiddleware.AdminAuth())
+		{
+			// 用户管理
+			adminUser := admin.Group("/users")
+			{
+				adminUser.GET("", userHandler.ListUsers)
+				adminUser.GET("/statistics", userHandler.GetUserStatistics)
+				adminUser.GET("/:user_id/auth-status", userAuthHandler.GetUserAuthStatus)
+				// TODO: 添加其他管理员用户接口
+				// adminUser.PUT("/:id/freeze", userHandler.FreezeUser)
+				// adminUser.PUT("/:id/unfreeze", userHandler.UnfreezeUser)
+				// adminUser.GET("/:id/auth", userHandler.GetUserAuth)
+			}
+
+			// 贷款审批管理
+			adminLoan := admin.Group("/loans")
+			{
+				adminLoan.GET("/applications", oaLoanHandler.GetApplications)
+				adminLoan.GET("/applications/:id", oaLoanHandler.GetApplicationDetail)
+				adminLoan.POST("/applications/:id/approve", oaLoanHandler.ApproveApplication)
+				adminLoan.POST("/applications/:id/reject", oaLoanHandler.RejectApplication)
+				adminLoan.POST("/applications/:id/return", oaLoanHandler.ReturnApplication)
+				adminLoan.POST("/applications/:id/start-review", oaLoanHandler.StartReview)
+				adminLoan.POST("/applications/:id/retry-ai", oaLoanHandler.RetryAIAssessment)
+				adminLoan.GET("/statistics", oaLoanHandler.GetStatistics)
+			}
+
+			// 认证审核管理
+			adminAuth := admin.Group("/auth")
+			{
+				adminAuth.GET("/list", userAuthHandler.GetAuthList)
+				adminAuth.GET("/:id", userAuthHandler.GetAuthDetail)
+				adminAuth.POST("/:id/review", userAuthHandler.ReviewAuth)
+				adminAuth.POST("/batch-review", userAuthHandler.BatchReviewAuth)
+				adminAuth.GET("/statistics", userAuthHandler.GetAuthStatistics)
+				adminAuth.GET("/export", userAuthHandler.ExportAuthData)
+			}
+
+			// 内容管理
+			adminContent := admin.Group("/content")
+			{
+				// 文章管理
+				adminContent.POST("/articles", articleHandler.CreateArticle)
+				adminContent.PUT("/articles/:id", articleHandler.UpdateArticle)
+				adminContent.DELETE("/articles/:id", articleHandler.DeleteArticle)
+				adminContent.POST("/articles/:id/publish", articleHandler.PublishArticle)
+
+				// 分类管理
+				adminContent.POST("/categories", articleHandler.CreateCategory)
+				adminContent.PUT("/categories/:id", articleHandler.UpdateCategory)
+				adminContent.DELETE("/categories/:id", articleHandler.DeleteCategory)
+
+				// 专家管理
+				adminContent.POST("/experts", expertHandler.CreateExpert)
+				adminContent.PUT("/experts/:id", expertHandler.UpdateExpert)
+				adminContent.DELETE("/experts/:id", expertHandler.DeleteExpert)
+			}
+
+			// 系统管理
+			adminSystem := admin.Group("/system")
+			{
+				adminSystem.GET("/config", systemHandler.GetConfig)
+				adminSystem.PUT("/config", systemHandler.SetConfig)
+				adminSystem.GET("/configs", systemHandler.GetConfigs)
+				adminSystem.GET("/health", systemHandler.HealthCheck)
+				adminSystem.GET("/statistics", systemHandler.GetSystemStats)
+			}
+
+			// TODO: 农机管理
+			// adminMachine := admin.Group("/machine")
+			// {
+			//     adminMachine.GET("/list", machineHandler.ListAllMachines)
+			//     adminMachine.GET("/statistics", machineHandler.GetMachineStatistics)
+			//     adminMachine.GET("/orders", machineHandler.ListAllOrders)
+			// }
+		}
+
+		// OA后台API（需要OA认证）
+		oa := api.Group("/oa")
+		oa.Use(authMiddleware.AdminAuth()) // TODO: 改为OA专用的认证中间件
+		{
+			// TODO: OA用户管理
+			// oaUser := oa.Group("/users")
+			// {
+			//     oaUser.POST("", oaHandler.CreateOAUser)
+			//     oaUser.GET("", oaHandler.ListOAUsers)
+			//     oaUser.GET("/:id", oaHandler.GetOAUser)
+			//     oaUser.PUT("/:id", oaHandler.UpdateOAUser)
+			//     oaUser.DELETE("/:id", oaHandler.DeleteOAUser)
+			//     oaUser.PUT("/:id/reset-password", oaHandler.ResetPassword)
+			// }
+
+			// TODO: OA角色管理
+			// oaRole := oa.Group("/roles")
+			// {
+			//     oaRole.POST("", oaHandler.CreateRole)
+			//     oaRole.GET("", oaHandler.ListRoles)
+			//     oaRole.GET("/:id", oaHandler.GetRole)
+			//     oaRole.PUT("/:id", oaHandler.UpdateRole)
+			//     oaRole.DELETE("/:id", oaHandler.DeleteRole)
+			// }
+
+			// TODO: OA工作台
+			// oa.GET("/dashboard", oaHandler.GetDashboard)
+			// oa.GET("/tasks", oaHandler.GetWorkTasks)
+		}
+	}
+
+	// Swagger文档（仅在开发环境）
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	return r
+}
+
+// SetupAPIRoutes 设置API路由（用于测试）
+func SetupAPIRoutes(r *gin.Engine, config *RouterConfig) {
+	authMiddleware := middleware.NewAuthMiddleware(config.JWTSecret)
+	userHandler := handler.NewUserHandler(config.UserService)
+
+	api := r.Group("/api")
+	{
+		// 认证路由
+		auth := api.Group("/auth")
+		{
+			auth.POST("/register", userHandler.Register)
+			auth.POST("/login", userHandler.Login)
+			auth.POST("/refresh", userHandler.RefreshToken)
+		}
+
+		// 用户路由
+		user := api.Group("/user")
+		user.Use(authMiddleware.RequireAuth())
+		{
+			user.GET("/profile", userHandler.GetProfile)
+			user.PUT("/profile", userHandler.UpdateProfile)
+			user.PUT("/password", userHandler.ChangePassword)
+			user.POST("/logout", userHandler.Logout)
+		}
+	}
+}

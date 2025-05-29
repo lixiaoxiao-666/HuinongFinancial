@@ -2,360 +2,756 @@ package service
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
+	"fmt"
 	"time"
 
-	"backend/internal/data"
-	"backend/pkg"
-
-	"go.uber.org/zap"
+	"huinong-backend/internal/model"
+	"huinong-backend/internal/repository"
 )
 
-// LoanService 贷款服务
-type LoanService struct {
-	data *data.Data
-	log  *zap.Logger
+// loanService 贷款服务实现
+type loanService struct {
+	loanRepo    repository.LoanRepository
+	userRepo    repository.UserRepository
+	difyService DifyService
 }
 
-// NewLoanService 创建贷款服务
-func NewLoanService(data *data.Data, log *zap.Logger) *LoanService {
-	return &LoanService{
-		data: data,
-		log:  log,
+// NewLoanService 创建贷款服务实例
+func NewLoanService(
+	loanRepo repository.LoanRepository,
+	userRepo repository.UserRepository,
+	difyService DifyService,
+) LoanService {
+	return &loanService{
+		loanRepo:    loanRepo,
+		userRepo:    userRepo,
+		difyService: difyService,
 	}
 }
 
-// LoanProductResponse 贷款产品响应
-type LoanProductResponse struct {
-	ProductID             string      `json:"product_id"`
-	Name                  string      `json:"name"`
-	Description           string      `json:"description"`
-	Category              string      `json:"category"`
-	MinAmount             float64     `json:"min_amount"`
-	MaxAmount             float64     `json:"max_amount"`
-	MinTermMonths         int         `json:"min_term_months"`
-	MaxTermMonths         int         `json:"max_term_months"`
-	InterestRateYearly    string      `json:"interest_rate_yearly"`
-	RepaymentMethods      interface{} `json:"repayment_methods"`
-	ApplicationConditions string      `json:"application_conditions,omitempty"`
-	RequiredDocuments     interface{} `json:"required_documents,omitempty"`
-}
+// ==================== 贷款产品查询 ====================
 
-// SubmitLoanApplicationRequest 提交贷款申请请求
-type SubmitLoanApplicationRequest struct {
-	ProductID         string                 `json:"product_id" binding:"required"`
-	Amount            float64                `json:"amount" binding:"required,gt=0"`
-	TermMonths        int                    `json:"term_months" binding:"required,gt=0"`
-	Purpose           string                 `json:"purpose" binding:"required"`
-	ApplicantInfo     map[string]interface{} `json:"applicant_info" binding:"required"`
-	UploadedDocuments []DocumentInfo         `json:"uploaded_documents"`
-}
+// GetProducts 获取贷款产品列表
+func (s *loanService) GetProducts(ctx context.Context, req *GetProductsRequest) (*GetProductsResponse, error) {
+	// TODO: 从上下文获取用户类型
+	userType := "farmer" // 临时默认值
 
-// DocumentInfo 文档信息
-type DocumentInfo struct {
-	DocType string `json:"doc_type" binding:"required"`
-	FileID  string `json:"file_id" binding:"required"`
-}
-
-// LoanApplicationResponse 贷款申请响应
-type LoanApplicationResponse struct {
-	ApplicationID       string                 `json:"application_id"`
-	UserID              string                 `json:"user_id"`
-	ProductID           string                 `json:"product_id"`
-	AmountApplied       float64                `json:"amount_applied"`
-	TermMonthsApplied   int                    `json:"term_months_applied"`
-	Purpose             string                 `json:"purpose"`
-	Status              string                 `json:"status"`
-	ApplicantSnapshot   map[string]interface{} `json:"applicant_snapshot,omitempty"`
-	SubmittedAt         time.Time              `json:"submitted_at"`
-	AIRiskScore         *int                   `json:"ai_risk_score,omitempty"`
-	AISuggestion        string                 `json:"ai_suggestion,omitempty"`
-	ApprovedAmount      *float64               `json:"approved_amount,omitempty"`
-	ApprovedTermMonths  *int                   `json:"approved_term_months,omitempty"`
-	FinalDecision       string                 `json:"final_decision,omitempty"`
-	DecisionReason      string                 `json:"decision_reason,omitempty"`
-	ProcessedAt         *time.Time             `json:"processed_at,omitempty"`
-	History             []HistoryItem          `json:"history,omitempty"`
-}
-
-// HistoryItem 历史记录项
-type HistoryItem struct {
-	Status    string    `json:"status"`
-	Timestamp time.Time `json:"timestamp"`
-	Operator  string    `json:"operator"`
-	Comments  string    `json:"comments,omitempty"`
-}
-
-// GetLoanProducts 获取贷款产品列表
-func (s *LoanService) GetLoanProducts(ctx context.Context, category string) ([]LoanProductResponse, error) {
-	var products []data.LoanProduct
-	query := s.data.DB.Where("status = ?", 0) // 只查询有效产品
-	
-	if category != "" {
-		query = query.Where("category = ?", category)
-	}
-	
-	if err := query.Find(&products).Error; err != nil {
-		s.log.Error("查询贷款产品失败", zap.Error(err))
-		return nil, errors.New("查询产品失败")
+	products, err := s.loanRepo.GetActiveProducts(ctx, userType)
+	if err != nil {
+		return nil, fmt.Errorf("获取贷款产品失败: %v", err)
 	}
 
-	var result []LoanProductResponse
+	// 转换为响应格式
+	var productResponses []*ProductResponse
 	for _, product := range products {
-		var repaymentMethods interface{}
-		if product.RepaymentMethods != nil {
-			json.Unmarshal(product.RepaymentMethods, &repaymentMethods)
-		}
-
-		result = append(result, LoanProductResponse{
-			ProductID:          product.ProductID,
-			Name:               product.Name,
-			Description:        product.Description,
-			Category:           product.Category,
-			MinAmount:          product.MinAmount,
-			MaxAmount:          product.MaxAmount,
-			MinTermMonths:      product.MinTermMonths,
-			MaxTermMonths:      product.MaxTermMonths,
-			InterestRateYearly: product.InterestRateYearly,
-			RepaymentMethods:   repaymentMethods,
+		productResponses = append(productResponses, &ProductResponse{
+			ID:               uint(product.ID),
+			ProductName:      product.ProductName,
+			ProductCode:      product.ProductCode,
+			ProductType:      product.ProductType,
+			Description:      product.Description,
+			MinAmount:        product.MinAmount,
+			MaxAmount:        product.MaxAmount,
+			InterestRate:     product.InterestRate,
+			TermMonths:       product.TermMonths,
+			RequiredAuth:     product.RequiredAuth,
+			IsActive:         product.IsActive,
+			EligibleUserType: product.EligibleUserType,
 		})
 	}
 
-	return result, nil
-}
-
-// GetLoanProduct 获取贷款产品详情
-func (s *LoanService) GetLoanProduct(ctx context.Context, productID string) (*LoanProductResponse, error) {
-	var product data.LoanProduct
-	if err := s.data.DB.Where("product_id = ? AND status = ?", productID, 0).First(&product).Error; err != nil {
-		return nil, errors.New("产品不存在")
-	}
-
-	var repaymentMethods, requiredDocuments interface{}
-	if product.RepaymentMethods != nil {
-		json.Unmarshal(product.RepaymentMethods, &repaymentMethods)
-	}
-	if product.RequiredDocuments != nil {
-		json.Unmarshal(product.RequiredDocuments, &requiredDocuments)
-	}
-
-	return &LoanProductResponse{
-		ProductID:             product.ProductID,
-		Name:                  product.Name,
-		Description:           product.Description,
-		Category:              product.Category,
-		MinAmount:             product.MinAmount,
-		MaxAmount:             product.MaxAmount,
-		MinTermMonths:         product.MinTermMonths,
-		MaxTermMonths:         product.MaxTermMonths,
-		InterestRateYearly:    product.InterestRateYearly,
-		RepaymentMethods:      repaymentMethods,
-		ApplicationConditions: product.ApplicationConditions,
-		RequiredDocuments:     requiredDocuments,
+	return &GetProductsResponse{
+		Products: productResponses,
+		Total:    int64(len(productResponses)),
+		Page:     req.Page,
+		Limit:    req.Limit,
 	}, nil
 }
 
-// GetProductByID 获取贷款产品详情（返回原始数据模型）
-func (s *LoanService) GetProductByID(productID string) (*data.LoanProduct, error) {
-	var product data.LoanProduct
-	if err := s.data.DB.Where("product_id = ? AND status = ?", productID, 0).First(&product).Error; err != nil {
-		s.log.Error("查询贷款产品失败", zap.String("product_id", productID), zap.Error(err))
-		return nil, errors.New("产品不存在")
-	}
-	return &product, nil
-}
+// ==================== 贷款申请处理 ====================
 
-// SubmitLoanApplication 提交贷款申请
-func (s *LoanService) SubmitLoanApplication(ctx context.Context, userID string, req *SubmitLoanApplicationRequest) (*LoanApplicationResponse, error) {
+// CreateApplication 创建贷款申请
+func (s *loanService) CreateApplication(ctx context.Context, req *CreateApplicationRequest) (*CreateApplicationResponse, error) {
+	// TODO: 从上下文获取用户ID
+	userID := uint64(1) // 临时默认值
+
 	// 验证产品是否存在
-	var product data.LoanProduct
-	if err := s.data.DB.Where("product_id = ? AND status = ?", req.ProductID, 0).First(&product).Error; err != nil {
-		return nil, errors.New("贷款产品不存在")
+	product, err := s.loanRepo.GetProductByID(ctx, req.ProductID)
+	if err != nil {
+		return nil, fmt.Errorf("产品不存在: %v", err)
 	}
 
-	// 验证申请金额和期限
-	if req.Amount < product.MinAmount || req.Amount > product.MaxAmount {
-		return nil, errors.New("申请金额超出产品范围")
-	}
-	if req.TermMonths < product.MinTermMonths || req.TermMonths > product.MaxTermMonths {
-		return nil, errors.New("申请期限超出产品范围")
+	// 验证申请金额
+	if req.LoanAmount < product.MinAmount || req.LoanAmount > product.MaxAmount {
+		return nil, fmt.Errorf("申请金额超出产品限制范围")
 	}
 
-	// 序列化申请人信息
-	applicantSnapshot, _ := json.Marshal(req.ApplicantInfo)
+	// 生成申请编号
+	applicationNo := generateApplicationNo()
 
-	// 创建贷款申请
-	application := data.LoanApplication{
-		ApplicationID:     pkg.GenerateApplicationID(),
-		UserID:            userID,
-		ProductID:         req.ProductID,
-		AmountApplied:     req.Amount,
-		TermMonthsApplied: req.TermMonths,
-		Purpose:           req.Purpose,
-		Status:            "SUBMITTED",
-		ApplicantSnapshot: applicantSnapshot,
-		SubmittedAt:       time.Now(),
+	// 创建申请记录
+	application := &model.LoanApplication{
+		ApplicationNo:        applicationNo,
+		UserID:               userID,
+		ProductID:            uint64(req.ProductID),
+		ApplyAmount:          req.LoanAmount,
+		LoanAmount:           req.LoanAmount,
+		ApplyTermMonths:      req.TermMonths,
+		TermMonths:           req.TermMonths,
+		LoanPurpose:          req.LoanPurpose,
+		ContactPhone:         req.ContactPhone,
+		ApplicantPhone:       req.ContactPhone,
+		ContactEmail:         req.ContactEmail,
+		MaterialsJSON:        req.MaterialsJSON,
+		ApplicationDocuments: req.MaterialsJSON,
+		Status:               "pending",
+		SubmittedAt:          time.Now(),
+		Remarks:              req.Remarks,
 	}
 
-	if err := s.data.DB.Create(&application).Error; err != nil {
-		s.log.Error("创建贷款申请失败", zap.Error(err))
-		return nil, errors.New("提交申请失败")
-	}
-
-	// 记录申请历史
-	history := data.LoanApplicationHistory{
-		ApplicationID: application.ApplicationID,
-		StatusTo:      "SUBMITTED",
-		OperatorType:  "USER",
-		OperatorID:    userID,
-		Comments:      "用户提交申请",
-		OccurredAt:    time.Now(),
-	}
-	s.data.DB.Create(&history)
-
-	// 处理文档关联
-	for _, doc := range req.UploadedDocuments {
-		s.data.DB.Model(&data.UploadedFile{}).
-			Where("file_id = ? AND user_id = ?", doc.FileID, userID).
-			Update("related_id", application.ApplicationID)
+	err = s.loanRepo.CreateApplication(ctx, application)
+	if err != nil {
+		return nil, fmt.Errorf("创建贷款申请失败: %v", err)
 	}
 
 	// 异步触发AI审批流程
-	go s.triggerAIProcessing(application.ApplicationID)
+	go func() {
+		// 使用新的context避免原context被取消
+		assessmentCtx := context.Background()
+		if triggerErr := s.TriggerAIAssessment(assessmentCtx, application.ID, "loan_approval"); triggerErr != nil {
+			// 记录错误日志，但不影响申请创建的响应
+			fmt.Printf("触发AI评估失败 - 申请ID: %d, 错误: %v\n", application.ID, triggerErr)
+		}
+	}()
 
-	return &LoanApplicationResponse{
-		ApplicationID:     application.ApplicationID,
-		UserID:            application.UserID,
-		ProductID:         application.ProductID,
-		AmountApplied:     application.AmountApplied,
-		TermMonthsApplied: application.TermMonthsApplied,
-		Purpose:           application.Purpose,
-		Status:            application.Status,
-		SubmittedAt:       application.SubmittedAt,
+	return &CreateApplicationResponse{
+		ID:            uint(application.ID),
+		ApplicationNo: application.ApplicationNo,
+		Status:        application.Status,
+		CreatedAt:     application.CreatedAt,
 	}, nil
 }
 
-// GetLoanApplication 获取贷款申请详情
-func (s *LoanService) GetLoanApplication(ctx context.Context, applicationID string, userID string) (*LoanApplicationResponse, error) {
-	var application data.LoanApplication
-	query := s.data.DB.Where("application_id = ?", applicationID)
-	
-	// 如果指定了用户ID，则只能查看自己的申请
-	if userID != "" {
-		query = query.Where("user_id = ?", userID)
-	}
-	
-	if err := query.First(&application).Error; err != nil {
-		return nil, errors.New("申请不存在")
+// GetApplicationDetails 获取申请详情
+func (s *loanService) GetApplicationDetails(ctx context.Context, req *GetApplicationDetailsRequest) (*GetApplicationDetailsResponse, error) {
+	application, err := s.loanRepo.GetApplicationByID(ctx, req.ID)
+	if err != nil {
+		return nil, fmt.Errorf("获取申请详情失败: %v", err)
 	}
 
-	// 获取申请历史
-	var historyRecords []data.LoanApplicationHistory
-	s.data.DB.Where("application_id = ?", applicationID).
-		Order("occurred_at ASC").
-		Find(&historyRecords)
+	// 获取产品信息
+	product, err := s.loanRepo.GetProductByID(ctx, uint(application.ProductID))
+	if err != nil {
+		return nil, fmt.Errorf("获取产品信息失败: %v", err)
+	}
 
-	var history []HistoryItem
-	for _, record := range historyRecords {
-		history = append(history, HistoryItem{
-			Status:    record.StatusTo,
-			Timestamp: record.OccurredAt,
-			Operator:  record.OperatorType,
-			Comments:  record.Comments,
+	// 获取审批日志
+	approvalLogs, _ := s.loanRepo.GetApprovalLogs(ctx, uint(application.ID))
+
+	// 获取Dify工作流日志
+	difyLogs, _ := s.loanRepo.GetDifyLogs(ctx, uint(application.ID))
+
+	// 转换审批日志
+	var approvalLogResponses []*ApprovalLogResponse
+	for _, log := range approvalLogs {
+		approvalLogResponses = append(approvalLogResponses, &ApprovalLogResponse{
+			ID:        uint(log.ID),
+			Step:      log.Step,
+			Status:    log.Status,
+			Note:      log.Note,
+			CreatedAt: log.CreatedAt,
 		})
 	}
 
-	var applicantSnapshot map[string]interface{}
-	if application.ApplicantSnapshot != nil {
-		json.Unmarshal(application.ApplicantSnapshot, &applicantSnapshot)
+	// 转换Dify日志
+	var difyLogResponses []*DifyLogResponse
+	for _, log := range difyLogs {
+		difyLogResponses = append(difyLogResponses, &DifyLogResponse{
+			ID:           uint(log.ID),
+			WorkflowType: log.WorkflowType,
+			Status:       log.Status,
+			Result:       log.Result,
+			CreatedAt:    log.CreatedAt,
+		})
 	}
 
-	return &LoanApplicationResponse{
-		ApplicationID:      application.ApplicationID,
-		UserID:             application.UserID,
-		ProductID:          application.ProductID,
-		AmountApplied:      application.AmountApplied,
-		TermMonthsApplied:  application.TermMonthsApplied,
-		Purpose:            application.Purpose,
-		Status:             application.Status,
-		ApplicantSnapshot:  applicantSnapshot,
-		SubmittedAt:        application.SubmittedAt,
-		AIRiskScore:        application.AIRiskScore,
-		AISuggestion:       application.AISuggestion,
-		ApprovedAmount:     application.ApprovedAmount,
-		ApprovedTermMonths: application.ApprovedTermMonths,
-		FinalDecision:      application.FinalDecision,
-		DecisionReason:     application.DecisionReason,
-		ProcessedAt:        application.ProcessedAt,
-		History:            history,
+	return &GetApplicationDetailsResponse{
+		Application: &ApplicationDetailsResponse{
+			ID:            uint(application.ID),
+			ApplicationNo: application.ApplicationNo,
+			ProductID:     uint(application.ProductID),
+			LoanAmount:    application.LoanAmount,
+			Status:        application.Status,
+			CreatedAt:     application.CreatedAt,
+		},
+		Product: &ProductResponse{
+			ID:           uint(product.ID),
+			ProductName:  product.ProductName,
+			ProductCode:  product.ProductCode,
+			ProductType:  product.ProductType,
+			Description:  product.Description,
+			MinAmount:    product.MinAmount,
+			MaxAmount:    product.MaxAmount,
+			InterestRate: product.InterestRate,
+			TermMonths:   product.TermMonths,
+			RequiredAuth: product.RequiredAuth,
+			IsActive:     product.IsActive,
+		},
+		ApprovalLogs: approvalLogResponses,
+		DifyLogs:     difyLogResponses,
 	}, nil
 }
 
-// GetMyLoanApplications 获取我的贷款申请列表
-func (s *LoanService) GetMyLoanApplications(ctx context.Context, userID string, status string, page, limit int) ([]LoanApplicationResponse, int64, error) {
-	offset, validLimit := pkg.GetPagination(page, limit)
-	
-	query := s.data.DB.Where("user_id = ?", userID)
-	if status != "" {
-		query = query.Where("status = ?", status)
+// GetUserApplications 获取用户申请列表
+func (s *loanService) GetUserApplications(ctx context.Context, req *GetUserApplicationsRequest) (*GetUserApplicationsResponse, error) {
+	// TODO: 从上下文获取用户ID
+	userID := uint(1) // 临时默认值
+
+	applications, total, err := s.loanRepo.GetUserApplications(ctx, userID, req.Page, req.Limit, req.Status)
+	if err != nil {
+		return nil, fmt.Errorf("获取用户申请列表失败: %v", err)
 	}
 
-	var total int64
-	query.Model(&data.LoanApplication{}).Count(&total)
-
-	var applications []data.LoanApplication
-	if err := query.Offset(offset).Limit(validLimit).
-		Order("submitted_at DESC").
-		Find(&applications).Error; err != nil {
-		s.log.Error("查询贷款申请失败", zap.Error(err))
-		return nil, 0, errors.New("查询失败")
-	}
-
-	var result []LoanApplicationResponse
+	var responses []*UserApplicationResponse
 	for _, app := range applications {
-		result = append(result, LoanApplicationResponse{
-			ApplicationID:     app.ApplicationID,
-			UserID:            app.UserID,
-			ProductID:         app.ProductID,
-			AmountApplied:     app.AmountApplied,
-			TermMonthsApplied: app.TermMonthsApplied,
-			Purpose:           app.Purpose,
-			Status:            app.Status,
-			SubmittedAt:       app.SubmittedAt,
-			AIRiskScore:       app.AIRiskScore,
-			AISuggestion:      app.AISuggestion,
-			FinalDecision:     app.FinalDecision,
-			ProcessedAt:       app.ProcessedAt,
+		// 获取产品名称
+		product, _ := s.loanRepo.GetProductByID(ctx, uint(app.ProductID))
+		productName := "未知产品"
+		if product != nil {
+			productName = product.ProductName
+		}
+
+		responses = append(responses, &UserApplicationResponse{
+			ID:            uint(app.ID),
+			ApplicationNo: app.ApplicationNo,
+			ProductName:   productName,
+			LoanAmount:    app.LoanAmount,
+			Status:        app.Status,
+			CreatedAt:     app.CreatedAt,
 		})
 	}
 
-	return result, total, nil
+	return &GetUserApplicationsResponse{
+		Applications: responses,
+		Total:        total,
+		Page:         req.Page,
+		Limit:        req.Limit,
+	}, nil
 }
 
-// triggerAIProcessing 触发AI处理流程（模拟实现）
-func (s *LoanService) triggerAIProcessing(applicationID string) {
-	// 模拟AI处理延迟
-	time.Sleep(2 * time.Second)
+// ==================== 审批流程 ====================
 
-	// 更新申请状态为AI处理中
-	s.data.DB.Model(&data.LoanApplication{}).
-		Where("application_id = ?", applicationID).
-		Updates(map[string]interface{}{
-			"status": "AI_PROCESSING",
-		})
-
-	// 记录状态变更历史
-	history := data.LoanApplicationHistory{
-		ApplicationID: applicationID,
-		StatusFrom:    "SUBMITTED",
-		StatusTo:      "AI_PROCESSING",
-		OperatorType:  "SYSTEM",
-		OperatorID:    "SYSTEM_AI",
-		Comments:      "AI系统开始处理申请",
-		OccurredAt:    time.Now(),
+// ApproveApplication 批准申请
+func (s *loanService) ApproveApplication(ctx context.Context, req *ApproveApplicationRequest) error {
+	application, err := s.loanRepo.GetApplicationByID(ctx, req.ID)
+	if err != nil {
+		return fmt.Errorf("获取申请信息失败: %v", err)
 	}
-	s.data.DB.Create(&history)
 
-	s.log.Info("AI处理流程已触发", zap.String("applicationId", applicationID))
-} 
+	// 更新申请状态
+	application.Status = "approved"
+	if application.FinalApprovedAt == nil {
+		now := time.Now()
+		application.FinalApprovedAt = &now
+	}
+
+	err = s.loanRepo.UpdateApplication(ctx, application)
+	if err != nil {
+		return fmt.Errorf("更新申请状态失败: %v", err)
+	}
+
+	// TODO: 记录审批日志
+	// TODO: 发送通知
+
+	return nil
+}
+
+// RejectApplication 拒绝申请
+func (s *loanService) RejectApplication(ctx context.Context, req *RejectApplicationRequest) error {
+	application, err := s.loanRepo.GetApplicationByID(ctx, req.ID)
+	if err != nil {
+		return fmt.Errorf("获取申请信息失败: %v", err)
+	}
+
+	// 更新申请状态
+	application.Status = "rejected"
+	application.RejectionReason = req.RejectionNote
+
+	err = s.loanRepo.UpdateApplication(ctx, application)
+	if err != nil {
+		return fmt.Errorf("更新申请状态失败: %v", err)
+	}
+
+	// TODO: 记录审批日志
+	// TODO: 发送通知
+
+	return nil
+}
+
+// GetAdminApplications 获取管理员申请列表
+func (s *loanService) GetAdminApplications(ctx context.Context, req *GetAdminApplicationsRequest) (*GetAdminApplicationsResponse, error) {
+	applications, total, err := s.loanRepo.GetApplicationsForAdmin(ctx, req.Page, req.Limit, req.Status)
+	if err != nil {
+		return nil, fmt.Errorf("获取申请列表失败: %v", err)
+	}
+
+	var responses []*AdminApplicationResponse
+	for _, app := range applications {
+		// 获取用户名和产品名
+		user, _ := s.userRepo.GetByID(ctx, app.UserID)
+		product, _ := s.loanRepo.GetProductByID(ctx, uint(app.ProductID))
+
+		userName := "未知用户"
+		if user != nil {
+			userName = user.RealName
+			if userName == "" {
+				userName = user.Username
+			}
+		}
+
+		productName := "未知产品"
+		if product != nil {
+			productName = product.ProductName
+		}
+
+		responses = append(responses, &AdminApplicationResponse{
+			ID:            uint(app.ID),
+			ApplicationNo: app.ApplicationNo,
+			UserName:      userName,
+			ProductName:   productName,
+			LoanAmount:    app.LoanAmount,
+			Status:        app.Status,
+			CreatedAt:     app.CreatedAt,
+		})
+	}
+
+	return &GetAdminApplicationsResponse{
+		Applications: responses,
+		Total:        total,
+		Page:         req.Page,
+		Limit:        req.Limit,
+	}, nil
+}
+
+// GetStatistics 获取贷款统计
+func (s *loanService) GetStatistics(ctx context.Context) (*LoanStatisticsResponse, error) {
+	// TODO: 实现统计查询
+	stats, err := s.loanRepo.GetApplicationStatistics(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("获取统计数据失败: %v", err)
+	}
+
+	return &LoanStatisticsResponse{
+		TotalApplications:   stats["total_applications"].(int64),
+		MonthlyApplications: stats["monthly_applications"].(int64),
+		StatusStatistics:    stats["status_statistics"],
+	}, nil
+}
+
+// ==================== 产品管理 ====================
+
+// CreateProduct 创建贷款产品
+func (s *loanService) CreateProduct(ctx context.Context, req *CreateProductRequest) (*model.LoanProduct, error) {
+	product := &model.LoanProduct{
+		ProductCode:      req.ProductCode,
+		ProductName:      req.ProductName,
+		ProductType:      req.ProductType,
+		Description:      req.Description,
+		MinAmount:        req.MinAmount,
+		MaxAmount:        req.MaxAmount,
+		InterestRate:     req.InterestRate,
+		TermMonths:       req.TermMonths,
+		RequiredAuth:     req.RequiredAuth,
+		IsActive:         req.IsActive,
+		SortOrder:        req.SortOrder,
+		DifyWorkflowID:   req.DifyWorkflowID,
+		EligibleUserType: req.EligibleUserType,
+	}
+
+	err := s.loanRepo.CreateProduct(ctx, product)
+	if err != nil {
+		return nil, fmt.Errorf("创建产品失败: %v", err)
+	}
+
+	return product, nil
+}
+
+// UpdateProduct 更新产品
+func (s *loanService) UpdateProduct(ctx context.Context, productID uint64, req *UpdateProductRequest) error {
+	product, err := s.loanRepo.GetProductByID(ctx, uint(productID))
+	if err != nil {
+		return fmt.Errorf("获取产品失败: %v", err)
+	}
+
+	// 更新字段
+	if req.ProductName != "" {
+		product.ProductName = req.ProductName
+	}
+	if req.Description != "" {
+		product.Description = req.Description
+	}
+	if req.MinAmount > 0 {
+		product.MinAmount = req.MinAmount
+	}
+	if req.MaxAmount > 0 {
+		product.MaxAmount = req.MaxAmount
+	}
+	if req.InterestRate > 0 {
+		product.InterestRate = req.InterestRate
+	}
+	if req.TermMonths > 0 {
+		product.TermMonths = req.TermMonths
+	}
+	if req.RequiredAuth != "" {
+		product.RequiredAuth = req.RequiredAuth
+	}
+	product.IsActive = req.IsActive
+	if req.SortOrder > 0 {
+		product.SortOrder = req.SortOrder
+	}
+	if req.DifyWorkflowID != "" {
+		product.DifyWorkflowID = req.DifyWorkflowID
+	}
+	if req.EligibleUserType != "" {
+		product.EligibleUserType = req.EligibleUserType
+	}
+
+	return s.loanRepo.UpdateProduct(ctx, product)
+}
+
+// DeleteProduct 删除产品
+func (s *loanService) DeleteProduct(ctx context.Context, productID uint64) error {
+	return s.loanRepo.DeleteProduct(ctx, uint(productID))
+}
+
+// GetProduct 获取产品详情
+func (s *loanService) GetProduct(ctx context.Context, productID uint64) (*model.LoanProduct, error) {
+	return s.loanRepo.GetProductByID(ctx, uint(productID))
+}
+
+// ListProducts 获取产品列表
+func (s *loanService) ListProducts(ctx context.Context, req *repository.ListProductsRequest) (*repository.ListProductsResponse, error) {
+	return s.loanRepo.ListProducts(ctx, req)
+}
+
+// GetActiveProducts 获取活跃产品
+func (s *loanService) GetActiveProducts(ctx context.Context, userType string) ([]*model.LoanProduct, error) {
+	return s.loanRepo.GetActiveProducts(ctx, userType)
+}
+
+// ==================== 高级审批功能 ====================
+
+// StartReview 开始人工审核
+func (s *loanService) StartReview(ctx context.Context, applicationID uint64, reviewerID uint64) error {
+	application, err := s.loanRepo.GetApplicationByID(ctx, uint(applicationID))
+	if err != nil {
+		return fmt.Errorf("获取申请失败: %v", err)
+	}
+
+	application.Status = "reviewing"
+	application.CurrentApprover = &reviewerID
+
+	return s.loanRepo.UpdateApplication(ctx, application)
+}
+
+// ReturnApplication 退回申请
+func (s *loanService) ReturnApplication(ctx context.Context, applicationID uint64, req *ReturnRequest) error {
+	application, err := s.loanRepo.GetApplicationByID(ctx, uint(applicationID))
+	if err != nil {
+		return fmt.Errorf("获取申请失败: %v", err)
+	}
+
+	application.Status = "returned"
+
+	return s.loanRepo.UpdateApplication(ctx, application)
+}
+
+// ==================== AI集成功能 ====================
+
+// TriggerAIAssessment 触发AI评估
+func (s *loanService) TriggerAIAssessment(ctx context.Context, applicationID uint64, workflowType string) error {
+	// 获取申请详情
+	application, err := s.loanRepo.GetApplicationByID(ctx, uint(applicationID))
+	if err != nil {
+		return fmt.Errorf("获取申请详情失败: %v", err)
+	}
+
+	// 更新申请状态为AI评估中
+	application.Status = "ai_processing"
+	if updateErr := s.loanRepo.UpdateApplication(ctx, application); updateErr != nil {
+		fmt.Printf("更新申请状态失败: %v\n", updateErr)
+	}
+
+	// 创建审批日志记录AI评估开始
+	startLog := &model.ApprovalLog{
+		ApplicationID:  application.ID,
+		ApproverID:     0, // AI系统
+		Action:         "submit",
+		Step:           "ai_assessment",
+		ApprovalLevel:  0,
+		Result:         "pending",
+		Status:         "pending",
+		Comment:        "开始AI智能评估",
+		Note:           "系统自动触发AI工作流进行贷款申请评估",
+		PreviousStatus: "pending",
+		NewStatus:      "ai_processing",
+		ActionTime:     time.Now(),
+	}
+	if logErr := s.loanRepo.CreateApprovalLog(ctx, startLog); logErr != nil {
+		fmt.Printf("创建审批日志失败: %v\n", logErr)
+	}
+
+	// 调用Dify工作流
+	response, err := s.difyService.CallLoanApprovalWorkflow(uint(applicationID), uint(application.UserID))
+	if err != nil {
+		// 更新申请状态为AI评估失败
+		application.Status = "ai_failed"
+		application.RejectionReason = fmt.Sprintf("AI评估失败: %v", err)
+		if updateErr := s.loanRepo.UpdateApplication(ctx, application); updateErr != nil {
+			fmt.Printf("更新失败状态失败: %v\n", updateErr)
+		}
+
+		// 记录失败日志
+		failLog := &model.ApprovalLog{
+			ApplicationID:  application.ID,
+			ApproverID:     0,
+			Action:         "reject",
+			Step:           "ai_assessment",
+			ApprovalLevel:  0,
+			Result:         "rejected",
+			Status:         "rejected",
+			Comment:        fmt.Sprintf("AI评估失败: %v", err),
+			Note:           "AI工作流调用失败",
+			PreviousStatus: "ai_processing",
+			NewStatus:      "ai_failed",
+			ActionTime:     time.Now(),
+		}
+		if logErr := s.loanRepo.CreateApprovalLog(ctx, failLog); logErr != nil {
+			fmt.Printf("创建失败日志失败: %v\n", logErr)
+		}
+
+		return fmt.Errorf("调用Dify工作流失败: %v", err)
+	}
+
+	// 处理AI评估结果
+	if err := s.processAIAssessmentResult(ctx, application, response); err != nil {
+		return fmt.Errorf("处理AI评估结果失败: %v", err)
+	}
+
+	return nil
+}
+
+// processAIAssessmentResult 处理AI评估结果
+func (s *loanService) processAIAssessmentResult(ctx context.Context, application *model.LoanApplication, response *DifyWorkflowResponse) error {
+	// 更新申请的Dify对话信息
+	application.DifyConversationID = response.ConversationID
+
+	// 根据AI响应状态处理结果
+	if response.Status == "succeeded" && response.Data != nil {
+		// 解析AI评估结果
+		result, ok := response.Data["result"]
+		if !ok {
+			return fmt.Errorf("AI响应中缺少result字段")
+		}
+
+		resultMap, ok := result.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("AI结果格式不正确")
+		}
+
+		// 获取AI建议
+		recommendation := ""
+		if rec, exists := resultMap["recommendation"]; exists {
+			recommendation = fmt.Sprintf("%v", rec)
+		}
+
+		// 获取AI决策
+		decision := ""
+		if dec, exists := resultMap["decision"]; exists {
+			decision = fmt.Sprintf("%v", dec)
+		}
+
+		// 获取信用评分
+		if score, exists := resultMap["credit_score"]; exists {
+			if scoreFloat, ok := score.(float64); ok {
+				application.CreditScore = int(scoreFloat)
+			}
+		}
+
+		// 获取风险等级
+		if risk, exists := resultMap["risk_level"]; exists {
+			application.RiskLevel = fmt.Sprintf("%v", risk)
+		}
+
+		// 更新AI建议
+		application.AIRecommendation = recommendation
+
+		// 根据AI决策更新申请状态
+		var newStatus string
+		var actionResult string
+		var actionComment string
+
+		switch decision {
+		case "approve", "approved":
+			newStatus = "ai_approved"
+			actionResult = "approved"
+			actionComment = "AI智能评估通过，建议批准申请"
+			application.AutoApprovalPassed = true
+
+			// 如果有推荐金额，设置批准金额
+			if approvedAmount, exists := resultMap["approved_amount"]; exists {
+				if amountFloat, ok := approvedAmount.(float64); ok {
+					amount := int64(amountFloat)
+					application.ApprovedAmount = &amount
+				}
+			}
+
+		case "reject", "rejected":
+			newStatus = "ai_rejected"
+			actionResult = "rejected"
+			actionComment = "AI智能评估不通过，建议拒绝申请"
+
+			// 设置拒绝原因
+			if reason, exists := resultMap["rejection_reason"]; exists {
+				application.RejectionReason = fmt.Sprintf("%v", reason)
+			} else {
+				application.RejectionReason = "AI评估认为不符合贷款条件"
+			}
+
+		case "manual_review", "manual":
+			newStatus = "manual_review"
+			actionResult = "returned"
+			actionComment = "AI智能评估建议人工审核"
+			application.ApprovalLevel = 1
+
+		default:
+			newStatus = "manual_review"
+			actionResult = "returned"
+			actionComment = "AI评估完成，建议人工审核"
+		}
+
+		application.Status = newStatus
+
+		// 更新申请记录
+		if err := s.loanRepo.UpdateApplication(ctx, application); err != nil {
+			return fmt.Errorf("更新申请记录失败: %v", err)
+		}
+
+		// 创建AI评估完成日志
+		resultLog := &model.ApprovalLog{
+			ApplicationID:  application.ID,
+			ApproverID:     0, // AI系统
+			Action:         actionResult,
+			Step:           "ai_assessment",
+			ApprovalLevel:  0,
+			Result:         actionResult,
+			Status:         actionResult,
+			Comment:        actionComment,
+			Note:           fmt.Sprintf("AI评估建议: %s", recommendation),
+			PreviousStatus: "ai_processing",
+			NewStatus:      newStatus,
+			ActionTime:     time.Now(),
+		}
+
+		if err := s.loanRepo.CreateApprovalLog(ctx, resultLog); err != nil {
+			fmt.Printf("创建AI评估结果日志失败: %v\n", err)
+		}
+
+	} else {
+		// AI评估失败
+		application.Status = "ai_failed"
+		application.RejectionReason = "AI评估过程中出现错误"
+
+		if err := s.loanRepo.UpdateApplication(ctx, application); err != nil {
+			return fmt.Errorf("更新失败状态失败: %v", err)
+		}
+
+		// 记录失败日志
+		failLog := &model.ApprovalLog{
+			ApplicationID:  application.ID,
+			ApproverID:     0,
+			Action:         "reject",
+			Step:           "ai_assessment",
+			ApprovalLevel:  0,
+			Result:         "rejected",
+			Status:         "rejected",
+			Comment:        "AI评估失败",
+			Note:           fmt.Sprintf("AI工作流状态: %s", response.Status),
+			PreviousStatus: "ai_processing",
+			NewStatus:      "ai_failed",
+			ActionTime:     time.Now(),
+		}
+
+		if err := s.loanRepo.CreateApprovalLog(ctx, failLog); err != nil {
+			fmt.Printf("创建失败日志失败: %v\n", err)
+		}
+
+		return fmt.Errorf("AI评估未成功完成，状态: %s", response.Status)
+	}
+
+	return nil
+}
+
+// ProcessDifyCallback 处理Dify回调
+func (s *loanService) ProcessDifyCallback(ctx context.Context, req *DifyCallbackRequest) error {
+	// TODO: 处理Dify工作流回调
+	// 1. 验证回调签名
+	// 2. 更新申请状态
+	// 3. 记录结果
+
+	return fmt.Errorf("Dify回调处理功能尚未实现")
+}
+
+// ==================== 统计报表功能 ====================
+
+// GetLoanStatistics 获取贷款统计
+func (s *loanService) GetLoanStatistics(ctx context.Context, req *StatisticsRequest) (*LoanStatistics, error) {
+	// TODO: 实现详细统计
+	return &LoanStatistics{
+		TotalApplications:     0,
+		PendingApplications:   0,
+		ApprovedApplications:  0,
+		RejectedApplications:  0,
+		TotalLoanAmount:       0,
+		ApprovedLoanAmount:    0,
+		ApplicationsByProduct: make(map[string]int64),
+		ApprovalRate:          0.0,
+	}, nil
+}
+
+// GenerateApprovalReport 生成审批报告
+func (s *loanService) GenerateApprovalReport(ctx context.Context, req *ReportRequest) (*ApprovalReport, error) {
+	// TODO: 实现报告生成
+	return &ApprovalReport{
+		TotalApplications:    0,
+		ApprovedApplications: 0,
+		RejectedApplications: 0,
+		PendingApplications:  0,
+		ReportData:           []ReportDataItem{},
+		GeneratedAt:          time.Now(),
+	}, nil
+}
+
+// ==================== 辅助方法 ====================
+
+// CreateApprovalLog 创建审批日志
+func (s *loanService) CreateApprovalLog(log *model.ApprovalLog) error {
+	ctx := context.Background()
+	return s.loanRepo.CreateApprovalLog(ctx, log)
+}
+
+// GetLoanApplicationByID 根据ID获取贷款申请
+func (s *loanService) GetLoanApplicationByID(applicationID uint) (*model.LoanApplication, error) {
+	ctx := context.Background()
+	return s.loanRepo.GetApplicationByID(ctx, uint(applicationID))
+}
+
+// UpdateLoanApplication 更新贷款申请
+func (s *loanService) UpdateLoanApplication(application *model.LoanApplication) error {
+	ctx := context.Background()
+	return s.loanRepo.UpdateApplication(ctx, application)
+}
+
+func generateApplicationNo() string {
+	return fmt.Sprintf("LA%d%06d", time.Now().Unix(), time.Now().Nanosecond()%1000000)
+}

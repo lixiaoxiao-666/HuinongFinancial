@@ -467,7 +467,8 @@ const maskIdCard = (idCard?: string) => {
   return idCard.replace(/(.{4}).*(.{4})/, '$1****$2')
 }
 
-const formatAmount = (amount: number) => {
+const formatAmount = (amount: number | undefined | null) => {
+  if (typeof amount !== 'number' || isNaN(amount)) return '-'
   return amount.toLocaleString()
 }
 
