@@ -12,7 +12,7 @@
  Date: 30/05/2025
 */
 
-USE huinong_db;
+USE app;
 
 -- 禁用外键检查，避免插入顺序问题
 SET FOREIGN_KEY_CHECKS = 0;

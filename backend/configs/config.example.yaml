@@ -15,7 +15,7 @@ database:
   port: 3306                  # 数据库端口
   username: "root"            # 数据库用户名
   password: "your_password"   # 数据库密码 - 请修改为实际密码
-  database: "huinong_db"      # 数据库名称 - 请修改为实际数据库名
+  database: "app"             # 数据库名称 - 请修改为实际数据库名
   charset: "utf8mb4"
   max_idle_conns: 10          # 最大空闲连接数
   max_open_conns: 100         # 最大打开连接数
