@@ -4,6 +4,7 @@ import (
 	"backend/internal/service"
 	"backend/pkg"
 
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -37,7 +38,8 @@ func (h *AIAgentHandler) GetApplicationInfo(c *gin.Context) {
 
 	h.log.Info("处理获取申请信息请求", zap.String("applicationId", applicationID))
 
-	info, err := h.aiAgentService.GetApplicationInfo(applicationID)
+	// 使用带日志记录的方法
+	info, err := h.aiAgentService.GetApplicationInfoWithLog(applicationID, c.Request)
 	if err != nil {
 		h.log.Error("获取申请信息失败", zap.Error(err), zap.String("applicationId", applicationID))
 		pkg.InternalError(c, err.Error())
@@ -253,8 +255,11 @@ func (h *AIAgentHandler) SubmitAIDecision(c *gin.Context) {
 		zap.Float64("risk_score", riskScore),
 		zap.String("risk_level", riskLevel))
 
+	// 设置request到context中，以便service层记录日志
+	ctx := context.WithValue(c.Request.Context(), "request", c.Request)
+
 	// 调用服务层处理
-	result, err := h.aiAgentService.SubmitAIDecisionQuery(c.Request.Context(), request)
+	result, err := h.aiAgentService.SubmitAIDecisionQuery(ctx, request)
 	if err != nil {
 		h.log.Error("Failed to submit AI decision", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -360,7 +365,8 @@ func (h *AIAgentHandler) TriggerWorkflow(c *gin.Context) {
 func (h *AIAgentHandler) GetAIModelConfig(c *gin.Context) {
 	h.log.Info("处理获取AI模型配置请求")
 
-	config, err := h.aiAgentService.GetAIModelConfig()
+	// 使用带日志记录的方法
+	config, err := h.aiAgentService.GetAIModelConfigWithLog(c.Request)
 	if err != nil {
 		h.log.Error("获取AI模型配置失败", zap.Error(err))
 		pkg.InternalError(c, err.Error())
@@ -388,7 +394,8 @@ func (h *AIAgentHandler) GetExternalData(c *gin.Context) {
 		zap.String("dataTypes", dataTypes),
 	)
 
-	data, err := h.aiAgentService.GetExternalData(userID, dataTypes)
+	// 使用带日志记录的方法
+	data, err := h.aiAgentService.GetExternalDataWithLog(userID, dataTypes, c.Request)
 	if err != nil {
 		h.log.Error("获取外部数据失败", zap.Error(err), zap.String("userId", userID))
 		pkg.InternalError(c, err.Error())
