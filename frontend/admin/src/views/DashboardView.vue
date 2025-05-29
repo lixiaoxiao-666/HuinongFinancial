@@ -1,7 +1,12 @@
 <template>
   <div class="dashboard">
     <div class="page-header">
-      <h2 class="page-title">工作台</h2>
+      <div class="page-title-container">
+        <div class="page-icon">
+          <img src="@/assets/icons/blue-oa-logo.png" alt="Dashboard" class="page-logo" />
+        </div>
+        <h2 class="page-title">工作台</h2>
+      </div>
       <div class="header-actions">
         <el-button @click="fetchDashboardData" :loading="loading">
           <el-icon><Refresh /></el-icon>
@@ -709,9 +714,31 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid #ebeef5;
 }
 
+.page-title-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.page-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  border: 1px solid #e6e6e6;
+  padding: 2px;
+  background-color: #ffffff;
+}
+
 .page-title {
   margin: 0;
-  color: #333;
+  color: #1976D2;
   font-size: 24px;
   font-weight: 600;
 }
