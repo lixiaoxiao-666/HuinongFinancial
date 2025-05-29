@@ -12,15 +12,17 @@ import (
 
 // RouterConfig 路由配置
 type RouterConfig struct {
-	UserService     service.UserService
-	LoanService     service.LoanService
-	MachineService  service.MachineService
-	ArticleService  service.ArticleService
-	ExpertService   service.ExpertService
-	FileService     service.FileService
-	SystemService   service.SystemService
-	OAService       service.OAService
-	JWTSecret       string
+	UserService    service.UserService
+	LoanService    service.LoanService
+	MachineService service.MachineService
+	ArticleService service.ArticleService
+	ExpertService  service.ExpertService
+	FileService    service.FileService
+	SystemService  service.SystemService
+	OAService      service.OAService
+	DifyService    service.DifyService
+	JWTSecret      string
+	DifyAPIToken   string
 }
 
 // SetupRouter 设置路由
@@ -38,6 +40,11 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 
 	// 创建Handler实例
 	userHandler := handler.NewUserHandler(config.UserService)
+	difyHandler := handler.NewDifyHandler(
+		config.UserService,
+		config.LoanService,
+		config.MachineService,
+	)
 	// TODO: 创建其他Handler实例
 	// loanHandler := handler.NewLoanHandler(config.LoanService)
 	// machineHandler := handler.NewMachineHandler(config.MachineService)
@@ -68,6 +75,34 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 					"description": "数字惠农APP及OA后台管理系统API接口",
 				})
 			})
+		}
+
+		// 内部API（供Dify工作流调用）
+		internal := api.Group("/internal")
+		internal.Use(middleware.DifyAuthMiddleware(config.DifyAPIToken))
+		{
+			// Dify工作流回调接口
+			dify := internal.Group("/dify")
+			{
+				// 贷款相关接口
+				loan := dify.Group("/loan")
+				{
+					loan.POST("/get-application-details", difyHandler.GetLoanApplicationDetails)
+					loan.POST("/submit-assessment", difyHandler.SubmitRiskAssessment)
+				}
+
+				// 农机相关接口
+				machine := dify.Group("/machine")
+				{
+					machine.POST("/get-rental-details", difyHandler.GetMachineRentalDetails)
+				}
+
+				// 征信相关接口
+				credit := dify.Group("/credit")
+				{
+					credit.POST("/query", difyHandler.QueryCreditReport)
+				}
+			}
 		}
 
 		// 认证相关API（无需认证）
@@ -303,4 +338,4 @@ func SetupAPIRoutes(r *gin.Engine, config *RouterConfig) {
 			user.POST("/logout", userHandler.Logout)
 		}
 	}
-} 
+}

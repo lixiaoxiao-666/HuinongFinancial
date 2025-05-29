@@ -76,7 +76,7 @@ func main() {
 	// 初始化Repository层
 	userRepo := repository.NewUserRepository(db)
 	loanRepo := repository.NewLoanRepository(db)
-	// machineRepo := repository.NewMachineRepository(db)
+	machineRepo := repository.NewMachineRepository(db)
 	// articleRepo := repository.NewArticleRepository(db)
 	// expertRepo := repository.NewExpertRepository(db)
 	// fileRepo := repository.NewFileRepository(db)
@@ -85,8 +85,9 @@ func main() {
 
 	// 初始化Service层
 	userService := service.NewUserService(userRepo, cfg.JWT.SecretKey)
-	// loanService := service.NewLoanService(loanRepo, userRepo, cacheClient)
-	// machineService := service.NewMachineService(machineRepo, userRepo)
+	loanService := service.NewLoanService(loanRepo, userRepo)
+	machineService := service.NewMachineService(machineRepo, userRepo)
+	difyService := service.NewDifyService(cfg, loanRepo)
 	// articleService := service.NewArticleService(articleRepo, userRepo, cacheClient)
 	// expertService := service.NewExpertService(expertRepo, userRepo)
 	// fileService := service.NewFileService(fileRepo, cfg.File.UploadPath)
@@ -96,24 +97,26 @@ func main() {
 	// 路由配置
 	routerConfig := &router.RouterConfig{
 		UserService:    userService,
-		LoanService:    nil, // loanService,
-		MachineService: nil, // machineService,
+		LoanService:    loanService,
+		MachineService: machineService,
 		ArticleService: nil, // articleService,
 		ExpertService:  nil, // expertService,
 		FileService:    nil, // fileService,
 		SystemService:  nil, // systemService,
 		OAService:      nil, // oaService,
+		DifyService:    difyService,
 		JWTSecret:      cfg.JWT.SecretKey,
+		DifyAPIToken:   cfg.Dify.APIToken,
 	}
 
 	// 设置路由
 	r := router.SetupRouter(routerConfig)
 
 	// 启动HTTP服务器
-	serverAddr := fmt.Sprintf(":%d", cfg.App.Port)
+	serverAddr := cfg.App.GetServerAddr()
 	log.Printf("服务器启动在 %s", serverAddr)
 	log.Printf("环境: %s", cfg.App.Mode)
-	log.Printf("Swagger文档: http://localhost%s/swagger/index.html", serverAddr)
+	log.Printf("Swagger文档: http://localhost:%d/swagger/index.html", cfg.App.Port)
 
 	// 优雅关闭
 	go func() {

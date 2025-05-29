@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"huinong-backend/internal/model"
 
@@ -325,4 +326,27 @@ func (r *machineRepository) GetOrderCount(ctx context.Context) (int64, error) {
 	var count int64
 	err := r.db.WithContext(ctx).Model(&model.RentalOrder{}).Count(&count).Error
 	return count, err
+}
+
+// ==================== 时间冲突检查 ====================
+
+// CheckTimeConflict 检查租赁时间冲突
+func (r *machineRepository) CheckTimeConflict(ctx context.Context, machineID uint64, startTime, endTime time.Time, excludeOrderID uint64) (bool, error) {
+	var count int64
+	query := r.db.WithContext(ctx).Model(&model.RentalOrder{}).
+		Where("machine_id = ?", machineID).
+		Where("status IN (?)", []string{"pending", "confirmed", "in_progress"}).
+		Where("NOT (end_time <= ? OR start_time >= ?)", startTime, endTime)
+
+	// 排除指定的订单ID（用于更新操作）
+	if excludeOrderID > 0 {
+		query = query.Where("id != ?", excludeOrderID)
+	}
+
+	err := query.Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
 }

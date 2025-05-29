@@ -8,7 +8,7 @@
 
 ### 1. 配置结构体定义
 - **Config**: 根配置结构体，整合所有子配置模块
-- **AppConfig**: 应用基础配置（名称、版本、环境、端口等）
+- **AppConfig**: 应用基础配置（名称、版本、环境、端口、Host等）
 - **DatabaseConfig**: 数据库连接配置
 - **RedisConfig**: Redis缓存配置
 - **JWTConfig**: JWT认证配置
@@ -45,7 +45,9 @@ type AppConfig struct {
     Name    string `mapstructure:"name"`     // 应用名称
     Version string `mapstructure:"version"`  // 版本号
     Env     string `mapstructure:"env"`      // 运行环境
+    Host    string `mapstructure:"host"`     // 服务器监听地址
     Port    int    `mapstructure:"port"`     // 监听端口
+    Mode    string `mapstructure:"mode"`     // Gin运行模式
     Debug   bool   `mapstructure:"debug"`    // 调试模式
 }
 ```
@@ -107,10 +109,12 @@ type JWTConfig struct {
 ### DifyConfig Dify AI配置
 ```go
 type DifyConfig struct {
-    BaseURL    string `mapstructure:"base_url"`    // Dify API基础URL
-    APIKey     string `mapstructure:"api_key"`     // API密钥
-    Timeout    int    `mapstructure:"timeout"`     // 请求超时时间(秒)
-    MaxRetries int    `mapstructure:"max_retries"` // 最大重试次数
+    APIURL     string            `mapstructure:"api_url"`
+    APIKey     string            `mapstructure:"api_key"`
+    APIToken   string            `mapstructure:"api_token"`
+    Timeout    int               `mapstructure:"timeout"`
+    RetryTimes int               `mapstructure:"retry_times"`
+    Workflows  map[string]string `mapstructure:"workflows"`
 }
 ```
 
@@ -210,7 +214,9 @@ app:
   name: "数字惠农系统"
   version: "1.0.0"
   env: "production"
+  host: "0.0.0.0"
   port: 8080
+  mode: "debug"
   debug: false
 
 # 数据库配置
@@ -244,10 +250,13 @@ jwt:
 
 # Dify AI配置
 dify:
-  base_url: "https://api.dify.ai/v1"
+  api_url: "https://api.dify.ai/v1"
   api_key: "your_dify_api_key"
+  api_token: "dify-huinong-secure-token-2024"
   timeout: 30
-  max_retries: 3
+  retry_times: 3
+  workflows:
+    loan_approval: "loan-approval-workflow-id"
 
 # 短信配置
 sms:
@@ -568,4 +577,75 @@ configs/
 - 及时更新配置文档
 - 记录配置变更历史
 - 提供配置示例
-- 说明各配置项的影响 
+- 说明各配置项的影响
+
+## 重要更新记录
+
+### Host配置支持 (2025-05-30)
+
+#### 1. AppConfig结构体增强
+```go
+type AppConfig struct {
+    Name    string `mapstructure:"name"`
+    Version string `mapstructure:"version"`
+    Env     string `mapstructure:"env"`
+    Host    string `mapstructure:"host"`     // 新增Host字段
+    Port    int    `mapstructure:"port"`
+    Mode    string `mapstructure:"mode"`
+}
+```
+
+#### 2. 新增服务器地址获取方法
+```go
+// GetServerAddr 获取服务器监听地址
+func (c *AppConfig) GetServerAddr() string {
+    // 如果Host为空，默认使用 "0.0.0.0"
+    host := c.Host
+    if host == "" {
+        host = "0.0.0.0"
+    }
+    return fmt.Sprintf("%s:%d", host, c.Port)
+}
+```
+
+#### 3. DifyConfig增强
+```go
+type DifyConfig struct {
+    APIURL     string            `mapstructure:"api_url"`
+    APIKey     string            `mapstructure:"api_key"`
+    APIToken   string            `mapstructure:"api_token"`  // 新增APIToken字段
+    Timeout    int               `mapstructure:"timeout"`
+    RetryTimes int               `mapstructure:"retry_times"`
+    Workflows  map[string]string `mapstructure:"workflows"`
+}
+```
+
+## 配置方法说明
+
+### AppConfig方法
+- `GetServerAddr()`: 获取完整的服务器监听地址
+- `IsDevelopment()`: 判断是否为开发环境
+- `IsProduction()`: 判断是否为生产环境
+- `IsTest()`: 判断是否为测试环境
+
+### DatabaseConfig方法
+- `GetDSN()`: 获取数据库连接字符串
+
+### RedisConfig方法
+- `GetRedisAddr()`: 获取Redis连接地址
+
+### JWTConfig方法
+- `GetJWTExpirationDuration()`: 获取JWT过期时间
+- `GetRefreshExpirationDuration()`: 获取刷新令牌过期时间
+
+## 注意事项
+
+1. **Host配置**: 新增的Host配置允许指定服务器监听的具体地址
+   - `0.0.0.0`: 监听所有网络接口
+   - `127.0.0.1`: 仅监听本地回环接口
+   - 具体IP: 监听指定网络接口
+
+2. **配置优先级**: 环境变量 > 配置文件
+3. **配置验证**: 启动时会自动验证配置的有效性
+4. **目录创建**: 会自动创建必要的目录（如日志目录、上传目录）
+5. **安全性**: 敏感配置（如JWT密钥）应通过环境变量设置 

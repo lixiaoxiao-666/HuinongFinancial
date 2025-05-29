@@ -385,14 +385,30 @@ func (s *machineService) GetMachineRatings(ctx context.Context, machineID uint64
 	}, nil
 }
 
-// ==================== 工具函数 ====================
+// ==================== 辅助方法 ====================
 
-// generateMachineCode 生成农机编码
-func generateMachineCode() string {
-	return "M" + strconv.FormatInt(time.Now().Unix(), 10)
+// CheckRentalTimeConflict 检查租赁时间冲突
+func (s *machineService) CheckRentalTimeConflict(machineID uint, startTime, endTime time.Time, excludeOrderID uint) (bool, error) {
+	ctx := context.Background()
+	return s.machineRepo.CheckTimeConflict(ctx, uint64(machineID), startTime, endTime, uint64(excludeOrderID))
 }
 
-// generateOrderNo 生成订单号
+// GetMachineByID 根据ID获取农机信息
+func (s *machineService) GetMachineByID(machineID uint) (*model.Machine, error) {
+	ctx := context.Background()
+	return s.machineRepo.GetByID(ctx, uint64(machineID))
+}
+
+// GetRentalOrderByID 根据ID获取租赁订单
+func (s *machineService) GetRentalOrderByID(orderID uint) (*model.RentalOrder, error) {
+	ctx := context.Background()
+	return s.machineRepo.GetOrderByID(ctx, uint64(orderID))
+}
+
+func generateMachineCode() string {
+	return fmt.Sprintf("MC%d%06d", time.Now().Unix(), time.Now().Nanosecond()%1000000)
+}
+
 func generateOrderNo() string {
-	return "O" + strconv.FormatInt(time.Now().Unix(), 10)
+	return fmt.Sprintf("RO%d%06d", time.Now().Unix(), time.Now().Nanosecond()%1000000)
 }

@@ -412,23 +412,29 @@ func (s *userService) UploadAvatar(ctx context.Context, userID uint64, file io.R
 	return "", nil
 }
 
-// ==================== 工具函数 ====================
+// ==================== 辅助方法 ====================
 
-// generateSalt 生成随机盐值
-func generateSalt() string {
-	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, 16)
-	rand.Read(b)
-	for i := range b {
-		b[i] = letters[b[i]%byte(len(letters))]
-	}
-	return string(b)
+// GetUserByID 根据ID获取用户信息
+func (s *userService) GetUserByID(userID uint) (*model.User, error) {
+	ctx := context.Background()
+	return s.userRepo.GetByID(ctx, uint64(userID))
 }
 
-// generateSessionID 生成会话ID
+func generateSalt() string {
+	salt := make([]byte, 16)
+	_, err := rand.Read(salt)
+	if err != nil {
+		// 如果生成随机盐失败，使用时间戳作为后备
+		return fmt.Sprintf("%d", time.Now().UnixNano())
+	}
+	return fmt.Sprintf("%x", salt)
+}
+
 func generateSessionID() string {
 	return uuid.New().String()
 }
+
+// ==================== 工具函数 ====================
 
 // generateTokens 生成JWT令牌
 func (s *userService) generateTokens(userID uint64, platform string) (string, string, error) {

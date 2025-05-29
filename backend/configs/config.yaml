@@ -2,6 +2,7 @@ app:
   name: "数字惠农后端服务"
   version: "1.0.0"
   env: "development"
+  host: "0.0.0.0"
   port: 8080
   mode: "debug"  # debug, release, test
 
@@ -32,7 +33,8 @@ jwt:
 
 dify:
   api_url: "http://172.18.120.57/v1"
-  api_key: "app-HvWb6RgrJ79otrbz9e9OIivp"
+  api_key: "app-d2ELQ0kfvzVv1m84LGQR4pKs"
+  api_token: "dify-huinong-secure-token-2024"
   timeout: 30
   retry_times: 3
   workflows:

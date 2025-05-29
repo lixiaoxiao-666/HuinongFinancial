@@ -101,6 +101,9 @@ type MachineRepository interface {
 	ListOrders(ctx context.Context, req *ListOrdersRequest) (*ListOrdersResponse, error)
 	GetUserOrders(ctx context.Context, userID uint64, userType string, limit, offset int) ([]*model.RentalOrder, error)
 
+	// 时间冲突检查
+	CheckTimeConflict(ctx context.Context, machineID uint64, startTime, endTime time.Time, excludeOrderID uint64) (bool, error)
+
 	// 统计方法
 	GetMachineCount(ctx context.Context) (int64, error)
 	GetAvailableMachineCount(ctx context.Context) (int64, error)

@@ -508,9 +508,26 @@ func (s *loanService) GenerateApprovalReport(ctx context.Context, req *ReportReq
 	}, nil
 }
 
-// ==================== 工具函数 ====================
+// ==================== 辅助方法 ====================
 
-// generateApplicationNo 生成申请编号
+// CreateApprovalLog 创建审批日志
+func (s *loanService) CreateApprovalLog(log *model.ApprovalLog) error {
+	ctx := context.Background()
+	return s.loanRepo.CreateApprovalLog(ctx, log)
+}
+
+// GetLoanApplicationByID 根据ID获取贷款申请
+func (s *loanService) GetLoanApplicationByID(applicationID uint) (*model.LoanApplication, error) {
+	ctx := context.Background()
+	return s.loanRepo.GetApplicationByID(ctx, uint(applicationID))
+}
+
+// UpdateLoanApplication 更新贷款申请
+func (s *loanService) UpdateLoanApplication(application *model.LoanApplication) error {
+	ctx := context.Background()
+	return s.loanRepo.UpdateApplication(ctx, application)
+}
+
 func generateApplicationNo() string {
 	return fmt.Sprintf("LA%d%06d", time.Now().Unix(), time.Now().Nanosecond()%1000000)
 }

@@ -23,6 +23,9 @@ type UserService interface {
 	FreezeUser(ctx context.Context, userID uint64, reason string) error
 	UnfreezeUser(ctx context.Context, userID uint64) error
 
+	// 获取用户信息
+	GetUserByID(userID uint) (*model.User, error)
+
 	// 用户认证
 	SubmitRealNameAuth(ctx context.Context, userID uint64, req *RealNameAuthRequest) error
 	SubmitBankCardAuth(ctx context.Context, userID uint64, req *BankCardAuthRequest) error
@@ -53,6 +56,11 @@ type LoanService interface {
 	GetAdminApplications(ctx context.Context, req *GetAdminApplicationsRequest) (*GetAdminApplicationsResponse, error)
 	GetStatistics(ctx context.Context) (*LoanStatisticsResponse, error)
 
+	// 获取贷款申请信息
+	GetLoanApplicationByID(applicationID uint) (*model.LoanApplication, error)
+	UpdateLoanApplication(application *model.LoanApplication) error
+	CreateApprovalLog(log *model.ApprovalLog) error
+
 	// 贷款产品管理
 	CreateProduct(ctx context.Context, req *CreateProductRequest) (*model.LoanProduct, error)
 	UpdateProduct(ctx context.Context, productID uint64, req *UpdateProductRequest) error
@@ -82,6 +90,11 @@ type MachineService interface {
 	UpdateMachine(ctx context.Context, machineID uint64, req *UpdateMachineRequest) error
 	DeleteMachine(ctx context.Context, machineID uint64) error
 	GetUserMachines(ctx context.Context, userID uint64, req *GetUserMachinesRequest) (*GetUserMachinesResponse, error)
+
+	// 获取农机和订单信息
+	GetMachineByID(machineID uint) (*model.Machine, error)
+	GetRentalOrderByID(orderID uint) (*model.RentalOrder, error)
+	CheckRentalTimeConflict(machineID uint, startTime, endTime time.Time, excludeOrderID uint) (bool, error)
 
 	// 农机搜索
 	SearchMachines(ctx context.Context, req *SearchMachinesRequest) (*SearchMachinesResponse, error)

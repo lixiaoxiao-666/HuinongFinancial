@@ -29,6 +29,7 @@ type AppConfig struct {
 	Name    string `mapstructure:"name"`
 	Version string `mapstructure:"version"`
 	Env     string `mapstructure:"env"`
+	Host    string `mapstructure:"host"`
 	Port    int    `mapstructure:"port"`
 	Mode    string `mapstructure:"mode"`
 }
@@ -68,6 +69,7 @@ type JWTConfig struct {
 type DifyConfig struct {
 	APIURL     string            `mapstructure:"api_url"`
 	APIKey     string            `mapstructure:"api_key"`
+	APIToken   string            `mapstructure:"api_token"`
 	Timeout    int               `mapstructure:"timeout"`
 	RetryTimes int               `mapstructure:"retry_times"`
 	Workflows  map[string]string `mapstructure:"workflows"`
@@ -266,4 +268,14 @@ func (c *AppConfig) IsProduction() bool {
 // IsTest 判断是否为测试环境
 func (c *AppConfig) IsTest() bool {
 	return c.Env == "test"
+}
+
+// GetServerAddr 获取服务器监听地址
+func (c *AppConfig) GetServerAddr() string {
+	// 如果Host为空，默认使用 "0.0.0.0"
+	host := c.Host
+	if host == "" {
+		host = "0.0.0.0"
+	}
+	return fmt.Sprintf("%s:%d", host, c.Port)
 }
