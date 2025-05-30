@@ -168,7 +168,7 @@ type UserSession struct {
     Platform        string     `gorm:"type:varchar(20);not null;index:idx_user_sessions_platform" json:"platform"`
     DeviceID        string     `gorm:"type:varchar(128);index:idx_user_sessions_device" json:"device_id"`
     DeviceType      string     `gorm:"type:varchar(20)" json:"device_type"`
-    DeviceName      string     `gorm:"type:varchar(100)" json:"device_name"`
+    DeviceName      string     `gorm:"type:varchar(500)" json:"device_name"`
     AppVersion      string     `gorm:"type:varchar(20)" json:"app_version"`
     UserAgent       string     `gorm:"type:text" json:"user_agent"`
     

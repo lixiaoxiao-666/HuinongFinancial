@@ -204,7 +204,21 @@ func (m *SessionAuthMiddleware) AdminAuth() gin.HandlerFunc {
 // RefreshToken 刷新Token中间件
 func (m *SessionAuthMiddleware) RefreshToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		refreshToken := c.PostForm("refresh_token")
+		var refreshToken string
+
+		// 首先尝试从form-data获取
+		refreshToken = c.PostForm("refresh_token")
+
+		// 如果form-data中没有，尝试从JSON body获取
+		if refreshToken == "" {
+			var requestBody struct {
+				RefreshToken string `json:"refresh_token"`
+			}
+			if err := c.ShouldBindJSON(&requestBody); err == nil {
+				refreshToken = requestBody.RefreshToken
+			}
+		}
+
 		if refreshToken == "" {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"code":    400,

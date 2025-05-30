@@ -30,6 +30,9 @@ func (h *OAHandler) Login(c *gin.Context) {
 		return
 	}
 
+	// 设置platform为oa
+	req.Platform = "oa"
+
 	ctx := c.Request.Context()
 	resp, err := h.oaService.OALogin(ctx, &req)
 	if err != nil {
@@ -38,15 +41,6 @@ func (h *OAHandler) Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, NewSuccessResponse("登录成功", resp))
-}
-
-// GetCaptcha 获取验证码
-func (h *OAHandler) GetCaptcha(c *gin.Context) {
-	// TODO: 实现验证码生成逻辑
-	c.JSON(http.StatusOK, NewSuccessResponse("获取成功", gin.H{
-		"captcha_id":    "cap_123456",
-		"captcha_image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
-	}))
 }
 
 // GetUsers 获取用户列表

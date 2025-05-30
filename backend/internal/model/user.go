@@ -103,7 +103,7 @@ type UserSession struct {
 	// 设备信息
 	DeviceID   string `gorm:"type:varchar(64)" json:"device_id"`
 	DeviceType string `gorm:"type:varchar(20)" json:"device_type"` // ios, android, web
-	DeviceName string `gorm:"type:varchar(100)" json:"device_name"`
+	DeviceName string `gorm:"type:varchar(500)" json:"device_name"`
 	AppVersion string `gorm:"type:varchar(20)" json:"app_version"`
 	UserAgent  string `gorm:"type:text" json:"user_agent"`
 

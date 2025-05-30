@@ -56,7 +56,53 @@ Content-Type: application/json
 }
 ```
 
-#### 1.2 Token刷新
+#### 1.2 OA管理员登录
+```http
+POST /api/oa/auth/login
+Content-Type: application/json
+
+{
+    "username": "admin",
+    "password": "admin123",
+    "platform": "oa",
+    "device_type": "web",
+    "device_name": "OA管理系统",
+    "device_id": "oa_web_1640995200000",
+    "app_version": "1.0.0"
+}
+```
+
+**响应示例:**
+```json
+{
+    "code": 200,
+    "message": "登录成功",
+    "data": {
+        "user": {
+            "id": 1,
+            "username": "admin",
+            "email": "admin@huinong.com",
+            "real_name": "超级管理员",
+            "role_id": 1,
+            "department": "技术部",
+            "position": "系统管理员",
+            "status": "active"
+        },
+        "access_token": "oa_access_token_1_1640995200",
+        "refresh_token": "oa_refresh_token_1_1640995200",
+        "expires_in": 86400,
+        "session_id": "oa_sess_1640995200000_1640995200"
+    }
+}
+```
+
+**平台标识说明:**
+- `app`: 移动端APP
+- `web`: 普通Web端
+- `oa`: OA管理后台
+- `mini`: 微信小程序
+
+#### 1.3 Token刷新
 ```http
 POST /api/auth/refresh
 Content-Type: application/x-www-form-urlencoded
@@ -322,9 +368,115 @@ const logout = async () => {
 };
 ```
 
-### 3. 管理员后台
+### 3. 管理员后台 (OA)
 
-#### 会话监控
+#### 登录流程
+```javascript
+// 1. OA管理员登录
+const oaLoginResponse = await fetch('/api/oa/auth/login', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+        username: 'admin',
+        password: 'admin123',
+        platform: 'oa',
+        device_type: 'web',
+        device_name: 'OA管理系统',
+        device_id: `oa_web_${Date.now()}`,
+        app_version: '1.0.0'
+    })
+});
+
+const { data } = await oaLoginResponse.json();
+
+// 2. 存储Token
+localStorage.setItem('oa_access_token', data.access_token);
+localStorage.setItem('oa_refresh_token', data.refresh_token);
+localStorage.setItem('oa_session_id', data.session_id);
+localStorage.setItem('oa_user', JSON.stringify(data.user));
+```
+
+#### Axios配置（OA专用）
+```javascript
+// 创建OA专用的axios实例
+const oaApi = axios.create({
+    baseURL: '/api/oa',
+    timeout: 10000
+});
+
+// OA请求拦截器
+oaApi.interceptors.request.use(config => {
+    const token = localStorage.getItem('oa_access_token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
+// OA响应拦截器
+oaApi.interceptors.response.use(
+    response => response,
+    async error => {
+        if (error.response?.status === 401) {
+            const refreshToken = localStorage.getItem('oa_refresh_token');
+            
+            try {
+                const refreshResponse = await fetch('/api/auth/refresh', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `refresh_token=${refreshToken}`
+                });
+                
+                const { data } = await refreshResponse.json();
+                
+                // 更新Token
+                localStorage.setItem('oa_access_token', data.access_token);
+                localStorage.setItem('oa_refresh_token', data.refresh_token);
+                
+                // 重试原请求
+                return oaApi.request(error.config);
+            } catch (refreshError) {
+                // 刷新失败，跳转到OA登录页
+                redirectToOALogin();
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+```
+
+#### OA会话管理
+```javascript
+// 获取OA管理员信息
+const getOAUserInfo = async () => {
+    const response = await oaApi.get('/auth/me');
+    return response.data;
+};
+
+// OA安全登出
+const oaLogout = async () => {
+    await oaApi.post('/auth/logout');
+    localStorage.removeItem('oa_access_token');
+    localStorage.removeItem('oa_refresh_token');
+    localStorage.removeItem('oa_session_id');
+    localStorage.removeItem('oa_user');
+    window.location.href = '/oa/login';
+};
+
+// 权限检查
+const checkOAPermission = (permission) => {
+    const user = JSON.parse(localStorage.getItem('oa_user') || '{}');
+    return user.permissions?.includes(permission) || user.role === 'super_admin';
+};
+```
+
+### 4. 管理员会话监控
+
+#### 获取所有活跃会话
 ```javascript
 // 获取活跃会话统计
 const getActiveSessionStats = async () => {

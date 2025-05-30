@@ -192,13 +192,19 @@ func (s *sessionService) CreateSession(ctx context.Context, userID uint64, login
 	}
 
 	// 存储到数据库
+	// 截断设备名称以确保符合数据库字段长度限制
+	deviceName := loginInfo.DeviceName
+	if len(deviceName) > 500 {
+		deviceName = deviceName[:500]
+	}
+
 	dbSession := &model.UserSession{
 		UserID:           userID,
 		SessionID:        sessionID,
 		Platform:         loginInfo.Platform,
 		DeviceID:         loginInfo.DeviceID,
 		DeviceType:       loginInfo.DeviceType,
-		DeviceName:       loginInfo.DeviceName,
+		DeviceName:       deviceName,
 		AppVersion:       loginInfo.AppVersion,
 		UserAgent:        loginInfo.UserAgent,
 		IPAddress:        loginInfo.IPAddress,

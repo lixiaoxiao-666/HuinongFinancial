@@ -8,7 +8,6 @@ OA后台管理模块为管理员提供完整的系统管理功能，包括用户
 
 #### ✅ **已实现的接口：**
 - 🔐 **管理员登录**: `POST /api/oa/auth/login` 
-- 🖼️ **获取验证码**: `GET /api/oa/auth/captcha`
 - 👥 **用户管理**: 
   - `GET /api/oa/users` - 获取用户列表
   - `GET /api/oa/users/{user_id}` - 获取用户详情
@@ -47,9 +46,12 @@ Content-Type: application/json
 
 {
     "username": "admin",
-    "password": "password123",
-    "captcha": "ABCD",
-    "captcha_id": "cap_123456"
+    "password": "admin123",
+    "platform": "oa",
+    "device_type": "web",
+    "device_name": "OA管理系统",
+    "device_id": "oa_web_1640995200000",
+    "app_version": "1.0.0"
 }
 ```
 
@@ -59,39 +61,46 @@ Content-Type: application/json
     "code": 200,
     "message": "登录成功",
     "data": {
-        "admin": {
-            "id": 1001,
+        "user": {
+            "id": 1,
             "username": "admin",
-            "real_name": "系统管理员",
-            "role": "super_admin",
-            "department": "信息技术部",
-            "permissions": ["user_manage", "loan_approve", "system_config"],
-            "last_login_time": "2024-01-15T09:30:00Z"
+            "email": "admin@huinong.com",
+            "real_name": "超级管理员",
+            "role_id": 1,
+            "department": "技术部",
+            "position": "系统管理员",
+            "status": "active",
+            "login_count": 1,
+            "last_login_at": "2024-01-15T09:30:00Z",
+            "created_at": "2023-12-01T10:00:00Z",
+            "updated_at": "2024-01-15T09:30:00Z"
         },
-        "session": {
-            "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-            "expires_in": 28800
-        }
+        "access_token": "oa_access_token_1_1640995200",
+        "refresh_token": "oa_refresh_token_1_1640995200",
+        "expires_in": 86400,
+        "session_id": "oa_sess_1640995200000_1640995200"
     }
 }
 ```
 
-### 1.2 获取验证码
-```http
-GET /api/oa/auth/captcha
-```
+**测试账户（开发环境）:**
+- **超级管理员**: `admin` / `admin123`
+- **审批员**: `reviewer` / `reviewer123`
 
-**响应示例:**
+**错误响应:**
 ```json
 {
-    "code": 200,
-    "message": "获取成功",
-    "data": {
-        "captcha_id": "cap_123456",
-        "captcha_image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
-    }
+    "code": 401,
+    "message": "登录失败",
+    "detail": "用户名或密码错误"
 }
 ```
+
+**注意事项:**
+- ✅ 已简化登录流程，无需验证码
+- ✅ 支持基于Redis的分布式会话管理
+- ✅ 自动设置platform为"oa"进行权限识别
+- ✅ 生成OA专用的Token前缀，避免与普通用户冲突
 
 ---
 

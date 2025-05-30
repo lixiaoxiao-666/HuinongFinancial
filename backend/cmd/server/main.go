@@ -82,7 +82,7 @@ func main() {
 	// expertRepo := repository.NewExpertRepository(db)
 	// fileRepo := repository.NewFileRepository(db)
 	// systemRepo := repository.NewSystemRepository(db)
-	// oaRepo := repository.NewOARepository(db)
+	oaRepo := repository.NewOARepository(db)
 
 	// 初始化Service层
 	userService := service.NewUserService(userRepo, cfg.JWT.SecretKey)
@@ -104,7 +104,7 @@ func main() {
 	// expertService := service.NewExpertService(expertRepo, userRepo)
 	// fileService := service.NewFileService(fileRepo, cfg.File.UploadPath)
 	// systemService := service.NewSystemService(systemRepo, cacheClient)
-	// oaService := service.NewOAService(oaRepo, cfg.JWT.SecretKey)
+	oaService := service.NewOAService(oaRepo, userRepo, loanRepo, machineRepo, cfg.JWT.SecretKey, sessionService)
 
 	// 路由配置
 	routerConfig := &router.RouterConfig{
@@ -116,7 +116,7 @@ func main() {
 		ExpertService:  nil, // expertService,
 		FileService:    nil, // fileService,
 		SystemService:  nil, // systemService,
-		OAService:      nil, // oaService,
+		OAService:      oaService,
 		DifyService:    difyService,
 		JWTSecret:      cfg.JWT.SecretKey,
 		DifyAPIToken:   cfg.Dify.APIToken,

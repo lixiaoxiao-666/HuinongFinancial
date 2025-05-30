@@ -116,6 +116,18 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			// 使用Redis会话管理系统进行Token刷新
 			auth.POST("/refresh", sessionAuthMiddleware.RefreshToken())
 
+			// Token验证接口（需要认证）
+			auth.GET("/validate", sessionAuthMiddleware.RequireAuth(), func(c *gin.Context) {
+				// 如果中间件验证通过，说明Token有效
+				c.JSON(200, gin.H{
+					"code":    200,
+					"message": "Token有效",
+					"data": gin.H{
+						"valid": true,
+					},
+				})
+			})
+
 			// TODO: 添加其他认证接口
 			// auth.POST("/forgot-password", userHandler.ForgotPassword)
 			// auth.POST("/reset-password", userHandler.ResetPassword)
@@ -337,17 +349,40 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			// }
 		}
 
+		// OA认证相关API（公开接口，无需认证）
+		oaAuth := api.Group("/oa/auth")
+		{
+			oaAuth.POST("/login", oaHandler.Login)
+			oaAuth.POST("/refresh", sessionAuthMiddleware.RefreshToken())
+			oaAuth.GET("/validate", sessionAuthMiddleware.RequireAuth(), func(c *gin.Context) {
+				// 检查是否为OA平台
+				platform, exists := c.Get("platform")
+				if !exists || platform != "oa" {
+					c.JSON(401, gin.H{
+						"code":    401,
+						"message": "非OA平台Token",
+						"error":   "Invalid platform for OA validation",
+					})
+					c.Abort()
+					return
+				}
+
+				// 如果中间件验证通过，说明Token有效
+				c.JSON(200, gin.H{
+					"code":    200,
+					"message": "Token有效",
+					"data": gin.H{
+						"valid": true,
+					},
+				})
+			})
+			oaAuth.POST("/logout", sessionAuthMiddleware.RequireAuth(), sessionAuthMiddleware.Logout())
+		}
+
 		// OA后台API（需要OA认证）- 使用Redis会话认证
 		oa := api.Group("/oa")
 		oa.Use(sessionAuthMiddleware.AdminAuth()) // 使用管理员认证，检查platform为"oa"
 		{
-			// OA认证相关
-			auth := oa.Group("/auth")
-			{
-				auth.POST("/login", oaHandler.Login)
-				auth.GET("/captcha", oaHandler.GetCaptcha)
-			}
-
 			// OA用户管理
 			oaUser := oa.Group("/users")
 			{

@@ -981,9 +981,17 @@ type UpdateRoleRequest struct {
 }
 
 type OALoginRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
-	Platform string `json:"platform" binding:"required"`
+	Username   string `json:"username" binding:"required"`
+	Password   string `json:"password" binding:"required"`
+	Platform   string `json:"platform" binding:"required"`
+	CaptchaID  string `json:"captcha_id"`
+	Captcha    string `json:"captcha"`
+	DeviceType string `json:"device_type"`
+	DeviceName string `json:"device_name"`
+	DeviceID   string `json:"device_id"`
+	AppVersion string `json:"app_version"`
+	IPAddress  string `json:"ip_address"`
+	Location   string `json:"location"`
 }
 
 type OALoginResponse struct {
