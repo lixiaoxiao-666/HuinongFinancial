@@ -113,10 +113,10 @@ func (m *SessionAuthMiddleware) OptionalAuth() gin.HandlerFunc {
 	}
 }
 
-// RequireRole 角色权限中间件
+// RequireRole 角色权限中间件（仅用于OA系统）
 func (m *SessionAuthMiddleware) RequireRole(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 首先需要认证
+		// 首先检查是否已经认证
 		userID, exists := c.Get("user_id")
 		if !exists {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -128,74 +128,70 @@ func (m *SessionAuthMiddleware) RequireRole(roles ...string) gin.HandlerFunc {
 			return
 		}
 
-		// TODO: 实现角色检查逻辑
-		// 这里应该从数据库或缓存查询用户角色并验证
-		_ = userID
-
-		c.Next()
-	}
-}
-
-// AdminAuth 管理员认证中间件
-func (m *SessionAuthMiddleware) AdminAuth() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// 从请求头获取Token
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    401,
-				"message": "未授权",
-				"error":   "Authorization header required",
-			})
-			c.Abort()
-			return
-		}
-
-		// 验证管理员Token
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    401,
-				"message": "未授权",
-				"error":   "Invalid authorization header format",
-			})
-			c.Abort()
-			return
-		}
-
-		accessToken := parts[1]
-
-		// 验证Token并检查平台
-		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
-		defer cancel()
-
-		sessionInfo, err := m.sessionService.ValidateToken(ctx, accessToken)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    401,
-				"message": "未授权",
-				"error":   err.Error(),
-			})
-			c.Abort()
-			return
-		}
-
-		// 检查是否为管理员平台
-		if sessionInfo.Platform != "oa" {
+		// 检查是否为OA平台
+		platform, exists := c.Get("platform")
+		if !exists || platform != "oa" {
 			c.JSON(http.StatusForbidden, gin.H{
 				"code":    403,
 				"message": "访问被拒绝",
-				"error":   "Admin access required",
+				"error":   "Role check only available for OA platform",
 			})
 			c.Abort()
 			return
 		}
 
-		// 存储管理员信息
-		c.Set("user_id", sessionInfo.UserID)
-		c.Set("session_id", sessionInfo.SessionID)
-		c.Set("platform", sessionInfo.Platform)
-		c.Set("is_admin", true)
+		// TODO: 实现OA用户角色检查逻辑
+		// 这里需要从数据库查询OAUser和对应的角色信息
+		// 暂时简单处理，后续需要注入UserService来查询角色
+		userIDVal := userID.(uint64)
+		_ = userIDVal
+
+		// 临时处理：如果需要admin角色，检查用户ID是否为管理员
+		// 实际应该查询oa_users表和oa_roles表
+		for _, requiredRole := range roles {
+			if requiredRole == "admin" {
+				// TODO: 查询数据库验证用户角色
+				// 现在暂时允许通过，后续需要实现具体的角色查询逻辑
+				c.Set("user_role", "admin") // 临时设置
+				c.Next()
+				return
+			}
+		}
+
+		c.JSON(http.StatusForbidden, gin.H{
+			"code":    403,
+			"message": "权限不足",
+			"error":   "Required role not found",
+		})
+		c.Abort()
+	}
+}
+
+// CheckPlatform 检查平台权限的中间件
+func (m *SessionAuthMiddleware) CheckPlatform(requiredPlatform string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 获取用户平台信息（在RequireAuth中间件中设置）
+		platform, exists := c.Get("platform")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{
+				"code":    403,
+				"message": "访问被拒绝",
+				"error":   "Platform information not found",
+			})
+			c.Abort()
+			return
+		}
+
+		// 检查平台权限
+		if platform != requiredPlatform {
+			c.JSON(http.StatusForbidden, gin.H{
+				"code":    403,
+				"message": "访问被拒绝",
+				"error":   "Platform access not authorized",
+			})
+			c.Abort()
+			return
+		}
 
 		c.Next()
 	}

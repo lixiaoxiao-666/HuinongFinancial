@@ -107,18 +107,15 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			}
 		}
 
-		// 认证相关API（无需认证）
+		// 惠农APP/Web认证API（无需认证的公开接口）
 		auth := api.Group("/auth")
 		{
 			auth.POST("/register", userHandler.Register)
 			auth.POST("/login", userHandler.Login)
-
-			// 使用Redis会话管理系统进行Token刷新
 			auth.POST("/refresh", sessionAuthMiddleware.RefreshToken())
 
 			// Token验证接口（需要认证）
 			auth.GET("/validate", sessionAuthMiddleware.RequireAuth(), func(c *gin.Context) {
-				// 如果中间件验证通过，说明Token有效
 				c.JSON(200, gin.H{
 					"code":    200,
 					"message": "Token有效",
@@ -135,7 +132,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			// auth.POST("/send-sms", userHandler.SendSMS)
 		}
 
-		// 用户API（需要认证）- 使用Redis会话认证
+		// 惠农APP/Web用户API（需要认证）- 支持app和web平台
 		user := api.Group("/user")
 		user.Use(sessionAuthMiddleware.RequireAuth())
 		{
@@ -143,8 +140,6 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			user.GET("/profile", userHandler.GetProfile)
 			user.PUT("/profile", userHandler.UpdateProfile)
 			user.PUT("/password", userHandler.ChangePassword)
-
-			// 使用Redis会话管理系统进行登出
 			user.POST("/logout", sessionAuthMiddleware.Logout())
 
 			// 会话管理相关接口
@@ -160,9 +155,6 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			{
 				userAuth.POST("/real-name", userHandler.SubmitRealNameAuth)
 				userAuth.POST("/bank-card", userHandler.SubmitBankCardAuth)
-				// TODO: 添加其他认证接口
-				// userAuth.GET("/status", userHandler.GetAuthStatus)
-				// userAuth.POST("/credit", userHandler.SubmitCreditAuth)
 			}
 
 			// 用户标签
@@ -173,11 +165,8 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			// 贷款相关API
 			loan := user.Group("/loan")
 			{
-				// 产品相关
 				loan.GET("/products", loanHandler.GetProducts)
 				loan.GET("/products/:id", loanHandler.GetProductDetail)
-
-				// 申请相关
 				loan.POST("/applications", loanHandler.SubmitApplication)
 				loan.GET("/applications", loanHandler.GetUserApplications)
 				loan.GET("/applications/:id", loanHandler.GetApplicationDetail)
@@ -201,9 +190,6 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 				machine.GET("/search", machineHandler.SearchMachines)
 				machine.GET("/:id", machineHandler.GetMachine)
 				machine.POST("/:id/orders", machineHandler.CreateOrder)
-				// TODO: 添加农机更新和删除功能
-				// machine.PUT("/:id", machineHandler.UpdateMachine)
-				// machine.DELETE("/:id", machineHandler.DeleteMachine)
 			}
 
 			// 农机订单API
@@ -225,7 +211,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			}
 		}
 
-		// 公共内容API（可选认证）- 使用Redis会话认证
+		// 公共内容API（可选认证）- 登录用户可获得个性化内容
 		content := api.Group("/content")
 		content.Use(sessionAuthMiddleware.OptionalAuth())
 		{
@@ -240,24 +226,54 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			content.GET("/experts/:id", expertHandler.GetExpert)
 		}
 
-		// 管理员API（需要管理员认证）- 使用Redis会话认证
-		admin := api.Group("/admin")
-		admin.Use(sessionAuthMiddleware.AdminAuth())
+		// OA系统认证API（无需认证的公开接口）
+		oaAuth := api.Group("/oa/auth")
+		{
+			oaAuth.POST("/login", oaHandler.Login)
+			oaAuth.POST("/refresh", sessionAuthMiddleware.RefreshToken())
+			oaAuth.GET("/validate", sessionAuthMiddleware.RequireAuth(), sessionAuthMiddleware.CheckPlatform("oa"), func(c *gin.Context) {
+				c.JSON(200, gin.H{
+					"code":    200,
+					"message": "OA Token有效",
+					"data": gin.H{
+						"valid": true,
+					},
+				})
+			})
+			oaAuth.POST("/logout", sessionAuthMiddleware.RequireAuth(), sessionAuthMiddleware.CheckPlatform("oa"), sessionAuthMiddleware.Logout())
+		}
+
+		// OA系统普通用户API（需要OA平台认证，但不需要管理员权限）
+		oaUser := api.Group("/oa/user")
+		oaUser.Use(sessionAuthMiddleware.RequireAuth(), sessionAuthMiddleware.CheckPlatform("oa"))
+		{
+			// OA普通用户个人信息
+			oaUser.GET("/profile", userHandler.GetProfile)
+			oaUser.PUT("/profile", userHandler.UpdateProfile)
+			oaUser.PUT("/password", userHandler.ChangePassword)
+
+			// OA普通用户查看自己的申请
+			oaUser.GET("/loan/applications", loanHandler.GetUserApplications)
+			oaUser.GET("/loan/applications/:id", loanHandler.GetApplicationDetail)
+		}
+
+		// OA系统管理员API（需要OA平台认证 + 管理员权限）
+		oaAdmin := api.Group("/oa/admin")
+		oaAdmin.Use(sessionAuthMiddleware.RequireAuth(), sessionAuthMiddleware.CheckPlatform("oa"), sessionAuthMiddleware.RequireRole("admin"))
 		{
 			// 用户管理
-			adminUser := admin.Group("/users")
+			adminUser := oaAdmin.Group("/users")
 			{
 				adminUser.GET("", userHandler.ListUsers)
 				adminUser.GET("/statistics", userHandler.GetUserStatistics)
+				adminUser.GET("/:user_id", oaHandler.GetUserDetail)
+				adminUser.PUT("/:user_id/status", oaHandler.UpdateUserStatus)
+				adminUser.POST("/batch-operation", oaHandler.BatchOperateUsers)
 				adminUser.GET("/:user_id/auth-status", userAuthHandler.GetUserAuthStatus)
-				// TODO: 添加其他管理员用户接口
-				// adminUser.PUT("/:id/freeze", userHandler.FreezeUser)
-				// adminUser.PUT("/:id/unfreeze", userHandler.UnfreezeUser)
-				// adminUser.GET("/:id/auth", userHandler.GetUserAuth)
 			}
 
 			// 会话管理
-			adminSession := admin.Group("/sessions")
+			adminSession := oaAdmin.Group("/sessions")
 			{
 				adminSession.GET("/active", func(c *gin.Context) {
 					// TODO: 实现获取所有活跃会话的接口
@@ -287,7 +303,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			}
 
 			// 贷款审批管理
-			adminLoan := admin.Group("/loans")
+			adminLoan := oaAdmin.Group("/loans")
 			{
 				adminLoan.GET("/applications", oaLoanHandler.GetApplications)
 				adminLoan.GET("/applications/:id", oaLoanHandler.GetApplicationDetail)
@@ -300,7 +316,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			}
 
 			// 认证审核管理
-			adminAuth := admin.Group("/auth")
+			adminAuth := oaAdmin.Group("/auth")
 			{
 				adminAuth.GET("/list", userAuthHandler.GetAuthList)
 				adminAuth.GET("/:id", userAuthHandler.GetAuthDetail)
@@ -311,7 +327,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			}
 
 			// 内容管理
-			adminContent := admin.Group("/content")
+			adminContent := oaAdmin.Group("/content")
 			{
 				// 文章管理
 				adminContent.POST("/articles", articleHandler.CreateArticle)
@@ -330,8 +346,16 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 				adminContent.DELETE("/experts/:id", expertHandler.DeleteExpert)
 			}
 
+			// 农机管理
+			adminMachine := oaAdmin.Group("/machines")
+			{
+				adminMachine.GET("", oaHandler.GetMachines)
+				adminMachine.GET("/:machine_id", oaHandler.GetMachineDetail)
+				// TODO: 添加设备审核、状态管理等接口
+			}
+
 			// 系统管理
-			adminSystem := admin.Group("/system")
+			adminSystem := oaAdmin.Group("/system")
 			{
 				adminSystem.GET("/config", systemHandler.GetConfig)
 				adminSystem.PUT("/config", systemHandler.SetConfig)
@@ -340,76 +364,10 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 				adminSystem.GET("/statistics", systemHandler.GetSystemStats)
 			}
 
-			// TODO: 农机管理
-			// adminMachine := admin.Group("/machine")
-			// {
-			//     adminMachine.GET("/list", machineHandler.ListAllMachines)
-			//     adminMachine.GET("/statistics", machineHandler.GetMachineStatistics)
-			//     adminMachine.GET("/orders", machineHandler.ListAllOrders)
-			// }
-		}
-
-		// OA认证相关API（公开接口，无需认证）
-		oaAuth := api.Group("/oa/auth")
-		{
-			oaAuth.POST("/login", oaHandler.Login)
-			oaAuth.POST("/refresh", sessionAuthMiddleware.RefreshToken())
-			oaAuth.GET("/validate", sessionAuthMiddleware.RequireAuth(), func(c *gin.Context) {
-				// 检查是否为OA平台
-				platform, exists := c.Get("platform")
-				if !exists || platform != "oa" {
-					c.JSON(401, gin.H{
-						"code":    401,
-						"message": "非OA平台Token",
-						"error":   "Invalid platform for OA validation",
-					})
-					c.Abort()
-					return
-				}
-
-				// 如果中间件验证通过，说明Token有效
-				c.JSON(200, gin.H{
-					"code":    200,
-					"message": "Token有效",
-					"data": gin.H{
-						"valid": true,
-					},
-				})
-			})
-			oaAuth.POST("/logout", sessionAuthMiddleware.RequireAuth(), sessionAuthMiddleware.Logout())
-		}
-
-		// OA后台API（需要OA认证）- 使用Redis会话认证
-		oa := api.Group("/oa")
-		oa.Use(sessionAuthMiddleware.AdminAuth()) // 使用管理员认证，检查platform为"oa"
-		{
-			// OA用户管理
-			oaUser := oa.Group("/users")
-			{
-				oaUser.GET("", oaHandler.GetUsers)
-				oaUser.GET("/:user_id", oaHandler.GetUserDetail)
-				oaUser.PUT("/:user_id/status", oaHandler.UpdateUserStatus)
-				oaUser.POST("/batch-operation", oaHandler.BatchOperateUsers)
-			}
-
-			// OA农机设备管理
-			oaMachine := oa.Group("/machines")
-			{
-				oaMachine.GET("", oaHandler.GetMachines)
-				oaMachine.GET("/:machine_id", oaHandler.GetMachineDetail)
-				// TODO: 添加设备审核、状态管理等接口
-			}
-
 			// OA工作台和数据分析
-			oa.GET("/dashboard", oaHandler.GetDashboard)
-			oa.GET("/dashboard/overview", oaHandler.GetDashboard)
-			oa.GET("/dashboard/risk-monitoring", oaHandler.GetRiskMonitoring)
-
-			// TODO: 继续添加其他OA管理功能
-			// - 认证审核管理
-			// - 系统配置管理
-			// - 操作日志管理
-			// - 权限管理
+			oaAdmin.GET("/dashboard", oaHandler.GetDashboard)
+			oaAdmin.GET("/dashboard/overview", oaHandler.GetDashboard)
+			oaAdmin.GET("/dashboard/risk-monitoring", oaHandler.GetRiskMonitoring)
 		}
 	}
 
