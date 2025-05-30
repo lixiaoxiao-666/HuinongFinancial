@@ -51,6 +51,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 	articleHandler := handler.NewArticleHandler(config.ArticleService)
 	expertHandler := handler.NewExpertHandler(config.ExpertService)
 	systemHandler := handler.NewSystemHandler(config.SystemService)
+	oaHandler := handler.NewOAHandler(config.OAService, config.UserService)
 
 	difyHandler := handler.NewDifyHandler(
 		config.UserService,
@@ -340,30 +341,40 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 		oa := api.Group("/oa")
 		oa.Use(sessionAuthMiddleware.AdminAuth()) // 使用管理员认证，检查platform为"oa"
 		{
-			// TODO: OA用户管理
-			// oaUser := oa.Group("/users")
-			// {
-			//     oaUser.POST("", oaHandler.CreateOAUser)
-			//     oaUser.GET("", oaHandler.ListOAUsers)
-			//     oaUser.GET("/:id", oaHandler.GetOAUser)
-			//     oaUser.PUT("/:id", oaHandler.UpdateOAUser)
-			//     oaUser.DELETE("/:id", oaHandler.DeleteOAUser)
-			//     oaUser.PUT("/:id/reset-password", oaHandler.ResetPassword)
-			// }
+			// OA认证相关
+			auth := oa.Group("/auth")
+			{
+				auth.POST("/login", oaHandler.Login)
+				auth.GET("/captcha", oaHandler.GetCaptcha)
+			}
 
-			// TODO: OA角色管理
-			// oaRole := oa.Group("/roles")
-			// {
-			//     oaRole.POST("", oaHandler.CreateRole)
-			//     oaRole.GET("", oaRole.ListRoles)
-			//     oaRole.GET("/:id", oaHandler.GetRole)
-			//     oaRole.PUT("/:id", oaHandler.UpdateRole)
-			//     oaRole.DELETE("/:id", oaHandler.DeleteRole)
-			// }
+			// OA用户管理
+			oaUser := oa.Group("/users")
+			{
+				oaUser.GET("", oaHandler.GetUsers)
+				oaUser.GET("/:user_id", oaHandler.GetUserDetail)
+				oaUser.PUT("/:user_id/status", oaHandler.UpdateUserStatus)
+				oaUser.POST("/batch-operation", oaHandler.BatchOperateUsers)
+			}
 
-			// TODO: OA工作台
-			// oa.GET("/dashboard", oaHandler.GetDashboard)
-			// oa.GET("/tasks", oaHandler.GetWorkTasks)
+			// OA农机设备管理
+			oaMachine := oa.Group("/machines")
+			{
+				oaMachine.GET("", oaHandler.GetMachines)
+				oaMachine.GET("/:machine_id", oaHandler.GetMachineDetail)
+				// TODO: 添加设备审核、状态管理等接口
+			}
+
+			// OA工作台和数据分析
+			oa.GET("/dashboard", oaHandler.GetDashboard)
+			oa.GET("/dashboard/overview", oaHandler.GetDashboard)
+			oa.GET("/dashboard/risk-monitoring", oaHandler.GetRiskMonitoring)
+
+			// TODO: 继续添加其他OA管理功能
+			// - 认证审核管理
+			// - 系统配置管理
+			// - 操作日志管理
+			// - 权限管理
 		}
 	}
 
