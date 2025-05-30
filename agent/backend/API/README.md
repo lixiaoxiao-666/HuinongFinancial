@@ -49,20 +49,34 @@
 ## 📚 API模块列表
 
 ### 🔐 1. 会话管理模块 [`session_management.md`](./session_management.md)
-提供基于Redis的分布式会话管理，支持多平台登录和实时会话控制。
+基于Redis的高性能分布式会话管理系统，支持多平台、多后端实例的会话同步。
 
 **核心功能:**
-- 🔑 用户认证 (登录/登出/Token刷新)
-- 📱 多端会话管理 (APP/Web/OA)
-- 🔒 会话安全控制 (强制下线/设备管理)
-- 👥 管理员会话监控
+- 🔑 **智能认证**: 用户登录/登出/自动Token刷新
+- 🌐 **分布式会话**: 多后端实例共享用户会话状态
+- 📱 **多端登录**: 支持APP/Web/OA同时登录管理
+- 🔒 **安全控制**: 强制下线/设备绑定/异常检测
+- 📊 **智能设备识别**: 自动识别浏览器类型，优化设备显示
+- 👥 **会话监控**: 管理员实时会话管理和统计
+- ⚡ **高性能**: Redis毫秒级会话验证，支持高并发
+
+**技术特性:**
+- 🚀 **Redis集群**: 支持Redis集群部署，保证高可用
+- 🔄 **实时同步**: 会话状态跨实例实时同步
+- 🛡️ **安全机制**: Token哈希存储、设备指纹、防重放攻击
+- 📈 **性能优化**: 连接池管理、批量操作、智能清理
 
 **主要接口:**
 ```http
-POST   /api/auth/login           # 用户登录
-POST   /api/auth/refresh         # Token刷新
+POST   /api/auth/login           # 用户登录 (智能设备检测)
+POST   /api/auth/refresh         # 通用Token刷新
+POST   /api/oa/auth/refresh      # OA专用Token刷新
+GET    /api/auth/validate        # 会话验证
 POST   /api/user/logout          # 用户登出
-GET    /api/user/session/info    # 获取会话信息
+GET    /api/user/session/info    # 获取用户会话列表
+DELETE /api/user/session/{id}    # 注销指定会话
+POST   /api/user/session/revoke-others # 注销其他设备
+GET    /api/admin/sessions/statistics # 会话统计
 ```
 
 ### 👤 2. 用户管理模块 [`user_management.md`](./user_management.md)
