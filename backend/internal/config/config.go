@@ -15,6 +15,7 @@ type Config struct {
 	Database  DatabaseConfig  `mapstructure:"database"`
 	Redis     RedisConfig     `mapstructure:"redis"`
 	JWT       JWTConfig       `mapstructure:"jwt"`
+	Session   SessionConfig   `mapstructure:"session"`
 	Dify      DifyConfig      `mapstructure:"dify"`
 	SMS       SMSConfig       `mapstructure:"sms"`
 	File      FileConfig      `mapstructure:"file"`
@@ -63,6 +64,49 @@ type JWTConfig struct {
 	SecretKey        string `mapstructure:"secret_key"`
 	ExpiresIn        int64  `mapstructure:"expires_in"`
 	RefreshExpiresIn int64  `mapstructure:"refresh_expires_in"`
+}
+
+// SessionConfig 会话管理配置
+type SessionConfig struct {
+	Redis    SessionRedisConfig    `mapstructure:"redis"`
+	Settings SessionSettingsConfig `mapstructure:"settings"`
+	Security SessionSecurityConfig `mapstructure:"security"`
+}
+
+// SessionRedisConfig 会话Redis配置
+type SessionRedisConfig struct {
+	DB           int           `mapstructure:"db"`
+	PoolSize     int           `mapstructure:"pool_size"`
+	MinIdleConns int           `mapstructure:"min_idle_conns"`
+	MaxRetries   int           `mapstructure:"max_retries"`
+	DialTimeout  time.Duration `mapstructure:"dial_timeout"`
+	ReadTimeout  time.Duration `mapstructure:"read_timeout"`
+	WriteTimeout time.Duration `mapstructure:"write_timeout"`
+}
+
+// SessionSettingsConfig 会话设置配置
+type SessionSettingsConfig struct {
+	AccessTokenTTL     time.Duration `mapstructure:"access_token_ttl"`
+	RefreshTokenTTL    time.Duration `mapstructure:"refresh_token_ttl"`
+	MaxSessionsPerUser int           `mapstructure:"max_sessions_per_user"`
+	SessionTimeout     time.Duration `mapstructure:"session_timeout"`
+	SingleDeviceLogin  bool          `mapstructure:"single_device_login"`
+	CleanupInterval    time.Duration `mapstructure:"cleanup_interval"`
+	BatchCleanupSize   int           `mapstructure:"batch_cleanup_size"`
+}
+
+// SessionSecurityConfig 会话安全配置
+type SessionSecurityConfig struct {
+	ValidateIP            bool    `mapstructure:"validate_ip"`
+	AllowIPChange         bool    `mapstructure:"allow_ip_change"`
+	ValidateDeviceID      bool    `mapstructure:"validate_device_id"`
+	AllowDeviceChange     bool    `mapstructure:"allow_device_change"`
+	MaxConcurrentSessions int     `mapstructure:"max_concurrent_sessions"`
+	KickOldestSession     bool    `mapstructure:"kick_oldest_session"`
+	EnableRiskDetection   bool    `mapstructure:"enable_risk_detection"`
+	RiskThreshold         int     `mapstructure:"risk_threshold"`
+	AutoRefresh           bool    `mapstructure:"auto_refresh"`
+	RefreshThreshold      float64 `mapstructure:"refresh_threshold"`
 }
 
 // DifyConfig Dify AI集成配置

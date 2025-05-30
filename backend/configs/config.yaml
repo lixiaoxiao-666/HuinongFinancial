@@ -31,6 +31,36 @@ jwt:
   expires_in: 86400  # 24小时
   refresh_expires_in: 604800  # 7天
 
+# 会话管理配置（新增）
+session:
+  redis:
+    db: 1  # 专用于会话管理的Redis数据库
+    pool_size: 20
+    min_idle_conns: 5
+    max_retries: 3
+    dial_timeout: 5s
+    read_timeout: 3s
+    write_timeout: 3s
+  settings:
+    access_token_ttl: 24h      # 访问令牌过期时间
+    refresh_token_ttl: 168h    # 刷新令牌过期时间（7天）
+    max_sessions_per_user: 5   # 每用户最大会话数
+    session_timeout: 30m       # 会话超时时间
+    single_device_login: false # 是否启用单设备登录
+    cleanup_interval: 1h       # 过期会话清理间隔
+    batch_cleanup_size: 1000   # 批量清理大小
+  security:
+    validate_ip: false         # 是否验证IP地址
+    allow_ip_change: true      # 是否允许IP变更
+    validate_device_id: false  # 是否验证设备ID
+    allow_device_change: true  # 是否允许设备变更
+    max_concurrent_sessions: 5 # 最大并发会话数
+    kick_oldest_session: true  # 是否踢出最旧会话
+    enable_risk_detection: false # 是否启用风险检测
+    risk_threshold: 80         # 风险阈值
+    auto_refresh: true         # 是否自动刷新
+    refresh_threshold: 0.3     # 刷新阈值（剩余时间比例）
+
 dify:
   api_url: "http://172.18.120.57/v1"
   api_key: "app-d2ELQ0kfvzVv1m84LGQR4pKs"

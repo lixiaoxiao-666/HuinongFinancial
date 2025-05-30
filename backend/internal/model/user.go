@@ -103,23 +103,32 @@ type UserSession struct {
 	// 设备信息
 	DeviceID   string `gorm:"type:varchar(64)" json:"device_id"`
 	DeviceType string `gorm:"type:varchar(20)" json:"device_type"` // ios, android, web
+	DeviceName string `gorm:"type:varchar(100)" json:"device_name"`
 	AppVersion string `gorm:"type:varchar(20)" json:"app_version"`
+	UserAgent  string `gorm:"type:text" json:"user_agent"`
 
 	// IP和地理位置
 	IPAddress string `gorm:"type:varchar(45)" json:"ip_address"`
 	Location  string `gorm:"type:varchar(100)" json:"location"`
 
-	// JWT Token信息 (不在JSON中返回)
-	AccessToken    string     `gorm:"type:text" json:"-"`
-	RefreshToken   string     `gorm:"type:text" json:"-"`
-	TokenExpiresAt *time.Time `json:"token_expires_at"`
+	// JWT Token信息哈希 (不在JSON中返回)
+	AccessToken      string     `gorm:"type:text" json:"-"`
+	RefreshToken     string     `gorm:"type:text" json:"-"`
+	AccessTokenHash  string     `gorm:"type:varchar(64);index" json:"-"`
+	RefreshTokenHash string     `gorm:"type:varchar(64);index" json:"-"`
+	TokenExpiresAt   *time.Time `json:"token_expires_at"`
+	RefreshExpiresAt *time.Time `json:"refresh_expires_at"`
 
 	// 会话状态：active(活跃)、expired(过期)、revoked(撤销)
 	Status string `gorm:"type:varchar(20);not null;default:'active'" json:"status"`
 
 	// 会话时间
-	LoginTime  time.Time  `json:"login_time"`
-	LogoutTime *time.Time `json:"logout_time"`
+	LoginTime    time.Time  `json:"login_time"`
+	LastActiveAt time.Time  `json:"last_active_at"`
+	LogoutTime   *time.Time `json:"logout_time"`
+
+	// 登录方式
+	LoginMethod string `gorm:"type:varchar(20)" json:"login_method"` // password, sms, oauth
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

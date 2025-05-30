@@ -41,6 +41,8 @@ type CacheInterface interface {
 	ZRange(ctx context.Context, key string, start, stop int64) ([]string, error)
 	ZRangeWithScores(ctx context.Context, key string, start, stop int64) ([]redis.Z, error)
 	ZRem(ctx context.Context, key string, members ...interface{}) error
+	Publish(ctx context.Context, channel string, message interface{}) error
+	Subscribe(ctx context.Context, channel string) (<-chan string, error)
 }
 
 // NewRedisClient 创建Redis客户端
@@ -204,6 +206,28 @@ func (r *RedisClient) ZRangeWithScores(ctx context.Context, key string, start, s
 // ZRem 从有序集合移除成员
 func (r *RedisClient) ZRem(ctx context.Context, key string, members ...interface{}) error {
 	return r.client.ZRem(ctx, key, members...).Err()
+}
+
+// Publish 发布消息到频道
+func (r *RedisClient) Publish(ctx context.Context, channel string, message interface{}) error {
+	return r.client.Publish(ctx, channel, message).Err()
+}
+
+// Subscribe 订阅频道
+func (r *RedisClient) Subscribe(ctx context.Context, channel string) (<-chan string, error) {
+	pubsub := r.client.Subscribe(ctx, channel)
+	ch := make(chan string, 100)
+
+	go func() {
+		defer close(ch)
+		defer pubsub.Close()
+
+		for msg := range pubsub.Channel() {
+			ch <- msg.Payload
+		}
+	}()
+
+	return ch, nil
 }
 
 // CacheService 缓存服务封装
@@ -387,4 +411,14 @@ func (c *CacheService) Unlock(ctx context.Context, lockKey string) error {
 func (c *CacheService) IsLocked(ctx context.Context, lockKey string) (bool, error) {
 	key := fmt.Sprintf("lock:%s", lockKey)
 	return c.client.Exists(ctx, key)
-} 
+}
+
+// Publish 发布消息到频道
+func (c *CacheService) Publish(ctx context.Context, channel string, message interface{}) error {
+	return c.client.Publish(ctx, channel, message)
+}
+
+// Subscribe 订阅频道
+func (c *CacheService) Subscribe(ctx context.Context, channel string) (<-chan string, error) {
+	return c.client.Subscribe(ctx, channel)
+}

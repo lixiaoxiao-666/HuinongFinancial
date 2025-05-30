@@ -75,6 +75,7 @@ func main() {
 
 	// 初始化Repository层
 	userRepo := repository.NewUserRepository(db)
+	sessionRepo := repository.NewSessionRepository(db)
 	loanRepo := repository.NewLoanRepository(db)
 	machineRepo := repository.NewMachineRepository(db)
 	// articleRepo := repository.NewArticleRepository(db)
@@ -85,6 +86,17 @@ func main() {
 
 	// 初始化Service层
 	userService := service.NewUserService(userRepo, cfg.JWT.SecretKey)
+
+	// 初始化会话管理服务
+	sessionService := service.NewSessionService(
+		cacheClient,
+		sessionRepo,
+		cfg.JWT.SecretKey,
+		cfg.Session.Settings.AccessTokenTTL,
+		cfg.Session.Settings.RefreshTokenTTL,
+		cfg.Session.Settings.MaxSessionsPerUser,
+	)
+
 	difyService := service.NewDifyService(cfg, loanRepo)
 	loanService := service.NewLoanService(loanRepo, userRepo, difyService)
 	machineService := service.NewMachineService(machineRepo, userRepo)
@@ -97,6 +109,7 @@ func main() {
 	// 路由配置
 	routerConfig := &router.RouterConfig{
 		UserService:    userService,
+		SessionService: sessionService,
 		LoanService:    loanService,
 		MachineService: machineService,
 		ArticleService: nil, // articleService,

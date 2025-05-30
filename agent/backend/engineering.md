@@ -1,504 +1,391 @@
-# 数字惠农后端工程化文档
+# 数字惠农金融系统 - 后端工程化文档
 
-## 项目概述
+## 📋 项目概述
 
-数字惠农APP及OA后台管理系统是一个综合性的农业数字化平台，采用单体架构设计，支持离线运行环境。
+数字惠农后端采用现代化的微服务架构设计，基于Go语言和Gin框架构建，实现高性能、高并发的RESTful API服务。系统支持多平台（APP、Web、OA后台）的业务需求，提供完整的用户管理、贷款服务、农机管理、内容管理等核心功能。
 
-### 核心特性
-- **单体架构**: 简化部署和维护，避免微服务复杂性
-- **离线优先**: 支持无网络环境运行，数据同步机制
-- **AI集成**: 基于Dify平台的智能贷款审批工作流
-- **权限管理**: 基于角色的访问控制(RBAC)系统
-- **多平台支持**: APP端、Web端、OA后台统一API
+**🔥 重要更新**: 系统已完全统一为Redis分布式会话认证架构，实现多后端实例的会话共享和实时控制。
 
-## 技术栈
+## 🏗️ 系统架构
 
-### 后端技术栈
-- **语言**: Go 1.21
-- **Web框架**: Gin v1.9.1
-- **ORM**: GORM v1.25.5
-- **数据库**: TiDB（MySQL兼容）
-- **缓存**: Redis v9.2.1
-- **认证**: JWT v4.5.0
-- **配置管理**: Viper v1.17.0
-- **文档**: Swagger/OpenAPI 3.0
-- **加密**: bcrypt, AES, SHA256
+### 分层架构设计
+```
+┌─────────────────────────────────────────┐
+│                客户端层                   │
+├─────────────────────────────────────────┤
+│     APP端      │   Web端   │  OA后台    │
+└─────────────────────────────────────────┘
+                    │
+┌─────────────────────────────────────────┐
+│                路由层                     │
+├─────────────────────────────────────────┤
+│        统一Redis会话认证中间件             │
+│    （除Dify平台保持专用Token认证）          │
+└─────────────────────────────────────────┘
+                    │
+┌─────────────────────────────────────────┐
+│               控制器层                    │
+├─────────────────────────────────────────┤
+│   用户控制器  │ 贷款控制器 │ 农机控制器    │
+└─────────────────────────────────────────┘
+                    │
+┌─────────────────────────────────────────┐
+│               服务层                      │
+├─────────────────────────────────────────┤
+│  业务逻辑服务 │ Redis会话服务 │ AI服务   │
+└─────────────────────────────────────────┘
+                    │
+┌─────────────────────────────────────────┐
+│              数据访问层                   │
+├─────────────────────────────────────────┤
+│   MySQL数据库  │  Redis缓存  │  文件存储  │
+└─────────────────────────────────────────┘
+```
 
-### 外部集成
-- **Dify AI平台**: 智能审批工作流
-- **短信服务**: 验证码发送
-- **文件存储**: 支持本地/云存储
-- **地理位置**: GPS定位服务
+### 🔐 认证架构统一
 
-## 项目结构
+#### 认证策略分布
+- **Redis会话认证**: 所有用户、管理员、OA后台API
+- **Dify专用认证**: 仅用于 `/api/internal/dify/*` 工作流接口
+- **无需认证**: 公开API、健康检查、认证相关接口
+
+#### 会话管理流程
+```mermaid
+graph TD
+    A[用户登录] --> B[Redis会话服务]
+    B --> C[生成会话ID]
+    B --> D[存储会话信息]
+    D --> E[返回访问令牌]
+    
+    F[API请求] --> G[会话认证中间件]
+    G --> H[验证Redis会话]
+    H --> I[检查权限级别]
+    I --> J[放行/拒绝]
+    
+    K[会话管理] --> L[强制下线]
+    K --> M[多设备控制]
+    K --> N[实时同步]
+```
+
+## 📁 目录结构
 
 ```
 backend/
 ├── cmd/
 │   └── server/
-│       └── main.go              # 应用程序入口
+│       └── main.go                    # 主程序入口
 ├── configs/
-│   └── config.yaml              # 配置文件
+│   └── config.yaml                    # 配置文件
 ├── internal/
+│   ├── cache/                         # Redis缓存层
+│   │   └── redis.go                   # Redis客户端和Pub/Sub
 │   ├── config/
-│   │   └── config.go            # 配置管理
+│   │   └── config.go                  # 配置管理
 │   ├── database/
-│   │   └── connection.go        # 数据库连接
-│   ├── model/
-│   │   ├── user.go              # 用户数据模型
-│   │   ├── loan.go              # 贷款数据模型
-│   │   ├── machine.go           # 农机数据模型
-│   │   └── common.go            # 通用数据模型
-│   ├── repository/
-│   │   ├── interface.go         # Repository接口定义
-│   │   ├── user_repository.go   # 用户数据访问层
-│   │   └── loan_repository.go   # 贷款数据访问层
-│   ├── service/
-│   │   ├── interface.go         # Service接口定义
-│   │   └── user_service.go      # 用户业务逻辑层
-│   ├── handler/
-│   │   └── user_handler.go      # HTTP请求处理层
-│   ├── middleware/
-│   │   └── auth.go              # 认证中间件
+│   │   └── mysql.go                   # 数据库连接和迁移
+│   ├── handler/                       # HTTP处理器层
+│   │   ├── user_handler.go            # 用户相关处理器
+│   │   ├── loan_handler.go            # 贷款相关处理器
+│   │   ├── machine_handler.go         # 农机相关处理器
+│   │   └── ...
+│   ├── middleware/                    # 中间件层
+│   │   ├── session_auth.go            # ✨ Redis会话认证中间件
+│   │   ├── recovery.go                # 错误恢复中间件
+│   │   ├── request_logger.go          # 请求日志中间件
+│   │   ├── cors.go                    # 跨域处理中间件
+│   │   └── dify_auth.go               # Dify专用认证中间件
+│   ├── model/                         # 数据模型层
+│   │   ├── user.go                    # 用户模型（含会话）
+│   │   ├── loan.go                    # 贷款模型
+│   │   ├── machine.go                 # 农机模型
+│   │   └── ...
+│   ├── repository/                    # 数据访问层
+│   │   ├── user_repository.go         # 用户数据访问
+│   │   ├── session_repository.go      # ✨ 会话数据访问
+│   │   ├── loan_repository.go         # 贷款数据访问
+│   │   └── ...
 │   ├── router/
-│   │   └── router.go            # 路由配置
-│   ├── cache/
-│   │   └── redis.go             # 缓存管理
-│   └── utils/
-│       └── crypto.go            # 加密工具函数
-├── go.mod                       # Go模块依赖
-└── go.sum                       # 依赖版本锁定
+│   │   └── router.go                  # ✨ 统一Redis认证路由
+│   ├── service/                       # 业务逻辑层
+│   │   ├── user_service.go            # 用户业务逻辑
+│   │   ├── session_service.go         # ✨ Redis会话服务
+│   │   ├── loan_service.go            # 贷款业务逻辑
+│   │   └── ...
+│   └── utils/                         # 工具类
+│       ├── jwt.go                     # JWT工具（会话系统使用）
+│       ├── response.go                # 响应封装
+│       └── validator.go               # 数据验证
+├── uploads/                           # 文件上传目录
+└── bin/                               # 可执行文件目录
 ```
 
-## 架构设计
+## 🔧 核心技术栈
 
-### 分层架构
+### 后端框架
+- **Go 1.19+**: 高性能编程语言
+- **Gin**: 轻量级Web框架
+- **GORM**: ORM数据库操作
+- **Redis**: 分布式会话存储和缓存
+- **MySQL**: 主数据库
+- **Swagger**: API文档生成
+
+### 中间件技术
+- **Redis会话认证**: 统一的分布式认证系统
+- **CORS处理**: 跨域资源共享
+- **请求日志**: 完整的请求追踪
+- **错误恢复**: 优雅的错误处理
+- **限流控制**: API请求频率限制
+
+### 第三方集成
+- **Dify AI**: 智能风险评估和决策支持
+- **短信服务**: 用户验证和通知
+- **文件存储**: 多媒体文件管理
+- **支付网关**: 在线支付处理
+
+## 🎯 核心功能模块
+
+### 1. Redis会话管理系统 ✨
+- **分布式会话**: 多后端实例共享用户状态
+- **实时控制**: 强制下线、会话监控
+- **多平台支持**: APP、Web、OA后台统一认证
+- **安全机制**: Token哈希、设备绑定、IP验证
+
+### 2. 用户管理系统
+- 用户注册、登录、认证
+- 实名认证、银行卡绑定
+- 用户标签和分类管理
+- 用户行为分析
+
+### 3. 贷款管理系统
+- 贷款产品展示和申请
+- AI智能风险评估
+- 审批流程管理
+- 放款和还款跟踪
+
+### 4. 农机管理系统
+- 农机注册和认证
+- 租赁服务匹配
+- 订单管理和评价
+- 使用效率分析
+
+### 5. 内容管理系统
+- 农业资讯发布
+- 专家咨询服务
+- 分类标签管理
+- 内容推荐算法
+
+### 6. 系统管理
+- 配置参数管理
+- 系统监控和告警
+- 日志分析和查询
+- 性能优化调试
+
+## 🔐 安全设计
+
+### Redis会话安全
+```yaml
+安全机制:
+  token_hashing: "SHA-256哈希存储"
+  device_binding: "设备指纹绑定"
+  ip_validation: "可选IP地址验证"
+  session_limit: "单用户最大会话数控制"
+  auto_cleanup: "过期会话自动清理"
+  force_logout: "管理员强制下线"
 ```
-┌─────────────────────────────────────┐
-│            Handler Layer            │  HTTP请求处理
-├─────────────────────────────────────┤
-│            Service Layer            │  业务逻辑处理
-├─────────────────────────────────────┤
-│          Repository Layer           │  数据访问抽象
-├─────────────────────────────────────┤
-│             Model Layer             │  数据模型定义
-└─────────────────────────────────────┘
-```
-
-### 核心组件
-
-#### 1. 数据模型层 (Model)
-- **用户管理**: User、UserAuth、UserSession、UserTag
-- **贷款业务**: LoanProduct、LoanApplication、ApprovalLog、DifyWorkflowLog
-- **农机租赁**: Machine、RentalOrder
-- **内容管理**: Article、Category、Expert
-- **系统管理**: SystemConfig、FileUpload、OfflineQueue、APILog
-- **OA管理**: OAUser、OARole
-
-#### 2. 数据访问层 (Repository)
-```go
-type UserRepository interface {
-    Create(ctx context.Context, user *model.User) error
-    GetByID(ctx context.Context, id uint64) (*model.User, error)
-    GetByPhone(ctx context.Context, phone string) (*model.User, error)
-    List(ctx context.Context, req *ListUsersRequest) (*ListUsersResponse, error)
-    // ... 更多方法
-}
-```
-
-#### 3. 业务逻辑层 (Service)
-```go
-type UserService interface {
-    Register(ctx context.Context, req *RegisterRequest) (*RegisterResponse, error)
-    Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error)
-    GetProfile(ctx context.Context, userID uint64) (*UserProfileResponse, error)
-    // ... 更多方法
-}
-```
-
-#### 4. HTTP处理层 (Handler)
-```go
-func (h *UserHandler) Register(c *gin.Context) {
-    var req service.RegisterRequest
-    if err := c.ShouldBindJSON(&req); err != nil {
-        // 参数验证错误处理
-    }
-    
-    result, err := h.userService.Register(ctx, &req)
-    if err != nil {
-        // 业务错误处理
-    }
-    
-    c.JSON(http.StatusOK, NewSuccessResponse("注册成功", result))
-}
-```
-
-### 中间件设计
-
-#### 1. 认证中间件
-- **JWT验证**: 解析和验证访问令牌
-- **会话管理**: 用户会话状态检查
-- **权限控制**: 基于角色的访问控制
-
-#### 2. 功能中间件
-- **CORS处理**: 跨域请求支持
-- **请求日志**: API调用记录
-- **错误恢复**: 全局异常处理
-- **限流控制**: 防止API滥用
-
-### 缓存策略
-
-#### Redis缓存设计
-```
-用户缓存:     user:{user_id}
-会话缓存:     session:{session_id}
-短信验证码:   sms_code:{phone}
-文章缓存:     article:{article_id}
-产品缓存:     loan_product:{product_id}
-配置缓存:     config:{config_key}
-限流计数:     limit:{rate_key}
-分布式锁:     lock:{lock_key}
-```
-
-#### 缓存策略
-- **用户信息**: 30分钟过期，写后失效
-- **会话数据**: 24小时过期，活跃延期
-- **系统配置**: 24小时过期，更新失效
-- **文章内容**: 1小时过期，发布失效
-- **产品信息**: 2小时过期，修改失效
-
-## API接口设计
-
-### 认证接口
-```
-POST /api/auth/register     # 用户注册
-POST /api/auth/login        # 用户登录
-POST /api/auth/refresh      # 刷新Token
-POST /api/auth/logout       # 用户登出
-```
-
-### 用户管理接口
-```
-GET  /api/user/profile      # 获取用户资料
-PUT  /api/user/profile      # 更新用户资料
-PUT  /api/user/password     # 修改密码
-POST /api/user/auth/real-name   # 实名认证
-POST /api/user/auth/bank-card   # 银行卡认证
-GET  /api/user/tags         # 获取用户标签
-POST /api/user/tags         # 添加用户标签
-```
-
-### 管理员接口
-```
-GET  /api/admin/users       # 用户列表
-GET  /api/admin/users/statistics # 用户统计
-PUT  /api/admin/users/:id/freeze # 冻结用户
-```
-
-### 响应格式
-```json
-{
-  "code": 200,
-  "message": "操作成功",
-  "data": {
-    // 具体数据
-  },
-  "error": null
-}
-```
-
-## 数据库设计
-
-### 核心表结构
-
-#### 用户表 (users)
-```sql
-CREATE TABLE users (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    uuid VARCHAR(36) UNIQUE NOT NULL,
-    username VARCHAR(50),
-    phone VARCHAR(20) UNIQUE NOT NULL,
-    email VARCHAR(100),
-    password_hash VARCHAR(255) NOT NULL,
-    salt VARCHAR(32) NOT NULL,
-    user_type ENUM('farmer', 'owner', 'expert', 'agent') NOT NULL,
-    status ENUM('active', 'frozen', 'deleted') DEFAULT 'active',
-    -- ... 更多字段
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-```
-
-#### 贷款申请表 (loan_applications)
-```sql
-CREATE TABLE loan_applications (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    application_no VARCHAR(32) UNIQUE NOT NULL,
-    user_id BIGINT NOT NULL,
-    product_id BIGINT NOT NULL,
-    amount DECIMAL(15,2) NOT NULL,
-    status ENUM('draft', 'submitted', 'reviewing', 'approved', 'rejected', 'cancelled') DEFAULT 'draft',
-    -- ... 更多字段
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (product_id) REFERENCES loan_products(id)
-);
-```
-
-### 索引设计
-```sql
--- 用户表索引
-CREATE INDEX idx_users_phone ON users(phone);
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_type_status ON users(user_type, status);
-
--- 贷款申请表索引
-CREATE INDEX idx_loan_apps_user ON loan_applications(user_id);
-CREATE INDEX idx_loan_apps_status ON loan_applications(status);
-CREATE INDEX idx_loan_apps_created ON loan_applications(created_at);
-```
-
-## 安全设计
-
-### 认证安全
-- **密码加密**: bcrypt + 随机盐值
-- **JWT令牌**: HS256签名算法
-- **会话管理**: Redis存储，过期自动清理
-- **双令牌机制**: Access Token + Refresh Token
 
 ### 数据安全
-- **敏感数据加密**: AES-256-CFB模式
-- **传输安全**: HTTPS强制
-- **SQL注入防护**: GORM参数化查询
-- **XSS防护**: 输入验证和输出编码
+- **输入验证**: 严格的参数验证和过滤
+- **SQL注入防护**: 使用GORM参数化查询
+- **XSS防护**: 输出内容转义和过滤
+- **CSRF防护**: 请求令牌验证
 
-### 权限控制
+### 传输安全
+- **HTTPS**: 强制使用SSL/TLS加密
+- **Token机制**: 无状态身份验证
+- **权限控制**: 基于角色的访问控制
+- **API限流**: 防止接口滥用
+
+## 🚀 性能优化
+
+### Redis缓存策略
 ```go
-// 权限检查中间件
-func (m *AuthMiddleware) RequireRole(roles ...string) gin.HandlerFunc {
-    return func(c *gin.Context) {
-        userID := GetUserIDFromContext(c)
-        // 检查用户角色
-        hasPermission := checkUserRole(userID, roles)
-        if !hasPermission {
-            c.JSON(403, gin.H{"error": "权限不足"})
-            c.Abort()
-            return
-        }
-        c.Next()
-    }
-}
+缓存架构:
+  会话存储: "user:sessions:{user_id}" (SET)
+  会话详情: "session:{session_id}" (HASH)
+  Token映射: "token:access:{hash}" (STRING)
+  活跃排行: "sessions:active" (ZSET)
+  事件通知: "session:events" (PUB/SUB)
 ```
-
-## 离线机制设计
-
-### 离线队列
-```go
-type OfflineQueue struct {
-    ID           uint64    `gorm:"primaryKey;autoIncrement"`
-    UserID       uint64    `gorm:"not null;index"`
-    ActionType   string    `gorm:"size:50;not null"`
-    RequestData  string    `gorm:"type:longtext"`
-    Status       string    `gorm:"size:20;default:'pending'"`
-    RetryCount   int       `gorm:"default:0"`
-    CreatedAt    time.Time
-}
-```
-
-### 数据同步策略
-1. **离线操作记录**: 所有用户操作记录到离线队列
-2. **批量同步**: 网络恢复后批量处理队列
-3. **冲突解决**: 时间戳优先原则
-4. **失败重试**: 指数退避重试机制
-
-## AI集成设计
-
-### Dify工作流集成
-```go
-type DifyWorkflowLog struct {
-    ID             uint64    `gorm:"primaryKey;autoIncrement"`
-    ApplicationID  uint64    `gorm:"not null;index"`
-    WorkflowType   string    `gorm:"size:50;not null"`
-    RequestData    string    `gorm:"type:longtext"`
-    ResponseData   string    `gorm:"type:longtext"`
-    Status         string    `gorm:"size:20;not null"`
-    ProcessingTime int       `gorm:"comment:处理时间(毫秒)"`
-    ErrorMessage   string    `gorm:"size:500"`
-    CreatedAt      time.Time
-}
-```
-
-### 工作流类型
-- **信用评估**: credit_assessment
-- **风险分析**: risk_analysis
-- **额度计算**: amount_calculation
-- **决策建议**: decision_recommendation
-
-## 性能优化
 
 ### 数据库优化
-- **连接池**: 最大20个连接，空闲5个
-- **查询优化**: 索引覆盖，避免全表扫描
-- **分页查询**: Limit/Offset优化
-- **批量操作**: 减少数据库往返
+- **连接池**: 数据库连接复用
+- **索引策略**: 关键字段索引优化
+- **分页查询**: 大数据集分页处理
+- **读写分离**: 主从数据库架构
 
-### 缓存优化
-- **多级缓存**: 内存缓存 + Redis缓存
-- **缓存预热**: 系统启动时预加载热数据
-- **缓存穿透**: 空结果也缓存
-- **缓存雪崩**: 随机过期时间
+### 并发处理
+- **Goroutine**: 轻量级并发处理
+- **Channel**: 安全的数据传递
+- **Context**: 请求上下文管理
+- **超时控制**: 请求处理时间限制
 
-### API优化
-- **响应压缩**: Gzip压缩
-- **并发限制**: 协程池控制
-- **超时控制**: 请求超时设置
-- **熔断机制**: 故障快速失败
+## 📊 监控和日志
 
-## 监控和日志
+### 应用监控
+- **健康检查**: `/health` 端点状态监控
+- **性能指标**: 响应时间、吞吐量统计
+- **错误追踪**: 异常日志记录和告警
+- **资源使用**: CPU、内存、网络监控
 
-### API日志记录
-```go
-type APILog struct {
-    ID            uint64    `gorm:"primaryKey;autoIncrement"`
-    Method        string    `gorm:"size:10;not null"`
-    URL           string    `gorm:"size:500;not null"`
-    UserID        *uint64   `gorm:"index"`
-    IPAddress     string    `gorm:"size:45;not null"`
-    UserAgent     string    `gorm:"size:500"`
-    RequestData   string    `gorm:"type:longtext"`
-    ResponseCode  int       `gorm:"not null"`
-    ResponseTime  int       `gorm:"comment:响应时间(毫秒)"`
-    CreatedAt     time.Time
-}
-```
+### 会话监控
+- **活跃会话**: 实时在线用户统计
+- **会话分布**: 多平台会话分析
+- **异常检测**: 可疑登录行为监控
+- **性能分析**: Redis操作延迟统计
 
-### 健康检查
-```go
-func HealthCheck(ctx context.Context) (*HealthCheckResponse, error) {
-    return &HealthCheckResponse{
-        Status:    "ok",
-        Database:  checkDatabase(),
-        Redis:     checkRedis(),
-        Services:  checkServices(),
-        Timestamp: time.Now().Unix(),
-    }, nil
-}
-```
-
-## 部署和运维
-
-### 环境配置
+### 日志管理
 ```yaml
-# config.yaml
-app:
-  name: "数字惠农API"
-  version: "1.0.0"
-  environment: "production"
-  port: 8080
-
-database:
-  host: "localhost"
-  port: 4000
-  username: "huinong"
-  password: "password"
-  database: "huinong_db"
-
-redis:
-  host: "localhost"
-  port: 6379
-  password: ""
-  database: 0
-
-jwt:
-  secret: "your-jwt-secret-key"
-  expires_in: 86400  # 24小时
+日志分类:
+  access_log: "HTTP请求访问日志"
+  error_log: "系统错误和异常日志"
+  session_log: "会话操作审计日志"
+  business_log: "业务操作记录日志"
 ```
 
-### Docker部署
-```dockerfile
-FROM golang:1.21-alpine AS builder
-WORKDIR /app
-COPY . .
-RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux go build -o main cmd/server/main.go
-
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates tzdata
-WORKDIR /root/
-COPY --from=builder /app/main .
-COPY --from=builder /app/configs ./configs
-EXPOSE 8080
-CMD ["./main"]
-```
-
-### 服务监控
-- **系统指标**: CPU、内存、磁盘使用率
-- **应用指标**: API响应时间、错误率、QPS
-- **业务指标**: 用户注册量、贷款申请量、机器租赁量
-- **告警机制**: 关键指标异常自动告警
-
-## 开发规范
+## 🔨 开发规范
 
 ### 代码规范
-- **命名规范**: 驼峰命名，见名知意
-- **错误处理**: 统一错误格式，详细错误信息
-- **注释规范**: 公开接口必须有注释
-- **测试覆盖**: 核心逻辑测试覆盖率80%+
+- **Go标准**: 遵循Go官方编码规范
+- **命名约定**: 清晰的函数和变量命名
+- **注释文档**: 完整的代码注释
+- **错误处理**: 统一的错误处理机制
 
-### Git工作流
+### API设计规范
+- **RESTful**: 标准的REST API设计
+- **HTTP状态码**: 正确的状态码使用
+- **统一响应**: 标准化的响应格式
+- **版本控制**: API版本管理策略
+
+### 测试规范
+- **单元测试**: 核心函数单元测试
+- **集成测试**: 完整流程集成测试
+- **性能测试**: 高并发压力测试
+- **安全测试**: 漏洞扫描和渗透测试
+
+## 🚀 部署架构
+
+### 容器化部署
+```yaml
+Docker容器:
+  - huinong-backend: "主服务容器"
+  - redis: "Redis缓存容器"
+  - mysql: "MySQL数据库容器"
+  - nginx: "反向代理容器"
 ```
-master (主分支)
-├── develop (开发分支)
-├── feature/user-auth (功能分支)
-├── hotfix/login-bug (热修复分支)
-└── release/v1.0.0 (发布分支)
+
+### Kubernetes部署
+```yaml
+K8s资源:
+  Deployment: "应用部署管理"
+  Service: "服务发现和负载均衡"
+  ConfigMap: "配置文件管理"
+  Secret: "敏感信息管理"
+  Ingress: "外部访问入口"
 ```
 
-### API文档
-- **Swagger注解**: 所有API接口都有Swagger文档
-- **示例数据**: 提供完整的请求响应示例
-- **错误码说明**: 详细的错误码对照表
-- **版本管理**: API版本向后兼容
+### 环境管理
+- **开发环境**: 本地开发和调试
+- **测试环境**: 功能测试和集成测试
+- **预生产环境**: 性能测试和压力测试
+- **生产环境**: 正式服务运行
 
-## 项目里程碑
+## 📈 扩展性设计
 
-### Phase 1: 基础架构 ✅
-- [x] 项目初始化和依赖管理
-- [x] 数据库连接和配置管理
-- [x] 数据模型设计和实现
-- [x] Repository层接口定义
+### 微服务架构准备
+- **服务拆分**: 按业务域拆分服务
+- **API网关**: 统一入口和路由
+- **服务发现**: 动态服务注册和发现
+- **配置中心**: 集中化配置管理
 
-### Phase 2: 核心功能 ✅
-- [x] Service层业务逻辑实现
-- [x] Handler层HTTP处理
-- [x] 认证中间件和JWT
-- [x] 路由配置和API设计
+### 分布式架构
+- **分布式会话**: Redis集群会话共享
+- **分布式锁**: Redis实现分布式锁
+- **消息队列**: 异步任务处理
+- **分布式事务**: 数据一致性保证
 
-### Phase 3: 增强功能 ✅
-- [x] Redis缓存管理
-- [x] 工具函数和加密
-- [x] 中间件完善
-- [x] 错误处理和日志
+### 高可用设计
+- **负载均衡**: 多实例负载分担
+- **故障转移**: 自动故障检测和切换
+- **数据备份**: 定期数据备份和恢复
+- **监控告警**: 实时故障监控和通知
 
-### Phase 4: 待完成功能
-- [ ] Repository层具体实现
-- [ ] 贷款Service和Handler
-- [ ] 农机Service和Handler
-- [ ] 文件上传和管理
-- [ ] Dify AI集成
-- [ ] 短信验证码服务
-- [ ] 单元测试和集成测试
-- [ ] 性能测试和优化
-- [ ] 部署脚本和文档
+## 🔄 持续集成/持续部署
 
-## 总结
+### CI/CD流程
+```yaml
+持续集成:
+  代码提交: "Git代码仓库"
+  自动构建: "Go编译和打包"
+  自动测试: "单元测试和集成测试"
+  代码质量: "静态代码分析"
+  镜像构建: "Docker镜像构建"
 
-数字惠农后端系统采用现代化的Go技术栈，遵循分层架构和领域驱动设计原则，具有以下特点：
+持续部署:
+  环境部署: "自动部署到测试环境"
+  验收测试: "自动化验收测试"
+  生产部署: "蓝绿部署或滚动更新"
+  健康检查: "部署后健康检查"
+  回滚机制: "快速回滚到稳定版本"
+```
 
-1. **架构清晰**: 分层明确，职责单一，易于维护
-2. **功能完整**: 覆盖用户管理、贷款业务、农机租赁等核心功能
-3. **性能优化**: 多级缓存、数据库优化、并发控制
-4. **安全可靠**: 多重安全机制，数据加密，权限控制
-5. **易于扩展**: 接口驱动，松耦合设计，支持功能扩展
-6. **运维友好**: 完善的监控、日志、健康检查机制
+## 📚 文档体系
 
-通过工程化的开发流程和规范，确保了代码质量和项目的可维护性，为数字农业平台的长期发展奠定了坚实的技术基础。
+### 技术文档
+- **架构文档**: 系统整体架构设计
+- **API文档**: 接口定义和使用说明
+- **数据库文档**: 数据模型和关系设计
+- **部署文档**: 环境搭建和部署指南
+
+### 开发文档
+- **开发指南**: 开发环境搭建和规范
+- **代码文档**: 核心模块代码说明
+- **测试文档**: 测试用例和测试报告
+- **运维文档**: 监控、日志和故障处理
+
+通过这种统一的Redis会话认证架构和完善的工程化体系，数字惠农后端实现了高性能、高可用、高安全的分布式服务！ 🎉
+
+## 📝 版本更新记录
+
+### v2.0.0 - Redis会话架构统一 (2024-01-15)
+**🔥 重大架构升级**
+- ✨ **统一认证架构**: 除Dify平台外，所有路由统一使用Redis分布式会话认证
+- 🚀 **分布式支持**: 实现多后端实例会话共享和实时状态同步
+- 🔒 **安全增强**: Token哈希存储、设备绑定、IP验证等安全机制
+- 📊 **会话监控**: 完整的会话管理、强制下线、异常检测功能
+- 🛡️ **权限优化**: 统一的权限验证和角色管理
+
+**技术变更**:
+- 移除传统JWT认证中间件，统一使用`sessionAuthMiddleware`
+- 删除`/api/legacy/*`兼容路由组
+- 保留Dify平台专用Token认证：`/api/internal/dify/*`
+- 新增Redis Pub/Sub事件通知机制
+- 优化路由性能和安全性
+
+**影响范围**:
+- 所有用户API：`/api/user/*` - Redis会话认证
+- 管理员API：`/api/admin/*` - Redis管理员认证
+- OA后台API：`/api/oa/*` - Redis管理员认证
+- 公共内容：`/api/content/*` - Redis可选认证
+- Dify工作流：`/api/internal/dify/*` - 保持专用认证
+
+### v1.5.0 - 会话管理系统实现 (2024-01-14)
+- 🎯 实现完整的Redis会话管理服务
+- 📝 创建会话相关数据模型和存储结构
+- 🔧 开发会话认证中间件和工具函数
+- 📋 完善API接口文档和使用指南
+
+### v1.0.0 - 基础架构建立 (2024-01-01)
+- 🏗️ 建立基础的微服务架构
+- 🔐 实现基础JWT认证系统
+- 📚 创建核心业务模块
+- 🛠️ 建立开发和部署流程

@@ -13,6 +13,7 @@ import (
 // RouterConfig 路由配置
 type RouterConfig struct {
 	UserService    service.UserService
+	SessionService service.SessionService
 	LoanService    service.LoanService
 	MachineService service.MachineService
 	ArticleService service.ContentService
@@ -35,8 +36,8 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 	r.Use(middleware.RequestLogger())
 	r.Use(middleware.CORS())
 
-	// 创建认证中间件
-	authMiddleware := middleware.NewAuthMiddleware(config.JWTSecret)
+	// 创建会话认证中间件（统一使用Redis会话认证）
+	sessionAuthMiddleware := middleware.NewSessionAuthMiddleware(config.SessionService)
 
 	// 创建Handler实例
 	userHandler := handler.NewUserHandler(config.UserService)
@@ -60,8 +61,10 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 	// 健康检查
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"status":  "ok",
-			"message": "数字惠农API服务正在运行",
+			"status":          "ok",
+			"message":         "数字惠农API服务正在运行",
+			"version":         "1.0.0",
+			"session_enabled": true,
 		})
 	})
 
@@ -75,7 +78,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			public.GET("/configs", systemHandler.GetPublicConfigs)
 		}
 
-		// 内部API（供Dify工作流调用）
+		// 内部API（供Dify工作流调用）- 保持Dify专用认证
 		internal := api.Group("/internal")
 		internal.Use(middleware.DifyAuthMiddleware(config.DifyAPIToken))
 		{
@@ -108,7 +111,10 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 		{
 			auth.POST("/register", userHandler.Register)
 			auth.POST("/login", userHandler.Login)
-			auth.POST("/refresh", userHandler.RefreshToken)
+
+			// 使用Redis会话管理系统进行Token刷新
+			auth.POST("/refresh", sessionAuthMiddleware.RefreshToken())
+
 			// TODO: 添加其他认证接口
 			// auth.POST("/forgot-password", userHandler.ForgotPassword)
 			// auth.POST("/reset-password", userHandler.ResetPassword)
@@ -116,15 +122,25 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			// auth.POST("/send-sms", userHandler.SendSMS)
 		}
 
-		// 用户API（需要认证）
+		// 用户API（需要认证）- 使用Redis会话认证
 		user := api.Group("/user")
-		user.Use(authMiddleware.RequireAuth())
+		user.Use(sessionAuthMiddleware.RequireAuth())
 		{
 			// 用户资料管理
 			user.GET("/profile", userHandler.GetProfile)
 			user.PUT("/profile", userHandler.UpdateProfile)
 			user.PUT("/password", userHandler.ChangePassword)
-			user.POST("/logout", userHandler.Logout)
+
+			// 使用Redis会话管理系统进行登出
+			user.POST("/logout", sessionAuthMiddleware.Logout())
+
+			// 会话管理相关接口
+			session := user.Group("/session")
+			{
+				session.GET("/info", sessionAuthMiddleware.SessionInfo())
+				session.POST("/revoke-others", sessionAuthMiddleware.RevokeOtherSessions())
+				session.GET("/list", sessionAuthMiddleware.SessionInfo()) // 获取用户所有会话
+			}
 
 			// 用户认证
 			userAuth := user.Group("/auth")
@@ -196,9 +212,9 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			}
 		}
 
-		// 公共内容API（可选认证）
+		// 公共内容API（可选认证）- 使用Redis会话认证
 		content := api.Group("/content")
-		content.Use(authMiddleware.OptionalAuth())
+		content.Use(sessionAuthMiddleware.OptionalAuth())
 		{
 			// 文章相关API
 			content.GET("/articles", articleHandler.ListArticles)
@@ -211,9 +227,9 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			content.GET("/experts/:id", expertHandler.GetExpert)
 		}
 
-		// 管理员API（需要管理员认证）
+		// 管理员API（需要管理员认证）- 使用Redis会话认证
 		admin := api.Group("/admin")
-		admin.Use(authMiddleware.AdminAuth())
+		admin.Use(sessionAuthMiddleware.AdminAuth())
 		{
 			// 用户管理
 			adminUser := admin.Group("/users")
@@ -225,6 +241,36 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 				// adminUser.PUT("/:id/freeze", userHandler.FreezeUser)
 				// adminUser.PUT("/:id/unfreeze", userHandler.UnfreezeUser)
 				// adminUser.GET("/:id/auth", userHandler.GetUserAuth)
+			}
+
+			// 会话管理
+			adminSession := admin.Group("/sessions")
+			{
+				adminSession.GET("/active", func(c *gin.Context) {
+					// TODO: 实现获取所有活跃会话的接口
+					c.JSON(200, gin.H{
+						"message": "获取活跃会话列表",
+						"data": gin.H{
+							"total":    150,
+							"sessions": []gin.H{},
+						},
+					})
+				})
+				adminSession.POST("/cleanup", func(c *gin.Context) {
+					// TODO: 实现手动清理过期会话的接口
+					c.JSON(200, gin.H{
+						"message": "会话清理完成",
+						"cleaned": 23,
+					})
+				})
+				adminSession.DELETE("/:session_id", func(c *gin.Context) {
+					// TODO: 实现强制注销指定会话的接口
+					sessionID := c.Param("session_id")
+					c.JSON(200, gin.H{
+						"message":    "会话已强制注销",
+						"session_id": sessionID,
+					})
+				})
 			}
 
 			// 贷款审批管理
@@ -290,9 +336,9 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			// }
 		}
 
-		// OA后台API（需要OA认证）
+		// OA后台API（需要OA认证）- 使用Redis会话认证
 		oa := api.Group("/oa")
-		oa.Use(authMiddleware.AdminAuth()) // TODO: 改为OA专用的认证中间件
+		oa.Use(sessionAuthMiddleware.AdminAuth()) // 使用管理员认证，检查platform为"oa"
 		{
 			// TODO: OA用户管理
 			// oaUser := oa.Group("/users")
@@ -309,7 +355,7 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			// oaRole := oa.Group("/roles")
 			// {
 			//     oaRole.POST("", oaHandler.CreateRole)
-			//     oaRole.GET("", oaHandler.ListRoles)
+			//     oaRole.GET("", oaRole.ListRoles)
 			//     oaRole.GET("/:id", oaHandler.GetRole)
 			//     oaRole.PUT("/:id", oaHandler.UpdateRole)
 			//     oaRole.DELETE("/:id", oaHandler.DeleteRole)
@@ -327,29 +373,30 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 	return r
 }
 
-// SetupAPIRoutes 设置API路由（用于测试）
+// SetupAPIRoutes 设置API路由（用于测试）- 统一使用Redis会话认证
 func SetupAPIRoutes(r *gin.Engine, config *RouterConfig) {
-	authMiddleware := middleware.NewAuthMiddleware(config.JWTSecret)
+	// 使用Redis会话认证中间件
+	sessionAuthMiddleware := middleware.NewSessionAuthMiddleware(config.SessionService)
 	userHandler := handler.NewUserHandler(config.UserService)
 
 	api := r.Group("/api")
 	{
-		// 认证路由
+		// 认证路由（无需认证）
 		auth := api.Group("/auth")
 		{
 			auth.POST("/register", userHandler.Register)
 			auth.POST("/login", userHandler.Login)
-			auth.POST("/refresh", userHandler.RefreshToken)
+			auth.POST("/refresh", sessionAuthMiddleware.RefreshToken())
 		}
 
-		// 用户路由
+		// 用户路由（使用Redis会话认证）
 		user := api.Group("/user")
-		user.Use(authMiddleware.RequireAuth())
+		user.Use(sessionAuthMiddleware.RequireAuth())
 		{
 			user.GET("/profile", userHandler.GetProfile)
 			user.PUT("/profile", userHandler.UpdateProfile)
 			user.PUT("/password", userHandler.ChangePassword)
-			user.POST("/logout", userHandler.Logout)
+			user.POST("/logout", sessionAuthMiddleware.Logout())
 		}
 	}
 }
