@@ -1,0 +1,208 @@
+// 导入变量和混入
+@import './variables.scss';
+@import './mixins.scss';
+
+// 全局重置样式
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5715;
+  color: $text-color;
+  background-color: $background-color;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  height: 100%;
+  overflow: hidden;
+}
+
+// 全局链接样式
+a {
+  color: $primary-color;
+  text-decoration: none;
+  transition: color 0.3s;
+
+  &:hover {
+    color: $primary-color-hover;
+  }
+
+  &:active {
+    color: $primary-color-active;
+  }
+}
+
+// 滚动条样式
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.2);
+  }
+}
+
+// 暗色模式滚动条
+[data-theme="dark"] {
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+}
+
+// 工具类
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.flex { display: flex; }
+.flex-center { 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+}
+.flex-between { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+}
+.flex-column { flex-direction: column; }
+.flex-1 { flex: 1; }
+
+.mb-16 { margin-bottom: 16px; }
+.mb-24 { margin-bottom: 24px; }
+.mt-16 { margin-top: 16px; }
+.mt-24 { margin-top: 24px; }
+
+// 卡片样式
+.oa-card {
+  background: $component-background;
+  border-radius: $border-radius-lg;
+  border: 1px solid $border-color;
+  box-shadow: $shadow-card;
+  transition: box-shadow 0.3s;
+
+  &:hover {
+    box-shadow: $shadow-card-hover;
+  }
+
+  .oa-card-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid $border-color;
+    
+    .oa-card-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin: 0;
+    }
+  }
+
+  .oa-card-body {
+    padding: 24px;
+  }
+}
+
+// 页面容器
+.page-container {
+  padding: 24px;
+  min-height: calc(100vh - 64px);
+}
+
+.page-header {
+  margin-bottom: 24px;
+  
+  .page-title {
+    font-size: 24px;
+    font-weight: 500;
+    margin: 0;
+    color: $text-color;
+  }
+
+  .page-description {
+    margin-top: 8px;
+    color: $text-color-secondary;
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .page-container {
+    padding: 16px;
+  }
+
+  .page-header .page-title {
+    font-size: 20px;
+  }
+}
+
+// Ant Design 组件自定义样式
+.ant-layout {
+  min-height: 100vh;
+}
+
+.ant-layout-header {
+  padding: 0 24px;
+  background: $component-background;
+  border-bottom: 1px solid $border-color;
+  box-shadow: $shadow-header;
+}
+
+.ant-layout-sider {
+  box-shadow: $shadow-sider;
+}
+
+.ant-menu {
+  border-right: none;
+}
+
+// 表格自定义样式
+.ant-table {
+  .ant-table-thead > tr > th {
+    background: $background-color-light;
+    font-weight: 500;
+  }
+}
+
+// 状态标签样式
+.status-tag {
+  &.success { background-color: $success-color-bg; color: $success-color; }
+  &.warning { background-color: $warning-color-bg; color: $warning-color; }
+  &.error { background-color: $error-color-bg; color: $error-color; }
+  &.info { background-color: $info-color-bg; color: $info-color; }
+  &.default { background-color: $text-color-disabled; color: $text-color; }
+}
+
+// 加载状态
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+// 空状态
+.empty-container {
+  text-align: center;
+  padding: 48px 24px;
+  color: $text-color-secondary;
+} 

@@ -1,0 +1,109 @@
+// OA系统主题色彩 - 基于UI设计文档
+$oa-primary: #001529;           // OA主色 - 深蓝色
+$oa-secondary: #1890FF;         // OA辅色 - 蓝色
+$primary-color: $oa-secondary;  // 主色使用蓝色
+$primary-color-hover: #40a9ff;
+$primary-color-active: #096dd9;
+
+// 功能色彩
+$success-color: #52c41a;
+$success-color-hover: #73d13d;
+$success-color-active: #389e0d;
+$success-color-bg: #f6ffed;
+
+$warning-color: #faad14;
+$warning-color-hover: #ffc53d;
+$warning-color-active: #d48806;
+$warning-color-bg: #fffbe6;
+
+$error-color: #ff4d4f;
+$error-color-hover: #ff7875;
+$error-color-active: #d9363e;
+$error-color-bg: #fff2f0;
+
+$info-color: #1890ff;
+$info-color-hover: #40a9ff;
+$info-color-active: #096dd9;
+$info-color-bg: #e6f7ff;
+
+// 中性色彩
+$text-color: #262626;                    // 主要文字
+$text-color-secondary: #595959;          // 次要文字
+$text-color-disabled: #bfbfbf;           // 禁用文字
+$text-color-inverse: #ffffff;            // 反色文字
+
+$background-color: #f0f2f5;              // 页面背景
+$background-color-light: #fafafa;        // 浅色背景
+$component-background: #ffffff;          // 组件背景
+
+$border-color: #d9d9d9;                  // 边框颜色
+$border-color-split: #f0f0f0;            // 分割线颜色
+
+// 字体大小
+$font-size-xs: 10px;
+$font-size-sm: 12px;
+$font-size-base: 14px;
+$font-size-lg: 16px;
+$font-size-xl: 18px;
+$font-size-xxl: 20px;
+$font-size-xxxl: 24px;
+
+// 字体权重
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+// 间距
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-base: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+$spacing-xxl: 48px;
+
+// 圆角
+$border-radius-sm: 4px;
+$border-radius-base: 6px;
+$border-radius-lg: 8px;
+$border-radius-xl: 12px;
+
+// 阴影
+$shadow-card: 0 2px 8px rgba(0, 0, 0, 0.09);
+$shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
+$shadow-header: 0 2px 8px rgba(0, 0, 0, 0.06);
+$shadow-sider: 2px 0 8px rgba(0, 0, 0, 0.09);
+$shadow-modal: 0 6px 16px rgba(0, 0, 0, 0.12);
+
+// 布局尺寸
+$header-height: 64px;
+$sider-width: 256px;
+$sider-collapsed-width: 80px;
+
+// 响应式断点
+$screen-xs: 480px;
+$screen-sm: 768px;
+$screen-md: 992px;
+$screen-lg: 1200px;
+$screen-xl: 1600px;
+
+// Z-index 层级
+$z-index-dropdown: 1050;
+$z-index-sticky: 1020;
+$z-index-fixed: 1030;
+$z-index-modal-backdrop: 1040;
+$z-index-modal: 1050;
+$z-index-popover: 1060;
+$z-index-tooltip: 1070;
+
+// 过渡动画
+$transition-base: 0.3s ease;
+$transition-fast: 0.15s ease;
+$transition-slow: 0.45s ease;
+
+// 暗色主题变量
+$dark-bg-color: #141414;
+$dark-component-bg: #1f1f1f;
+$dark-text-color: rgba(255, 255, 255, 0.85);
+$dark-text-color-secondary: rgba(255, 255, 255, 0.65);
+$dark-border-color: #303030; 
