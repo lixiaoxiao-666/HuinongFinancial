@@ -39,6 +39,27 @@ const routes: RouteRecordRaw[] = [
           icon: 'dashboard',
           requiresAuth: true
         }
+      },
+      {
+        path: 'loan',
+        name: 'Loan',
+        meta: {
+          title: '贷款管理',
+          icon: 'bank',
+          requiresAuth: true
+        },
+        children: [
+          {
+            path: 'applications',
+            name: 'LoanApplications',
+            component: () => import('@/views/loan/index.vue'),
+            meta: {
+              title: '申请审批',
+              requiresAuth: true,
+              requiredPermissions: ['loan:manage']
+            }
+          }
+        ]
       }
     ]
   },
