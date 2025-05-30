@@ -50,7 +50,7 @@ const initializeApplication = async () => {
     }
 
     // 3. 初始化认证状态
-    await authStore.initializeAuth()
+    await authStore.initAuth()
     
     // 4. 初始化完成
     isInitializing.value = false
@@ -98,9 +98,9 @@ router.onError((error) => {
  * 应用可见性变化处理
  */
 const handleVisibilityChange = () => {
-  if (!document.hidden && authStore.isAuthenticated) {
+  if (!document.hidden && authStore.isLoggedIn) {
     // 应用重新可见时，验证token状态
-    authStore.validateToken().catch(() => {
+    authStore.validateCurrentToken().catch(() => {
       // Token验证失败的处理在store中已经完成
     })
   }
@@ -216,8 +216,8 @@ defineExpose({
 .oa-app {
   height: 100vh;
   overflow: hidden;
-  background-color: $background-color;
-  color: $text-color;
+  background-color: #f0f2f5;
+  color: #262626;
   
   &.oa-initializing {
     overflow: hidden;
@@ -269,20 +269,17 @@ defineExpose({
 
 // 主题相关样式
 .oa-theme--light {
-  --app-bg-color: #{$background-color};
-  --app-text-color: #{$text-color};
+  background-color: #f0f2f5;
+  color: #262626;
 }
 
 .oa-theme--dark {
-  --app-bg-color: #{$dark-bg-color};
-  --app-text-color: #{$dark-text-color};
-  
-  background-color: var(--app-bg-color);
-  color: var(--app-text-color);
+  background-color: #141414;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 // 响应式设计
-@include responsive(xs) {
+@media (max-width: 480px) {
   .oa-loading-overlay {
     .loading-content .loading-text {
       font-size: 14px;
@@ -296,35 +293,33 @@ defineExpose({
 
 // 调整 Ant Design 组件在暗色主题下的样式
 [data-theme="dark"] {
-  // 这里可以添加暗色主题下的全局样式调整
-  
   .ant-layout {
-    background: $dark-bg-color;
+    background: #141414;
   }
   
   .ant-layout-header {
-    background: $dark-component-bg;
-    border-bottom-color: $dark-border-color;
+    background: #1f1f1f;
+    border-bottom-color: #303030;
   }
   
   .ant-layout-sider {
-    background: $dark-component-bg;
+    background: #1f1f1f;
   }
   
   .ant-menu {
     background: transparent;
-    color: $dark-text-color;
+    color: rgba(255, 255, 255, 0.85);
     
     .ant-menu-item {
-      color: $dark-text-color-secondary;
+      color: rgba(255, 255, 255, 0.65);
       
       &:hover {
-        color: $dark-text-color;
+        color: rgba(255, 255, 255, 0.85);
       }
       
       &.ant-menu-item-selected {
-        color: $primary-color;
-        background-color: rgba($primary-color, 0.1);
+        color: #1890ff;
+        background-color: rgba(24, 144, 255, 0.1);
       }
     }
   }

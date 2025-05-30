@@ -208,6 +208,37 @@ type OARepository interface {
 	ListRoles(ctx context.Context) ([]*model.OARole, error)
 }
 
+// TaskRepository 任务数据访问接口
+type TaskRepository interface {
+	// 任务基本操作
+	CreateTask(ctx context.Context, task *model.Task) error
+	GetTaskByID(ctx context.Context, id uint64) (*model.Task, error)
+	UpdateTask(ctx context.Context, id uint64, updates map[string]interface{}) error
+	DeleteTask(ctx context.Context, id uint64) error
+	ListTasks(ctx context.Context, conditions map[string]interface{}, page, limit int, sortBy, sortOrder, keyword string) ([]*model.Task, int64, error)
+
+	// 任务操作记录
+	CreateTaskAction(ctx context.Context, action *model.TaskAction) error
+	GetTaskActions(ctx context.Context, taskID uint64) ([]*model.TaskAction, error)
+	GetTaskActionsByUser(ctx context.Context, userID uint64, limit int) ([]*model.TaskAction, error)
+
+	// 任务统计
+	GetTaskStatistics(ctx context.Context, conditions map[string]interface{}) (*model.TaskStatistics, error)
+	GetTaskCountByStatus(ctx context.Context, status string) (int64, error)
+	GetTaskCountByType(ctx context.Context, taskType string) (int64, error)
+	GetTaskCountByPriority(ctx context.Context, priority string) (int64, error)
+	GetOverdueTasks(ctx context.Context, limit int) ([]*model.Task, error)
+
+	// 任务分配相关
+	GetTasksByAssignee(ctx context.Context, assigneeID uint64, page, limit int) ([]*model.Task, int64, error)
+	GetUnassignedTasks(ctx context.Context, page, limit int) ([]*model.Task, int64, error)
+	GetTasksByCreator(ctx context.Context, creatorID uint64, page, limit int) ([]*model.Task, int64, error)
+
+	// 业务相关任务
+	GetTasksByBusiness(ctx context.Context, businessType string, businessID uint64) ([]*model.Task, error)
+	CreateTaskFromBusiness(ctx context.Context, businessType string, businessID uint64, taskType string, title, description string, priority string, assigneeID *uint64) (*model.Task, error)
+}
+
 // 请求和响应结构体
 type ListUsersRequest struct {
 	Page     int    `json:"page"`
@@ -330,31 +361,13 @@ type ListExpertsResponse struct {
 	Limit   int             `json:"limit"`
 }
 
-type ListAPILogsRequest struct {
-	Page       int    `json:"page"`
-	Limit      int    `json:"limit"`
-	Method     string `json:"method"`
-	URL        string `json:"url"`
-	StatusCode int    `json:"status_code"`
-	UserID     uint64 `json:"user_id"`
-	StartDate  string `json:"start_date"`
-	EndDate    string `json:"end_date"`
-}
-
-type ListAPILogsResponse struct {
-	Logs  []*model.APILog `json:"logs"`
-	Total int64           `json:"total"`
-	Page  int             `json:"page"`
-	Limit int             `json:"limit"`
-}
-
 type ListOAUsersRequest struct {
-	Page       int    `json:"page"`
-	Limit      int    `json:"limit"`
 	RoleID     uint64 `json:"role_id"`
 	Department string `json:"department"`
 	Status     string `json:"status"`
 	Keyword    string `json:"keyword"`
+	Page       int    `json:"page"`
+	Limit      int    `json:"limit"`
 }
 
 type ListOAUsersResponse struct {
@@ -365,14 +378,27 @@ type ListOAUsersResponse struct {
 }
 
 type APIStatistics struct {
-	TotalRequests   int64          `json:"total_requests"`
-	SuccessRequests int64          `json:"success_requests"`
-	ErrorRequests   int64          `json:"error_requests"`
-	AvgResponseTime float64        `json:"avg_response_time"`
-	TopEndpoints    []EndpointStat `json:"top_endpoints"`
+	TotalRequests    int64            `json:"total_requests"`
+	SuccessRequests  int64            `json:"success_requests"`
+	ErrorRequests    int64            `json:"error_requests"`
+	AverageResponse  float64          `json:"average_response"`
+	RequestsByMethod map[string]int64 `json:"requests_by_method"`
+	RequestsByPath   map[string]int64 `json:"requests_by_path"`
 }
 
-type EndpointStat struct {
-	Endpoint string `json:"endpoint"`
-	Count    int64  `json:"count"`
+type ListAPILogsRequest struct {
+	Page      int    `json:"page"`
+	Limit     int    `json:"limit"`
+	Method    string `json:"method"`
+	Path      string `json:"path"`
+	Status    string `json:"status"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+}
+
+type ListAPILogsResponse struct {
+	Logs  []*model.APILog `json:"logs"`
+	Total int64           `json:"total"`
+	Page  int             `json:"page"`
+	Limit int             `json:"limit"`
 }

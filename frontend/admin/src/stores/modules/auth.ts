@@ -1,190 +1,151 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { authApi } from '@/api'
-import type { OAUser, LoginCredentials } from '@/api/types'
 import { message } from 'ant-design-vue'
+import router from '@/router'
+import * as authApi from '@/api/auth'
+import type { OAUser, LoginCredentials } from '@/api/auth'
 
 export const useAuthStore = defineStore('auth', () => {
-  // 状态定义
-  const token = ref<string | null>(localStorage.getItem('oa_token'))
-  const refreshToken = ref<string | null>(localStorage.getItem('oa_refresh_token'))
+  // 状态
+  const token = ref<string>(localStorage.getItem('auth_token') || '')
+  const refreshToken = ref<string>(localStorage.getItem('refresh_token') || '')
   const userInfo = ref<OAUser | null>(null)
-  const isLoggedIn = ref(false)
-  const permissions = ref<string[]>([])
-  const sessionId = ref<string | null>(null)
+  const isLoading = ref(false)
 
   // 计算属性
-  const isAuthenticated = computed(() => !!token.value && isLoggedIn.value)
-  const userRole = computed(() => userInfo.value?.role)
-  const userName = computed(() => userInfo.value?.real_name || userInfo.value?.username)
-  const userDepartment = computed(() => userInfo.value?.department)
+  const isLoggedIn = computed(() => !!token.value && !!userInfo.value)
+  const userName = computed(() => userInfo.value?.real_name || userInfo.value?.username || '')
+  const userRole = computed(() => userInfo.value?.role_name || '')
+  const userAvatar = computed(() => userInfo.value?.avatar || '')
 
-  // 权限检查
-  const hasPermission = (permission: string): boolean => {
-    return permissions.value.includes(permission) || userRole.value === 'admin'
+  // 检查是否有指定角色
+  const hasRole = (roles: string | string[]) => {
+    if (!userInfo.value) return false
+    const userRoleName = userInfo.value.role_name
+    const roleArray = Array.isArray(roles) ? roles : [roles]
+    return roleArray.includes(userRoleName)
   }
 
-  const hasRole = (role: string | string[]): boolean => {
-    if (!userRole.value) return false
-    if (Array.isArray(role)) {
-      return role.includes(userRole.value)
+  // 保存token到localStorage
+  const saveTokens = (accessToken: string, refresh: string) => {
+    token.value = accessToken
+    refreshToken.value = refresh
+    localStorage.setItem('auth_token', accessToken)
+    localStorage.setItem('refresh_token', refresh)
+  }
+
+  // 清除token
+  const clearTokens = () => {
+    token.value = ''
+    refreshToken.value = ''
+    userInfo.value = null
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('refresh_token')
+    localStorage.removeItem('user_info')
+  }
+
+  // 保存用户信息
+  const saveUserInfo = (user: OAUser) => {
+    userInfo.value = user
+    localStorage.setItem('user_info', JSON.stringify(user))
+  }
+
+  // 从localStorage恢复用户信息
+  const restoreUserInfo = () => {
+    const savedUserInfo = localStorage.getItem('user_info')
+    if (savedUserInfo) {
+      try {
+        userInfo.value = JSON.parse(savedUserInfo)
+      } catch (error) {
+        console.error('解析用户信息失败:', error)
+        localStorage.removeItem('user_info')
+      }
     }
-    return userRole.value === role
   }
 
-  // 登录方法
-  const login = async (credentials: LoginCredentials) => {
+  // 登录
+  const login = async (credentials: Omit<LoginCredentials, 'platform'>) => {
     try {
-      const response = await authApi.login({
+      isLoading.value = true
+      
+      const loginData: LoginCredentials = {
         ...credentials,
-        device_info: {
-          device_type: 'web',
-          device_name: navigator.userAgent,
-          app_version: import.meta.env.VITE_APP_VERSION || '1.0.0'
-        }
-      })
+        platform: 'oa'
+      }
 
-      const { user, session } = response.data
-
-      // 保存认证信息
-      token.value = session.access_token
-      refreshToken.value = session.refresh_token
-      userInfo.value = user
-      isLoggedIn.value = true
-      permissions.value = user.permissions || []
-
-      // 持久化存储
-      localStorage.setItem('oa_token', session.access_token)
-      localStorage.setItem('oa_refresh_token', session.refresh_token)
-      localStorage.setItem('oa_user_info', JSON.stringify(user))
-
-      message.success(`欢迎回来，${user.real_name}!`)
+      const response = await authApi.login(loginData)
+      
+      // 保存tokens和用户信息
+      saveTokens(response.access_token, response.refresh_token)
+      saveUserInfo(response.user)
+      
+      message.success('登录成功')
       return response
-    } catch (error) {
+      
+    } catch (error: any) {
       console.error('登录失败:', error)
+      const errorMessage = error?.message || '登录失败，请检查用户名和密码'
+      message.error(errorMessage)
       throw error
-    }
-  }
-
-  // 登出方法
-  const logout = async (showMessage = true) => {
-    try {
-      // 调用后端登出接口
-      if (token.value) {
-        await authApi.logout()
-      }
-    } catch (error) {
-      console.warn('后端登出失败:', error)
     } finally {
-      // 清除本地状态
-      token.value = null
-      refreshToken.value = null
-      userInfo.value = null
-      isLoggedIn.value = false
-      permissions.value = []
-      sessionId.value = null
-
-      // 清除本地存储
-      localStorage.removeItem('oa_token')
-      localStorage.removeItem('oa_refresh_token')
-      localStorage.removeItem('oa_user_info')
-
-      if (showMessage) {
-        message.success('已安全登出')
-      }
+      isLoading.value = false
     }
   }
 
-  // 刷新Token
+  // 刷新token
   const refreshAccessToken = async () => {
     if (!refreshToken.value) {
       throw new Error('没有refresh token')
     }
 
     try {
-      const response = await authApi.refresh(refreshToken.value)
-      const { access_token, refresh_token, expires_in } = response.data
-
-      token.value = access_token
-      refreshToken.value = refresh_token
-
-      localStorage.setItem('oa_token', access_token)
-      localStorage.setItem('oa_refresh_token', refresh_token)
-
-      return response
+      const response = await authApi.refreshToken(refreshToken.value)
+      saveTokens(response.access_token, response.refresh_token)
+      return response.access_token
     } catch (error) {
-      console.error('刷新Token失败:', error)
-      await logout(false)
+      console.error('刷新token失败:', error)
+      // 刷新失败，清除所有认证信息
+      await logout()
       throw error
     }
   }
 
-  // 验证Token有效性
-  const validateToken = async () => {
-    if (!token.value) {
-      return false
-    }
+  // 验证token
+  const validateCurrentToken = async () => {
+    if (!token.value) return false
 
     try {
-      const response = await authApi.validate()
-      const data = response.data
-
-      if (data.valid) {
-        sessionId.value = data.session_id
-        return true
-      } else {
-        await logout(false)
-        return false
-      }
+      const response = await authApi.validateToken()
+      return response.valid
     } catch (error) {
-      console.error('Token验证失败:', error)
-      await logout(false)
+      console.error('验证token失败:', error)
       return false
     }
   }
 
-  // 获取当前用户信息
+  // 获取用户信息
   const fetchUserInfo = async () => {
-    if (!token.value) {
-      throw new Error('未登录')
-    }
-
     try {
-      const response = await authApi.getCurrentUser()
-      userInfo.value = response.data
-      permissions.value = response.data.permissions || []
-      
-      // 更新本地存储
-      localStorage.setItem('oa_user_info', JSON.stringify(response.data))
-      
-      return response.data
+      const user = await authApi.getCurrentUser()
+      saveUserInfo(user)
+      return user
     } catch (error) {
       console.error('获取用户信息失败:', error)
       throw error
     }
   }
 
-  // 初始化认证状态（从本地存储恢复）
-  const initializeAuth = async () => {
-    const savedToken = localStorage.getItem('oa_token')
-    const savedUserInfo = localStorage.getItem('oa_user_info')
-
-    if (savedToken && savedUserInfo) {
-      try {
-        token.value = savedToken
-        userInfo.value = JSON.parse(savedUserInfo)
-        permissions.value = userInfo.value?.permissions || []
-
-        // 验证Token是否仍然有效
-        const isValid = await validateToken()
-        if (isValid) {
-          isLoggedIn.value = true
-          console.log('认证状态恢复成功')
-        }
-      } catch (error) {
-        console.error('认证状态恢复失败:', error)
-        await logout(false)
-      }
+  // 更新用户信息
+  const updateUserProfile = async (data: Partial<Pick<OAUser, 'email' | 'phone' | 'avatar'>>) => {
+    try {
+      const updatedUser = await authApi.updateProfile(data)
+      saveUserInfo(updatedUser)
+      message.success('用户信息更新成功')
+      return updatedUser
+    } catch (error) {
+      console.error('更新用户信息失败:', error)
+      message.error('更新用户信息失败')
+      throw error
     }
   }
 
@@ -195,37 +156,82 @@ export const useAuthStore = defineStore('auth', () => {
         old_password: oldPassword,
         new_password: newPassword
       })
-      message.success('密码修改成功')
+      message.success('密码修改成功，请重新登录')
+      await logout()
     } catch (error) {
-      console.error('密码修改失败:', error)
+      console.error('修改密码失败:', error)
+      message.error('修改密码失败')
       throw error
     }
   }
 
+  // 登出
+  const logout = async () => {
+    try {
+      if (token.value) {
+        await authApi.logout()
+      }
+    } catch (error) {
+      console.error('登出请求失败:', error)
+      // 即使请求失败也要清除本地数据
+    } finally {
+      clearTokens()
+      message.success('已安全退出')
+      
+      // 跳转到登录页面
+      if (router.currentRoute.value.path !== '/login') {
+        router.push('/login')
+      }
+    }
+  }
+
+  // 初始化认证状态
+  const initAuth = async () => {
+    // 恢复用户信息
+    restoreUserInfo()
+    
+    // 如果有token但没有用户信息，尝试获取
+    if (token.value && !userInfo.value) {
+      try {
+        await fetchUserInfo()
+      } catch (error) {
+        console.error('初始化时获取用户信息失败:', error)
+        clearTokens()
+      }
+    }
+    
+    // 验证token有效性
+    if (token.value) {
+      const isValid = await validateCurrentToken()
+      if (!isValid) {
+        clearTokens()
+      }
+    }
+  }
+
+  // 返回store API
   return {
     // 状态
     token,
     refreshToken,
     userInfo,
-    isLoggedIn,
-    permissions,
-    sessionId,
-
+    isLoading,
+    
     // 计算属性
-    isAuthenticated,
-    userRole,
+    isLoggedIn,
     userName,
-    userDepartment,
-
+    userRole,
+    userAvatar,
+    
     // 方法
+    hasRole,
     login,
     logout,
     refreshAccessToken,
-    validateToken,
+    validateCurrentToken,
     fetchUserInfo,
-    initializeAuth,
+    updateUserProfile,
     changePassword,
-    hasPermission,
-    hasRole
+    initAuth
   }
 }) 

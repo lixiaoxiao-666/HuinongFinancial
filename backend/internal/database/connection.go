@@ -21,7 +21,7 @@ func NewConnection(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 	// GORM配置
 	gormConfig := &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
-			TablePrefix:   "", // 表名前缀
+			TablePrefix:   "",    // 表名前缀
 			SingularTable: false, // 使用复数表名
 		},
 		Logger: getLogLevel(cfg),
@@ -72,13 +72,13 @@ func buildDSN(cfg *config.DatabaseConfig) string {
 func getLogLevel(cfg *config.DatabaseConfig) logger.Interface {
 	// 根据环境设置不同的日志级别
 	logLevel := logger.Silent // 默认静默模式
-	
+
 	// 这里可以根据配置来设置不同的日志级别
 	// 在开发环境可以设置为Info级别以便调试
 	// if cfg.Debug {
 	//     logLevel = logger.Info
 	// }
-	
+
 	return logger.Default.LogMode(logLevel)
 }
 
@@ -112,6 +112,14 @@ func AutoMigrate(db *gorm.DB) error {
 		&model.RentalOrder{},
 	); err != nil {
 		return fmt.Errorf("农机表迁移失败: %w", err)
+	}
+
+	// 任务相关表
+	if err := db.AutoMigrate(
+		&model.Task{},
+		&model.TaskAction{},
+	); err != nil {
+		return fmt.Errorf("任务表迁移失败: %w", err)
 	}
 
 	// 通用表
@@ -356,15 +364,15 @@ func GetDatabaseStats(db *gorm.DB) (map[string]interface{}, error) {
 	}
 
 	stats := sqlDB.Stats()
-	
+
 	return map[string]interface{}{
 		"max_open_connections": stats.MaxOpenConnections,
 		"open_connections":     stats.OpenConnections,
-		"in_use":              stats.InUse,
-		"idle":                stats.Idle,
-		"wait_count":          stats.WaitCount,
-		"wait_duration":       stats.WaitDuration.String(),
-		"max_idle_closed":     stats.MaxIdleClosed,
-		"max_lifetime_closed": stats.MaxLifetimeClosed,
+		"in_use":               stats.InUse,
+		"idle":                 stats.Idle,
+		"wait_count":           stats.WaitCount,
+		"wait_duration":        stats.WaitDuration.String(),
+		"max_idle_closed":      stats.MaxIdleClosed,
+		"max_lifetime_closed":  stats.MaxLifetimeClosed,
 	}, nil
-} 
+}

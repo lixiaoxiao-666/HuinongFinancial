@@ -106,4 +106,74 @@ $dark-bg-color: #141414;
 $dark-component-bg: #1f1f1f;
 $dark-text-color: rgba(255, 255, 255, 0.85);
 $dark-text-color-secondary: rgba(255, 255, 255, 0.65);
-$dark-border-color: #303030; 
+$dark-border-color: #303030;
+
+// SCSS 变量文件 - 惠农OA管理系统
+
+// 字体变量
+$font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+$line-height-base: 1.5;
+
+// 边框变量
+$border-color-base: #d9d9d9;
+
+// 阴影变量
+$box-shadow-base: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+// 响应式断点
+$screen-xs: 480px;
+$screen-sm: 576px;
+$screen-md: 768px;
+$screen-lg: 992px;
+$screen-xl: 1200px;
+$screen-xxl: 1600px;
+
+// 布局尺寸
+$layout-header-height: 64px;
+$layout-footer-height: 48px;
+$layout-sider-width: 240px;
+$layout-sider-collapsed-width: 80px;
+
+// 常用混入
+@mixin clearfix {
+  &::after {
+    content: '';
+    display: table;
+    clear: both;
+  }
+}
+
+@mixin ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@mixin center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin transition($property: all, $duration: 0.3s, $timing: ease) {
+  transition: $property $duration $timing;
+}
+
+// 响应式混入
+@mixin respond-to($breakpoint) {
+  @if $breakpoint == xs {
+    @media (max-width: $screen-xs) { @content; }
+  }
+  @if $breakpoint == sm {
+    @media (max-width: $screen-sm) { @content; }
+  }
+  @if $breakpoint == md {
+    @media (max-width: $screen-md) { @content; }
+  }
+  @if $breakpoint == lg {
+    @media (max-width: $screen-lg) { @content; }
+  }
+  @if $breakpoint == xl {
+    @media (max-width: $screen-xl) { @content; }
+  }
+} 

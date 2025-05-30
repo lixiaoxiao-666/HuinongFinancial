@@ -78,6 +78,7 @@ func main() {
 	sessionRepo := repository.NewSessionRepository(db)
 	loanRepo := repository.NewLoanRepository(db)
 	machineRepo := repository.NewMachineRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
 	// articleRepo := repository.NewArticleRepository(db)
 	// expertRepo := repository.NewExpertRepository(db)
 	// fileRepo := repository.NewFileRepository(db)
@@ -100,6 +101,7 @@ func main() {
 	difyService := service.NewDifyService(cfg, loanRepo)
 	loanService := service.NewLoanService(loanRepo, userRepo, difyService)
 	machineService := service.NewMachineService(machineRepo, userRepo)
+	taskService := service.NewTaskService(taskRepo, userRepo, loanRepo, db)
 	// articleService := service.NewArticleService(articleRepo, userRepo, cacheClient)
 	// expertService := service.NewExpertService(expertRepo, userRepo)
 	// fileService := service.NewFileService(fileRepo, cfg.File.UploadPath)
@@ -118,6 +120,7 @@ func main() {
 		SystemService:  nil, // systemService,
 		OAService:      oaService,
 		DifyService:    difyService,
+		TaskService:    taskService,
 		JWTSecret:      cfg.JWT.SecretKey,
 		DifyAPIToken:   cfg.Dify.APIToken,
 	}

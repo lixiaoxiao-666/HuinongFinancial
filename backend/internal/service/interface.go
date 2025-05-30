@@ -195,6 +195,28 @@ type OAService interface {
 	GetPendingTasks(ctx context.Context, userID uint64) (*PendingTasksResponse, error)
 }
 
+// TaskService 任务服务接口
+type TaskService interface {
+	// 任务管理
+	CreateTask(ctx context.Context, req *CreateTaskRequest) (*CreateTaskResponse, error)
+	GetTask(ctx context.Context, taskID uint64) (*TaskDetailResponse, error)
+	UpdateTask(ctx context.Context, taskID uint64, req *UpdateTaskRequest) error
+	DeleteTask(ctx context.Context, taskID uint64) error
+	ListTasks(ctx context.Context, req *ListTasksRequest) (*ListTasksResponse, error)
+
+	// 任务分配
+	AssignTask(ctx context.Context, taskID uint64, assigneeID uint64) error
+	UnassignTask(ctx context.Context, taskID uint64) error
+
+	// 任务进度
+	GetTaskProgress(ctx context.Context, taskID uint64) (*TaskProgressResponse, error)
+	UpdateTaskProgress(ctx context.Context, taskID uint64, progress float64) error
+
+	// 任务完成
+	CompleteTask(ctx context.Context, taskID uint64) error
+	ReassignTask(ctx context.Context, taskID uint64, newAssigneeID uint64) error
+}
+
 // ==================== 基础结构体定义 ====================
 
 // 用户相关结构体
@@ -1045,3 +1067,145 @@ type PendingUserAuth struct {
 type ArticleService = ContentService
 type ExpertService = ContentService
 type FileService = SystemService
+
+// ==================== 任务管理相关结构体 ====================
+
+// CreateTaskRequest 创建任务请求
+type CreateTaskRequest struct {
+	Title        string  `json:"title" binding:"required"`
+	Description  string  `json:"description"`
+	Type         string  `json:"type" binding:"required"`
+	Priority     string  `json:"priority"`
+	BusinessID   uint64  `json:"business_id" binding:"required"`
+	BusinessType string  `json:"business_type" binding:"required"`
+	AssignedTo   *uint64 `json:"assigned_to"`
+	Data         string  `json:"data"`
+}
+
+// CreateTaskResponse 创建任务响应
+type CreateTaskResponse struct {
+	ID     uint64 `json:"id"`
+	TaskNo string `json:"task_no"`
+	Status string `json:"status"`
+}
+
+// UpdateTaskRequest 更新任务请求
+type UpdateTaskRequest struct {
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	Priority    string  `json:"priority"`
+	Status      string  `json:"status"`
+	AssignedTo  *uint64 `json:"assigned_to"`
+	Data        string  `json:"data"`
+}
+
+// ListTasksRequest 任务列表请求
+type ListTasksRequest struct {
+	Page         int     `json:"page"`
+	Limit        int     `json:"limit"`
+	Type         string  `json:"type"`
+	Status       string  `json:"status"`
+	Priority     string  `json:"priority"`
+	AssignedTo   *uint64 `json:"assigned_to"`
+	CreatedBy    *uint64 `json:"created_by"`
+	BusinessType string  `json:"business_type"`
+	BusinessID   *uint64 `json:"business_id"`
+	IsOverdue    *bool   `json:"is_overdue"`
+	Keyword      string  `json:"keyword"`
+	SortBy       string  `json:"sort_by"`
+	SortOrder    string  `json:"sort_order"`
+}
+
+// ListTasksResponse 任务列表响应
+type ListTasksResponse struct {
+	Tasks      []*TaskDetailResponse `json:"tasks"`
+	Total      int64                 `json:"total"`
+	Page       int                   `json:"page"`
+	Limit      int                   `json:"limit"`
+	Statistics *TaskStatisticsInfo   `json:"statistics"`
+}
+
+// TaskDetailResponse 任务详情响应
+type TaskDetailResponse struct {
+	ID           uint64     `json:"id"`
+	Title        string     `json:"title"`
+	Description  string     `json:"description"`
+	Type         string     `json:"type"`
+	TypeName     string     `json:"type_name"`
+	Priority     string     `json:"priority"`
+	PriorityName string     `json:"priority_name"`
+	Status       string     `json:"status"`
+	StatusName   string     `json:"status_name"`
+	Progress     float64    `json:"progress"`
+	IsOverdue    bool       `json:"is_overdue"`
+	BusinessID   uint64     `json:"business_id"`
+	BusinessType string     `json:"business_type"`
+	Data         string     `json:"data"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+	CompletedAt  *time.Time `json:"completed_at"`
+
+	// 关联信息
+	AssignedUser *TaskUserInfo     `json:"assigned_user,omitempty"`
+	CreatedUser  *TaskUserInfo     `json:"created_user,omitempty"`
+	Actions      []*TaskActionInfo `json:"actions,omitempty"`
+
+	// 业务相关信息
+	BusinessInfo map[string]interface{} `json:"business_info,omitempty"`
+}
+
+// TaskUserInfo 任务用户信息
+type TaskUserInfo struct {
+	ID       uint64 `json:"id"`
+	Username string `json:"username"`
+	RealName string `json:"real_name"`
+	Avatar   string `json:"avatar,omitempty"`
+}
+
+// TaskActionInfo 任务操作信息
+type TaskActionInfo struct {
+	ID         uint64        `json:"id"`
+	Action     string        `json:"action"`
+	ActionName string        `json:"action_name"`
+	Comment    string        `json:"comment"`
+	CreatedAt  time.Time     `json:"created_at"`
+	Operator   *TaskUserInfo `json:"operator"`
+}
+
+// TaskStatisticsInfo 任务统计信息
+type TaskStatisticsInfo struct {
+	TotalTasks        int64 `json:"total_tasks"`
+	PendingTasks      int64 `json:"pending_tasks"`
+	ProcessingTasks   int64 `json:"processing_tasks"`
+	CompletedTasks    int64 `json:"completed_tasks"`
+	CancelledTasks    int64 `json:"cancelled_tasks"`
+	OverdueTasks      int64 `json:"overdue_tasks"`
+	HighPriorityTasks int64 `json:"high_priority_tasks"`
+	UrgentTasks       int64 `json:"urgent_tasks"`
+	MyTasks           int64 `json:"my_tasks"`
+	UnassignedTasks   int64 `json:"unassigned_tasks"`
+}
+
+// TaskProgressResponse 任务进度响应
+type TaskProgressResponse struct {
+	TaskID    uint64        `json:"task_id"`
+	Progress  float64       `json:"progress"`
+	UpdatedAt time.Time     `json:"updated_at"`
+	UpdatedBy *TaskUserInfo `json:"updated_by"`
+}
+
+// ProcessTaskRequest 处理任务请求
+type ProcessTaskRequest struct {
+	Action   string  `json:"action" binding:"required"`
+	Comment  string  `json:"comment"`
+	Progress float64 `json:"progress"`
+}
+
+// ProcessTaskResponse 处理任务响应
+type ProcessTaskResponse struct {
+	Success   bool      `json:"success"`
+	Message   string    `json:"message"`
+	TaskID    uint64    `json:"task_id"`
+	NewStatus string    `json:"new_status"`
+	UpdatedAt time.Time `json:"updated_at"`
+}

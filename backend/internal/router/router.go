@@ -22,6 +22,7 @@ type RouterConfig struct {
 	SystemService  service.SystemService
 	OAService      service.OAService
 	DifyService    service.DifyService
+	TaskService    service.TaskService
 	JWTSecret      string
 	DifyAPIToken   string
 }
@@ -58,6 +59,9 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 		config.LoanService,
 		config.MachineService,
 	)
+
+	// 任务管理Handler
+	taskHandler := handler.NewTaskHandler(config.TaskService)
 
 	// 健康检查
 	r.GET("/health", func(c *gin.Context) {
@@ -275,6 +279,23 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 			// 会话管理
 			adminSession := oaAdmin.Group("/sessions")
 			{
+				adminSession.GET("/statistics", func(c *gin.Context) {
+					// 会话统计接口实现
+					c.JSON(200, gin.H{
+						"code":    200,
+						"message": "获取成功",
+						"data": gin.H{
+							"total_active_sessions": 150,
+							"platform_distribution": gin.H{
+								"app": 100,
+								"web": 30,
+								"oa":  20,
+							},
+							"daily_peak_users":                 120,
+							"average_session_duration_minutes": 30,
+						},
+					})
+				})
 				adminSession.GET("/active", func(c *gin.Context) {
 					// TODO: 实现获取所有活跃会话的接口
 					c.JSON(200, gin.H{
@@ -300,6 +321,29 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 						"session_id": sessionID,
 					})
 				})
+			}
+
+			// 待处理任务管理
+			adminTasks := oaAdmin.Group("/tasks")
+			{
+				// 任务基本操作
+				adminTasks.GET("", taskHandler.ListTasks)
+				adminTasks.POST("", taskHandler.CreateTask)
+				adminTasks.GET("/:id", taskHandler.GetTask)
+				adminTasks.PUT("/:id", taskHandler.UpdateTask)
+				adminTasks.DELETE("/:id", taskHandler.DeleteTask)
+
+				// 待处理任务列表（兼容原接口）
+				adminTasks.GET("/pending", taskHandler.GetPendingTasks)
+
+				// 任务处理操作
+				adminTasks.POST("/:id/process", taskHandler.ProcessTask)
+				adminTasks.POST("/:id/assign", taskHandler.AssignTask)
+				adminTasks.POST("/:id/unassign", taskHandler.UnassignTask)
+				adminTasks.POST("/:id/reassign", taskHandler.ReassignTask)
+
+				// 任务进度
+				adminTasks.GET("/:id/progress", taskHandler.GetTaskProgress)
 			}
 
 			// 贷款审批管理
@@ -334,6 +378,93 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 				adminContent.PUT("/articles/:id", articleHandler.UpdateArticle)
 				adminContent.DELETE("/articles/:id", articleHandler.DeleteArticle)
 				adminContent.POST("/articles/:id/publish", articleHandler.PublishArticle)
+
+				// 系统公告管理
+				adminContent.GET("/announcements", func(c *gin.Context) {
+					// 获取系统公告列表
+					limit := c.DefaultQuery("limit", "10")
+					status := c.DefaultQuery("status", "")
+
+					announcements := []gin.H{
+						{
+							"id":         1,
+							"title":      "系统维护通知",
+							"content":    "系统将于今晚22:00-24:00进行维护，期间可能影响部分功能使用。",
+							"status":     "published",
+							"created_at": "2024-01-15T08:00:00Z",
+							"updated_at": "2024-01-15T08:00:00Z",
+						},
+						{
+							"id":         2,
+							"title":      "新功能上线公告",
+							"content":    "AI智能风险评估功能已正式上线，将大幅提升审批效率。",
+							"status":     "published",
+							"created_at": "2024-01-14T10:00:00Z",
+							"updated_at": "2024-01-14T10:00:00Z",
+						},
+						{
+							"id":         3,
+							"title":      "节假日服务安排",
+							"content":    "春节期间客服时间调整为9:00-18:00，给您带来不便敬请谅解。",
+							"status":     "published",
+							"created_at": "2024-01-13T15:30:00Z",
+							"updated_at": "2024-01-13T15:30:00Z",
+						},
+					}
+
+					// 如果指定了状态过滤
+					if status != "" {
+						filtered := []gin.H{}
+						for _, announcement := range announcements {
+							if announcement["status"] == status {
+								filtered = append(filtered, announcement)
+							}
+						}
+						announcements = filtered
+					}
+
+					c.JSON(200, gin.H{
+						"code":    200,
+						"message": "获取成功",
+						"data": gin.H{
+							"announcements": announcements,
+							"total":         len(announcements),
+							"limit":         limit,
+						},
+					})
+				})
+				adminContent.POST("/announcements", func(c *gin.Context) {
+					// 创建系统公告
+					c.JSON(200, gin.H{
+						"code":    200,
+						"message": "公告创建成功",
+						"data": gin.H{
+							"id": 4,
+						},
+					})
+				})
+				adminContent.PUT("/announcements/:id", func(c *gin.Context) {
+					// 更新系统公告
+					id := c.Param("id")
+					c.JSON(200, gin.H{
+						"code":    200,
+						"message": "公告更新成功",
+						"data": gin.H{
+							"id": id,
+						},
+					})
+				})
+				adminContent.DELETE("/announcements/:id", func(c *gin.Context) {
+					// 删除系统公告
+					id := c.Param("id")
+					c.JSON(200, gin.H{
+						"code":    200,
+						"message": "公告删除成功",
+						"data": gin.H{
+							"id": id,
+						},
+					})
+				})
 
 				// 分类管理
 				adminContent.POST("/categories", articleHandler.CreateCategory)

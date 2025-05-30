@@ -4,10 +4,13 @@ export interface ApiResponse<T = any> {
   message: string
   data: T
   meta?: {
-    total?: number
-    page?: number
-    limit?: number
-    totalPages?: number
+    timestamp?: string
+    request_id?: string
+    pagination?: {
+      page: number
+      limit: number
+      total: number
+    }
   }
 }
 
@@ -35,7 +38,10 @@ export interface OAUser {
   username: string
   real_name: string
   email: string
-  role: 'admin' | 'manager' | 'operator'
+  phone?: string
+  avatar?: string
+  role_id: number
+  role_name: string // 角色名称，如 "系统管理员"
   department: string
   position: string
   status: 'active' | 'inactive' | 'suspended'
@@ -45,17 +51,21 @@ export interface OAUser {
   last_login_at?: string
 }
 
+// 设备信息类型
+export interface DeviceInfo {
+  device_id?: string
+  device_type?: 'web' | 'ios' | 'android'
+  device_name?: string
+  user_agent?: string
+  app_version?: string
+}
+
 // 登录请求参数
 export interface LoginCredentials {
   username: string
   password: string
-  platform?: 'oa'
-  device_info?: {
-    device_id?: string
-    device_type?: string
-    device_name?: string
-    app_version?: string
-  }
+  platform?: 'oa' | 'app' | 'web'
+  device_info?: DeviceInfo
 }
 
 // 登录响应数据
@@ -97,14 +107,23 @@ export interface SessionStatistics {
 // 惠农用户类型
 export interface AppUser {
   id: number
+  uuid: string
   phone: string
   real_name: string
   user_type: 'farmer' | 'farm_owner' | 'cooperative' | 'enterprise'
   id_card: string
   status: 'active' | 'inactive' | 'suspended'
-  credit_score: number
+  is_real_name_verified: boolean
+  is_bank_card_verified: boolean
+  is_credit_verified: boolean
+  credit_score?: number
+  province?: string
+  city?: string
+  county?: string
+  address?: string
   created_at: string
   updated_at: string
+  last_login_time?: string
 }
 
 // 贷款申请类型
@@ -161,4 +180,13 @@ export interface SystemMetrics {
   daily_transactions: number
   error_rate: number
   response_time: number
+}
+
+// 错误响应类型
+export interface ErrorResponse {
+  code: number
+  message: string
+  errors?: Record<string, string[]>
+  timestamp?: string
+  request_id?: string
 } 
