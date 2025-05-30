@@ -2,26 +2,28 @@
 
 ## 📋 模块概述
 
-贷款管理模块是数字惠农系统的核心金融服务模块，为农户提供便捷的贷款申请、审批、放款、还款等全生命周期服务。集成AI审批系统，实现快速、智能的风险评估和决策。
+贷款管理模块为惠农APP/Web用户提供贷款产品查询、申请服务，并为OA系统管理员提供贷款审批和管理功能。
 
 ### 核心功能
-- 💰 **贷款申请**: 多种贷款产品申请，智能风险评估
-- 🤖 **AI审批**: 基于Dify平台的智能审批工作流
-- 📊 **额度评估**: 动态信用额度评估和管理
-- 💳 **还款管理**: 灵活的还款方式和提醒服务
-- 📈 **数据分析**: 贷款数据统计和风险监控
+-   **用户端 (`/api/user/loan/*`)**: 产品浏览、在线申请、申请状态跟踪。
+-   **OA管理员端 (`/api/oa/admin/loans/*`)**: 申请列表、审批操作、风险评估、放款管理。
 
 ---
 
-## 🏦 贷款产品管理
+## 🏦 惠农APP/Web - 贷款产品接口
+
+**接口路径前缀**: `/api/user/loan/products`
+**认证要求**: `RequireAuth` (惠农APP/Web用户)
+**适用平台**: `app`, `web`
 
 ### 1.1 获取贷款产品列表
+
 ```http
-GET /api/loans/products?user_type=farmer&amount_min=10000&amount_max=500000
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+GET /api/user/loan/products?user_type=farmer&amount_min=10000&amount_max=500000
+Authorization: Bearer {access_token}
 ```
 
-**响应示例:**
+**响应示例 (部分):**
 ```json
 {
     "code": 200,
@@ -29,172 +31,183 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     "data": [
         {
             "id": 1001,
-            "product_code": "NYCD001",
             "product_name": "农业创业贷",
-            "description": "专为新型农业经营主体提供的创业资金支持",
-            "min_amount": 10000,
-            "max_amount": 500000,
-            "min_term": 6,
-            "max_term": 36,
-            "interest_rate": 0.065,
-            "interest_type": "fixed",
-            "user_types": ["farmer", "farm_owner"],
-            "collateral_required": false,
-            "guarantor_required": true,
-            "features": ["免抵押", "快速审批", "随借随还"],
-            "eligibility": {
-                "min_age": 18,
-                "max_age": 65,
-                "min_credit_score": 600,
-                "required_auth": ["real_name", "bank_card"]
-            },
-            "status": "active"
+            // ... 其他产品字段
         }
     ]
 }
 ```
 
-### 1.2 获取产品详情
-```http
-GET /api/loans/products/{product_id}
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
+### 1.2 获取贷款产品详情
 
-**响应示例:**
-```json
-{
-    "code": 200,
-    "message": "获取成功",
-    "data": {
-        "id": 1001,
-        "product_code": "NYCD001",
-        "product_name": "农业创业贷",
-        "description": "专为新型农业经营主体提供的创业资金支持",
-        "detailed_description": "该产品面向有稳定收入来源的农业从业者...",
-        "min_amount": 10000,
-        "max_amount": 500000,
-        "min_term": 6,
-        "max_term": 36,
-        "interest_rate": 0.065,
-        "repayment_methods": ["equal_installment", "interest_first"],
-        "application_materials": [
-            {
-                "name": "身份证明",
-                "description": "二代身份证正反面",
-                "required": true
-            },
-            {
-                "name": "收入证明",
-                "description": "近3个月银行流水",
-                "required": true
-            }
-        ],
-        "approval_process": {
-            "estimated_time": "24小时",
-            "steps": ["资料审核", "征信查询", "AI风险评估", "人工复审", "放款"]
-        }
-    }
-}
+```http
+GET /api/user/loan/products/{product_id}
+Authorization: Bearer {access_token}
 ```
 
 ---
 
-## 💰 贷款申请管理
+## 💰 惠农APP/Web - 贷款申请接口
+
+**接口路径前缀**: `/api/user/loan/applications`
+**认证要求**: `RequireAuth` (惠农APP/Web用户)
+**适用平台**: `app`, `web`
 
 ### 2.1 提交贷款申请
+
 ```http
-POST /api/loans/applications
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+POST /api/user/loan/applications
+Authorization: Bearer {access_token}
 Content-Type: application/json
 
 {
     "product_id": 1001,
     "amount": 100000,
-    "term": 12,
-    "purpose": "购买农机设备",
-    "repayment_method": "equal_installment",
-    "business_info": {
-        "business_type": "种植业",
-        "annual_income": 200000,
-        "planting_area": 50,
-        "main_crops": ["水稻", "玉米"],
-        "years_experience": 5
-    },
-    "guarantor_info": {
-        "name": "李四",
-        "id_card": "370123199001011235",
-        "phone": "13800138001",
-        "relationship": "亲属",
-        "annual_income": 150000
-    },
-    "materials": [
-        {
-            "type": "id_card",
-            "file_url": "https://example.com/files/id_card_front.jpg"
-        },
-        {
-            "type": "income_proof",
-            "file_url": "https://example.com/files/bank_statement.pdf"
-        }
-    ]
+    // ... 其他申请信息
 }
 ```
 
-**响应示例:**
-```json
-{
-    "code": 200,
-    "message": "申请提交成功",
-    "data": {
-        "application_id": "LA20240115001",
-        "status": "submitted",
-        "estimated_approval_time": "24小时内",
-        "next_steps": [
-            "系统将自动进行初步审核",
-            "请保持手机畅通，等待审核结果"
-        ]
-    }
-}
-```
+### 2.2 获取当前用户的贷款申请列表
 
-### 2.2 获取贷款申请列表
 ```http
-GET /api/loans/applications?status=all&page=1&limit=10
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+GET /api/user/loan/applications?status=all&page=1&limit=10
+Authorization: Bearer {access_token}
 ```
 
-**响应示例:**
+### 2.3 获取当前用户指定贷款申请详情
+
+```http
+GET /api/user/loan/applications/{application_id}
+Authorization: Bearer {access_token}
+```
+
+### 2.4 用户取消贷款申请 (在特定状态下)
+
+```http
+DELETE /api/user/loan/applications/{application_id}
+Authorization: Bearer {access_token}
+```
+
+---
+
+## 🛠️ OA系统 - 贷款审批与管理接口 (管理员)
+
+**接口路径前缀**: `/api/oa/admin/loans`
+**认证要求**: `RequireAuth`, `CheckPlatform("oa")`, `RequireRole("admin")`
+**适用平台**: `oa`
+
+### 3.1 获取所有贷款申请列表 (管理员视图)
+
+```http
+GET /api/oa/admin/loans/applications?status=pending&user_id=101&page=1&limit=20
+Authorization: Bearer {oa_access_token}
+```
+
+**Query Parameters (示例)**:
+-   `status`: `pending`, `approved`, `rejected`, `submitted`, `under_review`, `all`
+-   `user_id`: 筛选特定惠农用户的申请 (User ID)
+-   `product_id`: 筛选特定贷款产品的申请
+-   `date_range_start`, `date_range_end`: 按申请日期筛选
+
+**响应示例 (部分):**
 ```json
 {
     "code": 200,
     "message": "获取成功",
     "data": {
-        "total": 25,
-        "page": 1,
-        "limit": 10,
+        "total": 50,
         "applications": [
             {
                 "id": "LA20240115001",
+                "user_info": { "user_id": 101, "real_name": "张三", "phone": "138..." },
                 "product_name": "农业创业贷",
                 "amount": 100000,
-                "amount_yuan": "100,000.00",
-                "term": 12,
-                "status": "approved",
-                "status_text": "已批准",
-                "applied_at": "2024-01-15T10:30:00Z",
-                "approved_at": "2024-01-16T14:20:00Z",
-                "interest_rate": 0.065,
-                "monthly_payment": 8849
+                "status": "pending",
+                "applied_at": "2024-01-15T10:30:00Z"
             }
         ]
     }
 }
 ```
 
-### 2.3 获取申请详情
+### 3.2 获取指定贷款申请详情 (管理员视图)
+
 ```http
-GET /api/loans/applications/{application_id}
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+GET /api/oa/admin/loans/applications/{application_id}
+Authorization: Bearer {oa_access_token}
+```
+
+(响应会包含更详细的审核信息、用户信息等)
+
+### 3.3 审批操作：批准贷款申请
+
+```http
+POST /api/oa/admin/loans/applications/{application_id}/approve
+Authorization: Bearer {oa_access_token}
+Content-Type: application/json
+
+{
+    "approved_amount": 100000, // 批准金额，可能与申请金额不同
+    "approved_term": 12,       // 批准期限
+    "interest_rate": 0.06,     // 最终利率
+    "repayment_start_date": "2024-02-01",
+    "approval_comments": "综合评估通过，同意放款。"
+}
+```
+
+### 3.4 审批操作：拒绝贷款申请
+
+```http
+POST /api/oa/admin/loans/applications/{application_id}/reject
+Authorization: Bearer {oa_access_token}
+Content-Type: application/json
+
+{
+    "rejection_reason_code": "INSUFFICIENT_CREDIT", // 预定义的拒绝原因代码
+    "rejection_comments": "申请人信用评分不足，且缺乏有效抵押物。",
+    "notify_user": true
+}
+```
+
+### 3.5 审批操作：退回贷款申请 (要求补充材料)
+
+```http
+POST /api/oa/admin/loans/applications/{application_id}/return
+Authorization: Bearer {oa_access_token}
+Content-Type: application/json
+
+{
+    "return_reason": "需要补充最新的银行流水证明。",
+    "required_materials": ["近三个月银行流水"],
+    "notify_user": true
+}
+```
+
+### 3.6 开始人工审核 (标记申请进入审核流程)
+
+```http
+POST /api/oa/admin/loans/applications/{application_id}/start-review
+Authorization: Bearer {oa_access_token}
+Content-Type: application/json
+
+{
+    "reviewer_id": 301, // 当前审核员的OA User ID
+    "review_department": "信贷审批部"
+}
+```
+
+### 3.7 重试AI风险评估 (当Dify调用失败或需要重新评估时)
+
+```http
+POST /api/oa/admin/loans/applications/{application_id}/retry-ai
+Authorization: Bearer {oa_access_token}
+```
+
+### 3.8 获取贷款统计数据 (管理员)
+
+```http
+GET /api/oa/admin/loans/statistics
+Authorization: Bearer {oa_access_token}
 ```
 
 **响应示例:**
@@ -203,78 +216,24 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     "code": 200,
     "message": "获取成功",
     "data": {
-        "id": "LA20240115001",
-        "product": {
-            "id": 1001,
-            "name": "农业创业贷",
-            "code": "NYCD001"
-        },
-        "amount": 100000,
-        "term": 12,
-        "purpose": "购买农机设备",
-        "status": "approved",
-        "status_text": "已批准",
-        "interest_rate": 0.065,
-        "repayment_method": "equal_installment",
-        "monthly_payment": 8849,
-        "applied_at": "2024-01-15T10:30:00Z",
-        "approved_at": "2024-01-16T14:20:00Z",
-        "approval_history": [
-            {
-                "stage": "初审",
-                "status": "passed",
-                "reviewer": "系统自动审核",
-                "review_time": "2024-01-15T11:00:00Z",
-                "comments": "基本资料齐全，信用良好"
-            },
-            {
-                "stage": "终审",
-                "status": "passed",
-                "reviewer": "风控部门",
-                "review_time": "2024-01-16T14:20:00Z",
-                "comments": "综合评估通过，同意放款"
-            }
-        ]
+        "total_applications": 1200,
+        "pending_applications": 50,
+        "approved_applications": 800,
+        "rejected_applications": 350,
+        "total_loan_amount": 50000000,
+        "average_loan_amount": 41666,
+        "default_rate": 0.025
     }
-}
-```
-
-### 2.4 更新申请信息
-```http
-PUT /api/loans/applications/{application_id}
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-Content-Type: application/json
-
-{
-    "business_info": {
-        "annual_income": 250000,
-        "planting_area": 60
-    },
-    "additional_materials": [
-        {
-            "type": "land_certificate",
-            "file_url": "https://example.com/files/land_cert.pdf"
-        }
-    ]
-}
-```
-
-### 2.5 取消申请
-```http
-DELETE /api/loans/applications/{application_id}
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-Content-Type: application/json
-
-{
-    "reason": "暂不需要贷款"
 }
 ```
 
 ---
 
+**说明**: 上述API仅为核心示例，实际项目中会包含更多参数、状态流转和错误处理。前端开发时请结合后端具体实现进行调整。
+
 ## 💳 贷款合同管理
 
-### 3.1 生成贷款合同
+### 4.1 生成贷款合同
 ```http
 POST /api/loans/contracts/{application_id}
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -294,7 +253,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 }
 ```
 
-### 3.2 签署合同
+### 4.2 签署合同
 ```http
 POST /api/loans/contracts/{contract_id}/sign
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -307,7 +266,7 @@ Content-Type: application/json
 }
 ```
 
-### 3.3 获取合同详情
+### 4.3 获取合同详情
 ```http
 GET /api/loans/contracts/{contract_id}
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -317,7 +276,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ## 📊 额度评估管理
 
-### 4.1 获取信用额度
+### 5.1 获取信用额度
 ```http
 GET /api/loans/credit-limit
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -357,7 +316,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 }
 ```
 
-### 4.2 申请额度提升
+### 5.2 申请额度提升
 ```http
 POST /api/loans/credit-limit/increase
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -379,7 +338,7 @@ Content-Type: application/json
 
 ## 💸 还款管理
 
-### 5.1 获取还款计划
+### 6.1 获取还款计划
 ```http
 GET /api/loans/{loan_id}/repayment-schedule
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -420,7 +379,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 }
 ```
 
-### 5.2 主动还款
+### 6.2 主动还款
 ```http
 POST /api/loans/{loan_id}/repayment
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -449,7 +408,7 @@ Content-Type: application/json
 }
 ```
 
-### 5.3 提前还款计算
+### 6.3 提前还款计算
 ```http
 POST /api/loans/{loan_id}/prepayment-calculate
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -478,7 +437,7 @@ Content-Type: application/json
 }
 ```
 
-### 5.4 获取还款记录
+### 6.4 获取还款记录
 ```http
 GET /api/loans/{loan_id}/payments?page=1&limit=20
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -488,7 +447,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ## 🏦 放款管理
 
-### 6.1 确认放款信息
+### 7.1 确认放款信息
 ```http
 GET /api/loans/{loan_id}/disbursement-info
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -515,7 +474,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 }
 ```
 
-### 6.2 申请放款
+### 7.2 申请放款
 ```http
 POST /api/loans/{loan_id}/disburse
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -531,7 +490,7 @@ Content-Type: application/json
 
 ## 📈 贷款统计查询
 
-### 7.1 获取贷款概览
+### 8.1 获取贷款概览
 ```http
 GET /api/loans/overview
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -558,7 +517,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 }
 ```
 
-### 7.2 获取历史贷款
+### 8.2 获取历史贷款
 ```http
 GET /api/loans/history?status=completed&page=1&limit=10
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -568,7 +527,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ## 🔔 提醒服务
 
-### 8.1 获取还款提醒设置
+### 9.1 获取还款提醒设置
 ```http
 GET /api/loans/reminder-settings
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -589,7 +548,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 }
 ```
 
-### 8.2 更新提醒设置
+### 9.2 更新提醒设置
 ```http
 PUT /api/loans/reminder-settings
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -628,7 +587,7 @@ Content-Type: application/json
 ```javascript
 // 获取贷款产品
 const getLoanProducts = async (token) => {
-    const response = await fetch('/api/loans/products?user_type=farmer', {
+    const response = await fetch('/api/user/loan/products?user_type=farmer', {
         headers: {
             'Authorization': `Bearer ${token}`
         }
@@ -638,7 +597,7 @@ const getLoanProducts = async (token) => {
 
 // 提交贷款申请
 const submitLoanApplication = async (token, applicationData) => {
-    const response = await fetch('/api/loans/applications', {
+    const response = await fetch('/api/user/loan/applications', {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`,

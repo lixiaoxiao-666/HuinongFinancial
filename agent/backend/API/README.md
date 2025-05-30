@@ -237,28 +237,63 @@ Authorization: Bearer {access_token}
 
 ## 🔐 认证与授权
 
-### 🎫 Token机制
-- **Access Token**: 有效期24小时，用于API调用
-- **Refresh Token**: 有效期7天，用于刷新Access Token
-- **Session ID**: 会话标识，存储在Redis中
+系统采用基于Redis的统一会话管理机制，为不同平台（惠农APP、惠农Web、OA后台）提供安全、高效的认证服务。
 
-### 👥 用户类型
-- **farmer** - 个体农户
-- **farm_owner** - 家庭农场主  
-- **cooperative** - 农民合作社
-- **enterprise** - 农业企业
-- **admin** - 系统管理员
+### 🔑 核心认证流程
 
-### 🔒 权限控制
-```
-user_view        - 查看用户信息
-user_manage      - 管理用户
-loan_view        - 查看贷款信息
-loan_approve     - 审批贷款
-machine_manage   - 管理农机
-content_manage   - 管理内容
-system_config    - 系统配置
-```
+1.  **登录获取Token**:
+    *   惠农APP/Web用户通过 `/api/auth/login` 登录。
+    *   OA系统用户通过 `/api/oa/auth/login` 登录。
+    *   成功登录后，返回 `access_token` 和 `refresh_token`。
+2.  **访问受保护API**:
+    *   在请求头中携带 `Authorization: Bearer {access_token}`。
+3.  **Token验证与平台检查**:
+    *   `RequireAuth()`: 验证Token有效性，并将用户信息（如 `user_id`, `platform`）存入上下文。
+    *   `CheckPlatform("{platform_name}")`: （可选）检查当前用户的 `platform` 是否符合接口要求。
+    *   `RequireRole("{role_name}")`: （仅OA管理员接口）检查OA用户的角色是否符合要求。
+4.  **Token刷新**:
+    *   当 `access_token` 过期时，使用 `refresh_token` 通过 `/api/auth/refresh` (惠农端) 或 `/api/oa/auth/refresh` (OA端) 获取新的Token对。
+
+### 🛡️ 权限模型
+
+系统权限主要通过以下方式控制：
+
+1.  **平台隔离 (`platform`)**: Token中会包含用户登录的平台信息 (`app`, `web`, `oa`)。后端通过 `CheckPlatform()` 中间件确保用户只能访问其对应平台的API。
+    *   例如，OA用户不能访问惠农APP特有的接口。
+2.  **路由分组**: 不同平台的API通过不同的路由前缀进行物理隔离。
+    *   惠农APP/Web通用接口: `/api/user/*`
+    *   OA系统普通用户接口: `/api/oa/user/*`
+    *   OA系统管理员接口: `/api/oa/admin/*`
+3.  **OA系统角色 (`role`)**: OA系统内部有明确的角色划分（如 `admin`, `staff` 等）。
+    *   管理员接口 (`/api/oa/admin/*`) 会通过 `RequireRole("admin")` 中间件校验用户是否具有管理员角色。
+
+### 🎫 Token与会话
+
+-   **Access Token**: 短效期（例如：24小时），用于API接口调用时的身份验证。
+-   **Refresh Token**: 长效期（例如：7天），用于在Access Token过期后，安全地获取新的Access Token，无需用户重新登录。
+-   **Session**: 用户登录后，会在Redis中创建一条会话记录，包含用户ID、平台、设备信息、Token哈希等。Token的有效性最终通过查询Redis会话来确认。
+
+### 👥 用户与角色
+
+-   **惠农APP/Web用户 (`User` 模型)**:
+    *   主要通过 `UserType` (如 `farmer`, `farm_owner`) 区分用户类型，业务逻辑上可能有所不同，但API权限上通常视为普通用户。
+-   **OA系统用户 (`OAUser` 模型)**:
+    *   具有 `RoleID` 字段，关联到 `OARole` 模型，实现细粒度的权限控制。
+    *   **普通OA用户**: 登录OA系统，可以访问 `/api/oa/user/*` 下的接口，如查看个人信息、自己提交的申请等。
+    *   **OA管理员**: 具有 `admin` 角色，可以访问 `/api/oa/admin/*` 下的所有管理接口，如用户管理、贷款审批、系统配置等。
+
+### 🚦 API端点权限示例
+
+| API端点                               | 认证要求                         | 平台要求     | 角色要求     | 说明                                     |
+| :------------------------------------ | :------------------------------- | :----------- | :----------- | :--------------------------------------- |
+| `POST /api/auth/login`                | 无                               | N/A          | N/A          | 惠农APP/Web用户登录                      |
+| `POST /api/oa/auth/login`             | 无                               | N/A          | N/A          | OA系统用户登录                           |
+| `GET /api/user/profile`               | `RequireAuth`                    | `app` 或 `web` | N/A          | 获取惠农APP/Web用户个人信息                |
+| `GET /api/oa/user/profile`            | `RequireAuth`                    | `oa`         | N/A          | 获取OA系统普通用户个人信息                 |
+| `GET /api/oa/admin/users`             | `RequireAuth`                    | `oa`         | `admin`      | OA管理员获取用户列表                     |
+| `POST /api/oa/admin/loans/approve`    | `RequireAuth`                    | `oa`         | `admin`      | OA管理员审批贷款                         |
+| `GET /api/content/articles`           | `OptionalAuth` (可选认证)        | N/A          | N/A          | 公开获取文章，登录用户可能看到个性化内容   |
+| `POST /api/internal/dify/...`         | Dify专用Token                   | N/A          | N/A          | Dify工作流内部调用                       |
 
 ---
 

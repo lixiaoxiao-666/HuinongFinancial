@@ -1,612 +1,348 @@
-# OA后台管理模块 - API 接口文档
+# OA系统管理模块 - API 接口文档
 
 ## 📋 模块概述
 
-OA后台管理模块为管理员提供完整的系统管理功能，包括用户管理、业务审批、数据统计、系统配置等。支持多级权限管理，实现精细化的权限控制和业务流程管理。
+OA后台管理模块为内部运营和管理人员提供系统管理功能。根据用户角色，提供不同级别的操作权限。
 
-### 🚀 当前实现状态
+### 平台与角色
 
-#### ✅ **已实现的接口：**
-- 🔐 **管理员登录**: `POST /api/oa/auth/login` 
-- 👥 **用户管理**: 
-  - `GET /api/oa/users` - 获取用户列表
-  - `GET /api/oa/users/{user_id}` - 获取用户详情
-  - `PUT /api/oa/users/{user_id}/status` - 更新用户状态
-  - `POST /api/oa/users/batch-operation` - 批量操作用户
-- 🚜 **农机设备管理**:
-  - `GET /api/oa/machines` - 获取农机设备列表
-  - `GET /api/oa/machines/{machine_id}` - 获取农机设备详情
-- 📊 **数据统计**:
-  - `GET /api/oa/dashboard` - 获取工作台数据
-  - `GET /api/oa/dashboard/overview` - 获取业务概览
-  - `GET /api/oa/dashboard/risk-monitoring` - 获取风险监控数据
+-   **适用平台**: `oa` (所有OA接口)
+-   **用户模型**: `OAUser` (包含 `RoleID`)
+-   **权限划分**:
+    -   **普通OA用户**: 拥有基础操作权限，如查看个人信息、提交的申请等。
+        -   API路径: `/api/oa/user/*`
+        -   认证要求: `RequireAuth`, `CheckPlatform("oa")`
+    -   **OA管理员**: 拥有高级管理权限，如用户管理、系统配置、业务审批等。
+        -   API路径: `/api/oa/admin/*`
+        -   认证要求: `RequireAuth`, `CheckPlatform("oa")`, `RequireRole("admin")`
 
-#### ⚠️ **待实现的接口（当前返回模拟数据）：**
-- 📋 认证审核管理
-- ⚙️ 系统配置管理
-- 🔍 操作日志管理
-- 👑 权限管理
-- 📈 报表导出
+### 核心功能 (按角色划分)
 
-### 核心功能
-- 👥 **用户管理**: 用户列表、权限管理、认证审核
-- 📋 **审批管理**: 贷款审批、农机审批、工作流管理
-- 📊 **数据统计**: 业务报表、用户分析、风险监控
-- ⚙️ **系统配置**: 参数设置、通知管理、日志查看
-- 🔐 **权限管理**: 角色管理、权限分配、操作审计
+#### 普通OA用户 (`/api/oa/user/*`)
+-   个人信息查看与修改
+-   查看自己的业务数据（如贷款申请、农机订单等）
+
+#### OA管理员 (`/api/oa/admin/*`)
+-   **用户管理**: 管理所有惠农用户 (`User`) 和OA系统用户 (`OAUser`)。
+-   **业务审批**: 贷款申请审批、实名认证审核等。
+-   **内容管理**: 发布和管理资讯、政策等。
+-   **农机管理**: 管理农机设备信息、租赁订单等。
+-   **系统配置**: 系统参数设置、角色权限管理。
+-   **数据统计与监控**: 查看业务报表、系统监控数据。
+-   **会话管理**: 查看和管理用户会话。
 
 ---
 
-## 🔐 管理员认证
+## 🔐 OA系统 - 认证接口
 
-### 1.1 管理员登录
+**接口路径前缀**: `/api/oa/auth`
+**适用平台**: `oa`
+**认证要求**: 无 (部分接口如 /validate, /logout 需要先登录)
+
+### 1.1 OA用户登录
+
 ```http
 POST /api/oa/auth/login
 Content-Type: application/json
 
 {
-    "username": "admin",
-    "password": "admin123",
-    "platform": "oa",
-    "device_type": "web",
-    "device_name": "OA管理系统",
-    "device_id": "oa_web_1640995200000",
-    "app_version": "1.0.0"
+    "username": "oa_admin_user", // 或 email
+    "password": "password123",
+    "platform": "oa", // 固定为 "oa"
+    "device_info": { // 可选，用于审计和设备管理
+        "device_id": "OA_WebApp_Session_XYZ",
+        "device_type": "web",
+        "user_agent": "Mozilla/5.0 (...)"
+    }
 }
 ```
 
-**响应示例:**
+**响应示例 (成功):**
 ```json
 {
     "code": 200,
     "message": "登录成功",
     "data": {
-        "user": {
-            "id": 1,
-            "username": "admin",
-            "email": "admin@huinong.com",
-            "real_name": "超级管理员",
-            "role_id": 1,
-            "department": "技术部",
-            "position": "系统管理员",
-            "status": "active",
-            "login_count": 1,
-            "last_login_at": "2024-01-15T09:30:00Z",
-            "created_at": "2023-12-01T10:00:00Z",
-            "updated_at": "2024-01-15T09:30:00Z"
-        },
-        "access_token": "oa_access_token_1_1640995200",
-        "refresh_token": "oa_refresh_token_1_1640995200",
+        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
         "expires_in": 86400,
-        "session_id": "oa_sess_1640995200000_1640995200"
+        "user_info": { // 登录成功后返回的OA用户信息
+            "id": 201,
+            "username": "oa_admin_user",
+            "real_name": "管理员张三",
+            "role": "admin" // 用户角色
+        }
     }
 }
 ```
 
-**测试账户（开发环境）:**
-- **超级管理员**: `admin` / `admin123`
-- **审批员**: `reviewer` / `reviewer123`
+### 1.2 OA Token刷新
 
-**错误响应:**
-```json
+```http
+POST /api/oa/auth/refresh
+Content-Type: application/json
+
 {
-    "code": 401,
-    "message": "登录失败",
-    "detail": "用户名或密码错误"
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
-**注意事项:**
-- ✅ 已简化登录流程，无需验证码
-- ✅ 支持基于Redis的分布式会话管理
-- ✅ 自动设置platform为"oa"进行权限识别
-- ✅ 生成OA专用的Token前缀，避免与普通用户冲突
+### 1.3 OA Token验证
+
+```http
+GET /api/oa/auth/validate
+Authorization: Bearer {access_token}
+```
+
+### 1.4 OA用户登出
+
+```http
+POST /api/oa/auth/logout
+Authorization: Bearer {access_token}
+```
 
 ---
 
-## 👥 用户管理
+## 🧑‍💼 OA系统 - 普通用户接口
 
-### 2.1 获取用户列表
+**接口路径前缀**: `/api/oa/user`
+**适用平台**: `oa`
+**认证要求**: `RequireAuth`, `CheckPlatform("oa")`
+
+### 2.1 获取当前OA用户信息
+
 ```http
-GET /api/oa/users?page=1&limit=20&status=active&user_type=farmer&keyword=张三
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+GET /api/oa/user/profile
+Authorization: Bearer {access_token}
 ```
 
-**响应示例:**
+(响应示例见 `user_management.md` 中OA用户部分)
+
+### 2.2 更新当前OA用户信息
+
+```http
+PUT /api/oa/user/profile
+Authorization: Bearer {access_token}
+Content-Type: application/json
+
+{
+    "email": "new_oa_user_email@example.com",
+    "phone": "13900139002",
+    "avatar": "https://new.oa_avatar.url/image.png"
+}
+```
+
+### 2.3 OA用户修改密码
+
+```http
+PUT /api/oa/user/password
+Authorization: Bearer {access_token}
+Content-Type: application/json
+
+{
+    "old_password": "oldpassword123",
+    "new_password": "newpassword123"
+}
+```
+
+### 2.4 查看自己提交的贷款申请
+
+```http
+GET /api/oa/user/loan/applications?status=pending&page=1&limit=10
+Authorization: Bearer {access_token}
+```
+
+**说明**: 此接口复用 `/api/user/loan/applications` 的Handler，但通过OA认证和平台检查确保是OA用户访问自己的数据。具体参数和响应请参考 `loan_management.md`。
+
+---
+
+## 🛠️ OA系统 - 管理员接口
+
+**接口路径前缀**: `/api/oa/admin`
+**适用平台**: `oa`
+**认证要求**: `RequireAuth`, `CheckPlatform("oa")`, `RequireRole("admin")`
+
+### 3.1 用户管理 (管理员)
+
+#### 3.1.1 获取用户列表 (惠农用户和OA用户)
+
+```http
+GET /api/oa/admin/users?page=1&limit=20&status=active&user_type=farmer&keyword=张三&platform_user_type=app_user
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters**:
+-   `platform_user_type`: `app_user` (惠农用户), `oa_user` (OA用户), `all` (默认，所有)
+
+**响应示例 (部分):**
 ```json
 {
     "code": 200,
     "message": "获取成功",
     "data": {
         "total": 1250,
-        "page": 1,
-        "limit": 20,
-        "filters": {
-            "user_types": [
-                {"value": "farmer", "label": "个体农户", "count": 800},
-                {"value": "farm_owner", "label": "农场主", "count": 300},
-                {"value": "cooperative", "label": "合作社", "count": 150}
-            ],
-            "statuses": [
-                {"value": "active", "label": "正常", "count": 1100},
-                {"value": "frozen", "label": "冻结", "count": 50},
-                {"value": "deleted", "label": "删除", "count": 100}
-            ]
-        },
         "users": [
             {
-                "id": 10001,
-                "uuid": "uuid-abc-123",
+                "id": 1001, // 如果是惠农用户，这里是 User ID
+                "user_id_type": "app_user", // 标识用户来源
                 "phone": "13800138000",
-                "real_name": "张三",
-                "user_type": "farmer",
-                "user_type_text": "个体农户",
-                "status": "active",
-                "status_text": "正常",
-                "province": "山东省",
-                "city": "济南市",
-                "county": "历城区",
-                "is_real_name_verified": true,
-                "is_bank_card_verified": true,
-                "credit_score": 750,
-                "credit_level": "优秀",
-                "total_loans": 3,
-                "total_borrowed": 150000,
-                "current_debt": 50000,
-                "overdue_count": 0,
-                "last_login_time": "2024-01-15T14:30:00Z",
-                "created_at": "2023-08-15T10:00:00Z"
-            }
-        ]
-    }
-}
-```
-
-### 2.2 获取用户详情
-```http
-GET /api/oa/users/{user_id}
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-**响应示例:**
-```json
-{
-    "code": 200,
-    "message": "获取成功",
-    "data": {
-        "basic_info": {
-            "id": 10001,
-            "uuid": "uuid-abc-123",
-            "phone": "13800138000",
-            "email": "zhangsan@example.com",
-            "real_name": "张三",
-            "id_card": "370123199001011234",
-            "gender": "male",
-            "birthday": "1990-01-01",
-            "user_type": "farmer",
-            "status": "active",
-            "created_at": "2023-08-15T10:00:00Z"
-        },
-        "address_info": {
-            "province": "山东省",
-            "city": "济南市",
-            "county": "历城区",
-            "address": "某某村123号",
-            "longitude": 117.1234,
-            "latitude": 36.5678
-        },
-        "auth_status": {
-            "is_real_name_verified": true,
-            "is_bank_card_verified": true,
-            "is_credit_verified": false,
-            "real_name_auth_time": "2023-08-20T10:00:00Z",
-            "bank_card_auth_time": "2023-08-25T15:30:00Z"
-        },
-        "credit_info": {
-            "credit_score": 750,
-            "credit_level": "优秀",
-            "balance": 5000,
-            "total_limit": 500000,
-            "used_limit": 50000,
-            "available_limit": 450000
-        },
-        "business_summary": {
-            "total_loans": 3,
-            "total_borrowed": 150000,
-            "total_repaid": 100000,
-            "current_debt": 50000,
-            "overdue_count": 0,
-            "total_rentals": 15,
-            "total_rental_cost": 45000
-        },
-        "login_info": {
-            "login_count": 156,
-            "last_login_time": "2024-01-15T14:30:00Z",
-            "last_login_ip": "192.168.1.100",
-            "device_count": 2
-        },
-        "risk_assessment": {
-            "risk_level": "low",
-            "risk_score": 85,
-            "risk_factors": [],
-            "blacklist_status": false
-        }
-    }
-}
-```
-
-### 2.3 用户状态管理
-```http
-PUT /api/oa/users/{user_id}/status
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-Content-Type: application/json
-
-{
-    "status": "frozen",
-    "reason": "风险账户",
-    "note": "多次逾期还款，暂时冻结账户",
-    "notify_user": true
-}
-```
-
-**响应示例:**
-```json
-{
-    "code": 200,
-    "message": "状态更新成功",
-    "data": {
-        "user_id": 10001,
-        "old_status": "active",
-        "new_status": "frozen",
-        "operation_time": "2024-01-15T16:30:00Z",
-        "operator": "admin"
-    }
-}
-```
-
-### 2.4 批量操作
-```http
-POST /api/oa/users/batch-operation
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-Content-Type: application/json
-
-{
-    "operation": "freeze",
-    "user_ids": [10001, 10002, 10003],
-    "reason": "批量风控处理",
-    "notify_users": true
-}
-```
-
----
-
-## 🚜 农机设备管理
-
-### 5.1 获取农机设备列表
-```http
-GET /api/oa/machines?status=active&category=tillage&owner_type=cooperative&page=1&limit=20
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-**响应示例:**
-```json
-{
-    "code": 200,
-    "message": "获取成功",
-    "data": {
-        "total": 156,
-        "page": 1,
-        "limit": 20,
-        "summary": {
-            "total_machines": 156,
-            "active_machines": 135,
-            "rented_machines": 45,
-            "maintenance_machines": 12
-        },
-        "filters": {
-            "categories": [
-                {"code": "tillage", "name": "耕地机械", "count": 68},
-                {"code": "planting", "name": "播种机械", "count": 35},
-                {"code": "harvesting", "name": "收获机械", "count": 53}
-            ],
-            "status_options": [
-                {"value": "active", "label": "可用", "count": 135},
-                {"value": "rented", "label": "租赁中", "count": 45},
-                {"value": "maintenance", "label": "维护中", "count": 12}
-            ]
-        },
-        "machines": [
-            {
-                "id": 10001,
-                "name": "约翰迪尔 6B-1204拖拉机",
-                "category": "tillage",
-                "category_name": "耕地机械",
-                "brand": "约翰迪尔",
-                "model": "6B-1204",
-                "serial_number": "JD2022120401",
-                "year": 2022,
-                "status": "active",
-                "status_text": "可用",
-                "condition": "excellent",
-                "owner": {
-                    "id": 2001,
-                    "name": "济南农机合作社",
-                    "type": "cooperative",
-                    "contact_phone": "0531-12345678"
-                },
-                "location": {
-                    "province": "山东省",
-                    "city": "济南市",
-                    "district": "历城区",
-                    "address": "农机服务站"
-                },
-                "rental_info": {
-                    "daily_rate": 500,
-                    "total_orders": 25,
-                    "total_revenue": 37500,
-                    "utilization_rate": 0.68
-                },
-                "maintenance": {
-                    "last_maintenance": "2024-01-10",
-                    "next_maintenance": "2024-04-10",
-                    "maintenance_status": "正常"
-                },
-                "created_at": "2023-03-15T08:00:00Z",
-                "updated_at": "2024-01-15T10:30:00Z"
-            }
-        ]
-    }
-}
-```
-
-### 5.2 获取农机设备详情
-```http
-GET /api/oa/machines/{machine_id}
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-**响应示例:**
-```json
-{
-    "code": 200,
-    "message": "获取成功",
-    "data": {
-        "basic_info": {
-            "id": 10001,
-            "name": "约翰迪尔 6B-1204拖拉机",
-            "category": "tillage",
-            "brand": "约翰迪尔",
-            "model": "6B-1204",
-            "serial_number": "JD2022120401",
-            "purchase_date": "2022-03-15",
-            "purchase_price": 320000,
-            "current_value": 280000,
-            "depreciation_rate": 0.125,
-            "status": "active",
-            "condition": "excellent"
-        },
-        "owner_info": {
-            "id": 2001,
-            "name": "济南农机合作社",
-            "type": "cooperative",
-            "legal_person": "李四",
-            "contact_phone": "0531-12345678",
-            "business_license": "91370100123456789X",
-            "registration_date": "2020-05-20"
-        },
-        "specifications": {
-            "engine_power": "120马力",
-            "engine_type": "柴油发动机",
-            "transmission": "动力换挡",
-            "fuel_capacity": "280L",
-            "weight": "4800kg",
-            "dimensions": {
-                "length": "4.2m",
-                "width": "2.1m", 
-                "height": "2.8m"
-            }
-        },
-        "rental_statistics": {
-            "total_orders": 25,
-            "total_days": 180,
-            "total_revenue": 90000,
-            "average_daily_rate": 500,
-            "utilization_rate": 0.68,
-            "customer_rating": 4.8,
-            "return_rate": 0.96
-        },
-        "maintenance_records": [
-            {
-                "id": 1001,
-                "type": "routine",
-                "description": "例行保养检查",
-                "date": "2024-01-10",
-                "cost": 800,
-                "technician": "张师傅",
-                "status": "completed"
-            }
-        ],
-        "current_status": {
-            "location": {
-                "longitude": 117.1234,
-                "latitude": 36.5678,
-                "address": "济南市历城区农机服务站",
-                "updated_at": "2024-01-15T10:30:00Z"
+                "real_name": "张三 (惠农用户)",
+                // ... 惠农User模型字段
             },
-            "current_order": null,
-            "next_booking": {
-                "start_date": "2024-01-20",
-                "customer_name": "张三"
-            }
-        }
-    }
-}
-```
-
-### 5.3 审批农机申请
-```http
-POST /api/oa/machines/{machine_id}/review
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-Content-Type: application/json
-
-{
-    "action": "approve",
-    "review_note": "设备状态良好，服务商资质齐全",
-    "approved_categories": ["耕地作业", "播种作业"],
-    "restricted_areas": [],
-    "rental_rate_approved": true
-}
-```
-
-### 5.4 设备状态管理
-```http
-PUT /api/oa/machines/{machine_id}/status
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-Content-Type: application/json
-
-{
-    "status": "maintenance",
-    "reason": "例行维护保养",
-    "estimated_duration": 5,
-    "maintenance_type": "routine",
-    "notify_pending_customers": true
-}
-```
-
-### 5.5 获取设备所有者列表
-```http
-GET /api/oa/machine-owners?type=cooperative&status=active&page=1&limit=20
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-**响应示例:**
-```json
-{
-    "code": 200,
-    "message": "获取成功",
-    "data": {
-        "total": 45,
-        "page": 1,
-        "limit": 20,
-        "owners": [
             {
-                "id": 2001,
-                "name": "济南农机合作社",
-                "type": "cooperative",
-                "legal_person": "李四",
-                "contact_phone": "0531-12345678",
-                "business_license": "91370100123456789X",
-                "status": "active",
-                "machine_count": 12,
-                "total_revenue": 450000,
-                "rating": 4.8,
-                "registration_date": "2020-05-20",
-                "last_active": "2024-01-15T14:30:00Z"
+                "id": 205, // 如果是OA用户，这里是 OAUser ID
+                "user_id_type": "oa_user",
+                "username": "oa_staff_li",
+                "real_name": "李四 (OA员工)",
+                "role": "staff",
+                // ... OAUser模型字段
             }
         ]
     }
 }
 ```
 
-### 5.6 设备所有者审核
+#### 3.1.2 获取指定用户详情 (惠农/OA)
+
 ```http
-POST /api/oa/machine-owners/{owner_id}/review
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+GET /api/oa/admin/users/{user_platform_id}?user_id_type=app_user
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters**:
+-   `user_id_type`: 必填, `app_user` 或 `oa_user`，用于区分ID类型。
+
+**Path Parameters**:
+-   `user_platform_id`: 用户在对应平台上的ID。
+
+#### 3.1.3 更新用户状态 (惠农/OA)
+
+```http
+PUT /api/oa/admin/users/{user_platform_id}/status?user_id_type=app_user
+Authorization: Bearer {access_token}
 Content-Type: application/json
 
 {
-    "action": "approve",
-    "review_note": "资质审核通过，允许上架设备",
-    "approved_categories": ["耕地机械", "播种机械"],
-    "max_machine_count": 50,
-    "commission_rate": 0.05
+    "status": "frozen", // active, frozen
+    "reason": "风险操作"
 }
 ```
 
-### 5.7 获取设备维护记录
-```http
-GET /api/oa/machines/{machine_id}/maintenance?page=1&limit=20
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
+#### 3.1.4 创建OA系统用户
 
-### 5.8 创建维护记录
 ```http
-POST /api/oa/machines/{machine_id}/maintenance
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+POST /api/oa/admin/users/oa-user
+Authorization: Bearer {access_token}
 Content-Type: application/json
 
 {
-    "type": "repair",
-    "description": "液压系统故障维修",
-    "estimated_cost": 1500,
-    "estimated_duration": 3,
-    "technician": "王师傅",
-    "parts_needed": ["液压油缸", "密封件"],
-    "priority": "high"
+    "username": "new_oa_staff",
+    "password": "staffpassword",
+    "email": "staff@example.com",
+    "real_name": "新员工王五",
+    "phone": "13700137000",
+    "role_id": 2, // 对应 OARole 的 ID
+    "department": "市场部",
+    "position": "市场专员"
 }
 ```
 
-### 5.9 设备利用率分析
-```http
-GET /api/oa/machines/analytics/utilization?period=month&start_date=2024-01-01&end_date=2024-01-31
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
+#### 3.1.5 更新OA系统用户信息
 
-**响应示例:**
-```json
-{
-    "code": 200,
-    "message": "获取成功",
-    "data": {
-        "overall_utilization": {
-            "average_rate": 0.65,
-            "total_machines": 156,
-            "active_machines": 135,
-            "high_utilization_count": 45,
-            "low_utilization_count": 23
-        },
-        "category_analysis": [
-            {
-                "category": "tillage",
-                "name": "耕地机械",
-                "machine_count": 68,
-                "utilization_rate": 0.72,
-                "revenue": 280000
-            }
-        ],
-        "top_performers": [
-            {
-                "machine_id": 10001,
-                "name": "约翰迪尔 6B-1204拖拉机",
-                "utilization_rate": 0.89,
-                "revenue": 45000
-            }
-        ],
-        "maintenance_alerts": [
-            {
-                "machine_id": 10015,
-                "alert_type": "overdue_maintenance",
-                "message": "设备超期未保养"
-            }
-        ]
-    }
-}
-```
-
-### 5.10 批量操作
 ```http
-POST /api/oa/machines/batch-operation
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+PUT /api/oa/admin/users/oa-user/{oa_user_id}
+Authorization: Bearer {access_token}
 Content-Type: application/json
 
 {
-    "operation": "status_change",
-    "machine_ids": [10001, 10002, 10003],
-    "new_status": "maintenance",
-    "reason": "冬季集中保养",
-    "estimated_duration": 7
+    "email": "updated_staff@example.com",
+    "real_name": "王五更新",
+    "role_id": 3,
+    "status": "active"
 }
 ```
+
+#### 3.1.6 删除OA系统用户
+
+```http
+DELETE /api/oa/admin/users/oa-user/{oa_user_id}
+Authorization: Bearer {access_token}
+```
+
+### 3.2 贷款审批管理 (管理员)
+
+(详细接口请参考 `loan_management.md` 中标记为管理员操作的部分，路径前缀为 `/api/oa/admin/loans/*`)
+
+**示例接口**:
+-   `GET /api/oa/admin/loans/applications` - 获取所有贷款申请列表 (可筛选)
+-   `POST /api/oa/admin/loans/applications/{application_id}/approve` - 批准贷款申请
+-   `POST /api/oa/admin/loans/applications/{application_id}/reject` - 拒绝贷款申请
+
+### 3.3 实名认证审核 (管理员)
+
+(详细接口请参考 `user_management.md` 或 `identity_auth.md` (如果单独创建) 中标记为管理员操作的部分)
+
+**示例接口**:
+-   `GET /api/oa/admin/auth/real-name/pending` - 获取待审核实名认证列表
+-   `POST /api/oa/admin/auth/real-name/{auth_id}/approve` - 通过实名认证
+-   `POST /api/oa/admin/auth/real-name/{auth_id}/reject` - 셔부实名认证
+
+### 3.4 内容管理 (管理员)
+
+(详细接口请参考 `content_management.md` 中标记为管理员操作的部分，路径前缀为 `/api/oa/admin/content/*`)
+
+### 3.5 农机管理 (管理员)
+
+(详细接口请参考 `machine_rental.md` 中标记为管理员操作的部分，路径前缀为 `/api/oa/admin/machines/*`)
+
+### 3.6 系统配置与管理 (管理员)
+
+#### 3.6.1 获取系统配置
+
+```http
+GET /api/oa/admin/system/config
+Authorization: Bearer {access_token}
+```
+
+#### 3.6.2 更新系统配置
+
+```http
+PUT /api/oa/admin/system/config
+Authorization: Bearer {access_token}
+Content-Type: application/json
+
+{
+    "site_name": "新惠农金融平台",
+    "default_loan_interest_rate": 0.05
+    // ... 其他配置项
+}
+```
+
+#### 3.6.3 OA角色管理
+-   `GET /api/oa/admin/system/roles` - 获取OA角色列表
+-   `POST /api/oa/admin/system/roles` - 创建OA角色
+-   `PUT /api/oa/admin/system/roles/{role_id}` - 更新OA角色
+-   `DELETE /api/oa/admin/system/roles/{role_id}` - 删除OA角色
+
+### 3.7 数据统计与仪表盘 (管理员)
+
+```http
+GET /api/oa/admin/dashboard/overview
+Authorization: Bearer {access_token}
+```
+
+```http
+GET /api/oa/admin/dashboard/risk-monitoring
+Authorization: Bearer {access_token}
+```
+
+### 3.8 会话管理 (管理员)
+
+(详细接口请参考 `session_management.md` 中标记为管理员操作的部分，路径前缀为 `/api/oa/admin/sessions/*`)
+
+**示例接口**:
+-   `GET /api/oa/admin/sessions/active` - 获取当前所有活跃会话
+-   `POST /api/oa/admin/sessions/{session_id}/revoke` - 强制指定会话下线
 
 ---
 
