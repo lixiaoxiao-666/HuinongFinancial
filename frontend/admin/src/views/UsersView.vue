@@ -2,19 +2,12 @@
   <div class="users-view">
     <div class="page-header">
       <div class="page-title-container">
-        <div class="page-icon">
-          <img src="@/assets/icons/blue-oa-logo.png" alt="Users" class="page-logo" />
-        </div>
         <h2 class="page-title">用户管理</h2>
       </div>
       <div class="header-actions">
         <el-button type="primary" @click="showAddUserDialog">
           <el-icon><Plus /></el-icon>
           添加用户
-        </el-button>
-        <el-button @click="refreshData" :loading="loading">
-          <el-icon><Refresh /></el-icon>
-          刷新
         </el-button>
       </div>
     </div>
@@ -434,23 +427,6 @@ onMounted(() => {
 .page-title-container {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.page-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.page-logo {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-  border: 1px solid #e6e6e6;
-  padding: 2px;
-  background-color: #ffffff;
 }
 
 .page-title {
