@@ -78,41 +78,42 @@
         :data="tableData"
         v-loading="loading"
         stripe
-        style="width: 100%"
+        style="width: 100%;"
         @sort-change="handleSortChange"
+        flexible
       >
-        <el-table-column prop="id" label="申请ID" width="120" sortable="custom" />
-        <el-table-column prop="applicant_name" label="申请人" width="100" />
-        <el-table-column prop="phone" label="手机号" width="140" />
-        <el-table-column prop="machine_type" label="农机类型" width="100">
+        <el-table-column prop="id" label="申请ID" min-width="120" sortable="custom" />
+        <el-table-column prop="applicant_name" label="申请人" min-width="100" />
+        <el-table-column prop="phone" label="手机号" min-width="140" />
+        <el-table-column prop="machine_type" label="农机类型" min-width="100">
           <template #default="{ row }">
             <el-tag :type="getMachineTypeTagType(row.machine_type)">
               {{ getMachineTypeText(row.machine_type) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="machine_model" label="设备型号" width="140" show-overflow-tooltip />
-        <el-table-column prop="lease_duration" label="租期" width="80">
+        <el-table-column prop="machine_model" label="设备型号" min-width="140" show-overflow-tooltip />
+        <el-table-column prop="lease_duration" label="租期" min-width="80">
           <template #default="{ row }">
             <span>{{ row.lease_duration }}天</span>
           </template>
         </el-table-column>
-        <el-table-column prop="daily_rate" label="日租金" width="100" sortable="custom">
+        <el-table-column prop="daily_rate" label="日租金" min-width="100" sortable="custom">
           <template #default="{ row }">
             <span class="amount">¥{{ row.daily_rate }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="total_amount" label="租金总额" width="120" sortable="custom">
+        <el-table-column prop="total_amount" label="租金总额" min-width="120" sortable="custom">
           <template #default="{ row }">
             <span class="total-amount">{{ formatAmount(row.total_amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="lease_area" label="作业面积" width="100">
+        <el-table-column prop="lease_area" label="作业面积" min-width="100">
           <template #default="{ row }">
             <span>{{ row.lease_area }}亩</span>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="审批状态" width="100">
+        <el-table-column prop="status" label="审批状态" min-width="100">
           <template #default="{ row }">
             <el-tag
               :type="getStatusTagType(row.status)"
@@ -122,12 +123,12 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="申请时间" width="160" sortable="custom">
+        <el-table-column prop="created_at" label="申请时间" min-width="160" sortable="custom">
           <template #default="{ row }">
             {{ formatTime(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" min-width="220" fixed="right">
           <template #default="{ row }">
             <el-button
               type="primary"
@@ -533,16 +534,20 @@ onMounted(() => {
 
 <style scoped>
 .lease-approval-container {
-  height: 100vh;
+  height: calc(100vh - 70px); /* 减去header高度 */
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 0 20px;
+  padding: 20px;
   overflow: hidden;
+  box-sizing: border-box;
+  width: 100%; /* 确保容器占满宽度 */
+  max-width: 100%; /* 防止容器超出视口 */
 }
 
 .header-card {
   flex-shrink: 0;
+  width: 100%; /* 确保头部卡片占满宽度 */
 }
 
 .content-card {
@@ -550,12 +555,17 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 0; /* 确保flex子项能够正确收缩 */
+  height: 100%; /* 确保占满可用高度 */
+  width: 100%; /* 确保内容卡片占满宽度 */
+  max-width: 100%; /* 防止卡片超出容器 */
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0; /* 防止头部被压缩 */
 }
 
 .header-actions {
@@ -620,6 +630,9 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   flex-shrink: 0;
+  padding: 10px 0;
+  border-top: 1px solid #ebeef5; /* 添加分隔线 */
+  background-color: #fff; /* 确保背景色 */
 }
 
 .detail-content {
@@ -674,25 +687,125 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  padding: 0 20px 20px 20px;
+  min-height: 0;
+  height: 100%;
+  width: 100%; /* 确保卡片主体占满宽度 */
+}
+
+/* 卡片头部样式调整 */
+:deep(.el-card__header) {
   padding: 20px;
+  border-bottom: 1px solid #ebeef5;
+  flex-shrink: 0;
+  width: 100%; /* 确保卡片头部占满宽度 */
 }
 
-/* 表格容器样式 */
+/* 表格容器样式 - 修复水平布局问题 */
 :deep(.el-table) {
-  flex: 1;
+  flex: 1 !important;
   overflow: hidden;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important; /* 确保表格宽度占满容器 */
+  max-width: 100% !important; /* 防止表格超出容器 */
 }
 
-/* 表格主体滚动区域 */
+/* 表格内部包装器 */
+:deep(.el-table__inner-wrapper) {
+  width: 100% !important;
+  overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 表格头部 */
+:deep(.el-table__header-wrapper) {
+  overflow: visible;
+  background-color: #fafafa;
+  flex-shrink: 0;
+  width: 100% !important;
+}
+
+/* 表格头部表格 */
+:deep(.el-table__header) {
+  width: 100% !important;
+  table-layout: fixed !important; /* 使用固定布局确保列宽一致 */
+  min-width: 100% !important;
+}
+
+/* 表格主体滚动区域 - 修复水平滚动 */
 :deep(.el-table__body-wrapper) {
-  max-height: calc(100vh - 400px);
-  overflow-y: auto !important;
-  overflow-x: auto !important;
-  /* 表格滚动条样式 */
+  flex: 1 !important;
+  overflow: auto !important; /* 允许水平和垂直滚动 */
+  height: auto !important;
+  max-height: none !important;
+  width: 100% !important;
   scrollbar-width: thin;
   scrollbar-color: #67c23a #f1f1f1;
 }
 
+/* 表格主体表格 */
+:deep(.el-table__body) {
+  width: 100% !important;
+  table-layout: fixed !important; /* 使用固定布局确保列宽一致 */
+  min-width: 100% !important;
+}
+
+/* 滚动条容器 */
+:deep(.el-scrollbar) {
+  height: 100%;
+  width: 100%;
+  flex: 1;
+}
+
+:deep(.el-scrollbar__wrap) {
+  overflow: auto !important; /* 允许水平滚动 */
+  width: 100%;
+  height: 100%;
+}
+
+:deep(.el-scrollbar__view) {
+  display: block !important;
+  width: 100% !important;
+  min-width: 100% !important; /* 确保视图占满宽度 */
+}
+
+/* 修复固定列的显示问题 */
+:deep(.el-table-fixed-column--right) {
+  background-color: #fff;
+  position: sticky !important;
+  right: 0 !important;
+  z-index: 10;
+}
+
+/* 确保列宽度自适应 */
+:deep(.el-table__cell) {
+  padding: 8px 12px;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+}
+
+/* 表格列组 - 确保列宽度正确分配 */
+:deep(colgroup col) {
+  min-width: auto !important;
+}
+
+/* 修复表格行的显示 */
+:deep(.el-table__row) {
+  background-color: #fff;
+  width: 100%;
+}
+
+:deep(.el-table__row--striped) {
+  background-color: #fafafa;
+}
+
+/* 表格滚动条样式 */
 :deep(.el-table__body-wrapper::-webkit-scrollbar) {
   width: 12px;
   height: 12px;
@@ -717,18 +830,40 @@ onMounted(() => {
   background: #f1f1f1;
 }
 
-/* 表格头部固定 */
-:deep(.el-table__header-wrapper) {
-  overflow: visible;
+/* 水平滚动条样式 */
+:deep(.el-scrollbar__bar.is-horizontal) {
+  height: 12px !important;
+  bottom: 0 !important;
 }
 
-:deep(.el-divider__text) {
-  background-color: #f5f7fa;
+:deep(.el-scrollbar__bar.is-vertical) {
+  width: 12px !important;
+  right: 0 !important;
 }
 
-/* 分页组件位置调整 */
-:deep(.el-pagination) {
-  margin-top: 20px;
-  justify-content: center;
+/* 响应式调整 */
+@media (max-width: 1200px) {
+  .lease-approval-container {
+    padding: 15px;
+    gap: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .lease-approval-container {
+    padding: 10px;
+    gap: 10px;
+  }
+  
+  .header-actions {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  
+  .header-actions .el-select,
+  .header-actions .el-input {
+    width: 100% !important;
+  }
 }
 </style> 

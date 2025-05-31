@@ -7,7 +7,7 @@
           <div class="header-actions">
             <el-button type="primary" @click="createWorkflow">
               <el-icon><Plus /></el-icon>
-              新建流程
+              管理Dify AI工作流
             </el-button>
             <el-button @click="refreshData">
               <el-icon><Refresh /></el-icon>
@@ -489,9 +489,8 @@ const viewWorkflow = (row: WorkflowRecord) => {
 }
 
 const createWorkflow = () => {
-  isEdit.value = false
-  resetForm()
-  formDialogVisible.value = true
+  // 跳转到Dify AI工作流管理页面
+  window.open('http://10.10.10.5/app/c827412a-c7dd-412a-9c3f-333ef5bb70d7/workflow', '_blank')
 }
 
 const editWorkflow = (row: WorkflowRecord) => {
