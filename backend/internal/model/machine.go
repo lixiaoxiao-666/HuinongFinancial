@@ -174,3 +174,65 @@ func (Machine) TableName() string {
 func (RentalOrder) TableName() string {
 	return "rental_orders"
 }
+
+// RentalRating 租赁评价表
+type RentalRating struct {
+	ID         uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	OrderID    uint64    `gorm:"not null;index" json:"order_id"`
+	RaterID    uint64    `gorm:"not null;index" json:"rater_id"`
+	RatingType string    `gorm:"type:varchar(20);not null" json:"rating_type"` // "renter" 或 "owner"
+	Rating     float32   `gorm:"type:decimal(3,1);not null" json:"rating"`
+	Comment    string    `gorm:"type:text" json:"comment"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+// RentalApplication 租赁申请表
+type RentalApplication struct {
+	ID             uint64     `gorm:"primaryKey;autoIncrement" json:"id"`
+	ApplicationNo  string     `gorm:"type:varchar(30);uniqueIndex;not null" json:"application_no"`
+	UserID         uint64     `gorm:"not null;index" json:"user_id"`
+	MachineID      uint64     `gorm:"not null;index" json:"machine_id"`
+	StartTime      time.Time  `gorm:"not null" json:"start_time"`
+	EndTime        time.Time  `gorm:"not null" json:"end_time"`
+	RentalLocation string     `gorm:"type:varchar(200)" json:"rental_location"`
+	ContactPerson  string     `gorm:"type:varchar(50)" json:"contact_person"`
+	ContactPhone   string     `gorm:"type:varchar(20)" json:"contact_phone"`
+	BillingMethod  string     `gorm:"type:varchar(20);not null" json:"billing_method"`
+	Quantity       float64    `gorm:"not null" json:"quantity"`
+	TotalAmount    int64      `gorm:"not null" json:"total_amount"`
+	DepositAmount  int64      `gorm:"not null" json:"deposit_amount"`
+	Status         string     `gorm:"type:varchar(20);not null;default:'pending'" json:"status"`
+	RiskLevel      string     `gorm:"type:varchar(20)" json:"risk_level"`
+	RiskFactors    string     `gorm:"type:json" json:"risk_factors"`
+	AIAssessment   string     `gorm:"type:text" json:"ai_assessment"`
+	ReviewerID     *uint64    `gorm:"index" json:"reviewer_id"`
+	ReviewedAt     *time.Time `json:"reviewed_at"`
+	ReviewNote     string     `gorm:"type:text" json:"review_note"`
+	Remarks        string     `gorm:"type:text" json:"remarks"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+}
+
+// RentalReviewLog 租赁审核日志表
+type RentalReviewLog struct {
+	ID            uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	ApplicationID uint64    `gorm:"not null;index" json:"application_id"`
+	ReviewerID    uint64    `gorm:"not null;index" json:"reviewer_id"`
+	Action        string    `gorm:"type:varchar(20);not null" json:"action"` // "approve", "reject", "request_more_info"
+	Note          string    `gorm:"type:text" json:"note"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
+// TableName 设置表名
+func (RentalRating) TableName() string {
+	return "rental_ratings"
+}
+
+func (RentalApplication) TableName() string {
+	return "rental_applications"
+}
+
+func (RentalReviewLog) TableName() string {
+	return "rental_review_logs"
+}

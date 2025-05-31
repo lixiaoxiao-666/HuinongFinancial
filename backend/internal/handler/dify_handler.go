@@ -3,8 +3,10 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -570,7 +572,7 @@ type QueryCreditReportRequest struct {
 	RealName string `json:"real_name" validate:"required"`
 }
 
-// QueryCreditReport 查询征信报告 (供Dify工作流调用)
+// QueryCreditReport 查询征信报告
 func (h *DifyHandler) QueryCreditReport(c *gin.Context) {
 	var req QueryCreditReportRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -589,21 +591,530 @@ func (h *DifyHandler) QueryCreditReport(c *gin.Context) {
 		return
 	}
 
-	// 这里应该调用真实的征信查询接口
-	// 现在返回模拟数据
-	creditInfo := gin.H{
+	// 模拟征信查询结果
+	response := gin.H{
 		"success": true,
 		"data": gin.H{
-			"credit_score":          750,
-			"debt_income_ratio":     0.25,
-			"overdue_count":         0,
-			"max_overdue_days":      0,
-			"total_debt":            50000.0,
-			"monthly_payment":       2000.0,
-			"credit_history_months": 36,
-			"query_time":            time.Now().Format("2006-01-02 15:04:05"),
+			"user_id":      req.UserID,
+			"id_card":      req.IDCard,
+			"real_name":    req.RealName,
+			"credit_score": 680,
+			"credit_level": "良好",
+			"report_date":  time.Now().Format("2006-01-02"),
+			"credit_details": gin.H{
+				"overdue_records": []gin.H{
+					{
+						"type":         "信用卡",
+						"amount":       500.00,
+						"overdue_days": 5,
+						"status":       "已还清",
+						"date":         "2023-12-15",
+					},
+				},
+				"credit_accounts": []gin.H{
+					{
+						"type":            "信用卡",
+						"bank":            "中国银行",
+						"credit_limit":    50000,
+						"current_balance": 5000,
+						"status":          "正常",
+					},
+					{
+						"type":        "消费贷款",
+						"bank":        "农业银行",
+						"loan_amount": 20000,
+						"remaining":   8000,
+						"status":      "正常",
+					},
+				},
+				"query_records": []gin.H{
+					{
+						"date":        "2024-01-10",
+						"type":        "贷款审批",
+						"institution": "惠农金融",
+					},
+				},
+			},
+			"risk_indicators": gin.H{
+				"debt_income_ratio":     0.3,
+				"payment_history_score": 85,
+				"credit_utilization":    0.1,
+				"account_diversity":     "良好",
+			},
 		},
 	}
 
-	c.JSON(http.StatusOK, creditInfo)
+	c.JSON(http.StatusOK, response)
+}
+
+// ============= 自动审批功能扩展 =============
+
+// AutoApproveLoanApplication 自动审批贷款申请
+type AutoApproveLoanApplicationRequest struct {
+	ApplicationID     string   `json:"application_id" validate:"required"`
+	UserID            string   `json:"user_id" validate:"required"`
+	RiskLevel         string   `json:"risk_level" validate:"required,oneof=low medium high"`
+	CreditScore       float64  `json:"credit_score" validate:"required,min=300,max=850"`
+	RecommendedAmount *float64 `json:"recommended_amount,omitempty"`
+	RecommendedTerm   *int     `json:"recommended_term,omitempty"`
+	RecommendedRate   *float64 `json:"recommended_rate,omitempty"`
+	AutoApprove       bool     `json:"auto_approve"`
+	Confidence        float64  `json:"confidence" validate:"min=0,max=1"`
+	Reason            string   `json:"reason"`
+}
+
+// AutoApproveLoanApplication 自动审批贷款申请 (供Dify工作流调用)
+func (h *DifyHandler) AutoApproveLoanApplication(c *gin.Context) {
+	var req AutoApproveLoanApplicationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "请求参数格式错误: " + err.Error(),
+		})
+		return
+	}
+
+	if err := h.validator.Struct(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "请求参数验证失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 根据风险等级和置信度决定是否自动审批
+	decision := "manual" // 默认人工审核
+	if req.AutoApprove && req.Confidence >= 0.8 {
+		if req.RiskLevel == "low" && req.CreditScore >= 700 {
+			decision = "auto_approve"
+		} else if req.RiskLevel == "medium" && req.CreditScore >= 650 && req.Confidence >= 0.9 {
+			decision = "auto_approve"
+		}
+	}
+
+	// 如果是自动拒绝的情况
+	if req.RiskLevel == "high" || req.CreditScore < 500 {
+		decision = "auto_reject"
+	}
+
+	// 创建审批任务（如果需要人工审核）
+	taskID := ""
+	if decision == "manual" {
+		taskID = fmt.Sprintf("TASK_%s_%d", req.ApplicationID, time.Now().Unix())
+	}
+
+	response := gin.H{
+		"success": true,
+		"data": gin.H{
+			"application_id": req.ApplicationID,
+			"decision":       decision,
+			"approved_amount": func() *float64 {
+				if decision == "auto_approve" && req.RecommendedAmount != nil {
+					return req.RecommendedAmount
+				}
+				return nil
+			}(),
+			"approved_term": func() *int {
+				if decision == "auto_approve" && req.RecommendedTerm != nil {
+					return req.RecommendedTerm
+				}
+				return nil
+			}(),
+			"approved_rate": func() *float64 {
+				if decision == "auto_approve" && req.RecommendedRate != nil {
+					return req.RecommendedRate
+				}
+				return nil
+			}(),
+			"task_id":      taskID,
+			"confidence":   req.Confidence,
+			"reason":       req.Reason,
+			"processed_at": time.Now().Format(time.RFC3339),
+			"next_steps": func() []string {
+				switch decision {
+				case "auto_approve":
+					return []string{"自动批准", "发送通知", "生成合同"}
+				case "auto_reject":
+					return []string{"自动拒绝", "发送通知", "记录原因"}
+				default:
+					return []string{"创建人工审核任务", "分配审核员", "等待审核"}
+				}
+			}(),
+		},
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// AutoApproveMachineRental 自动审批农机租赁申请
+type AutoApproveMachineRentalRequest struct {
+	RequestID     string  `json:"request_id" validate:"required"`
+	UserID        string  `json:"user_id" validate:"required"`
+	MachineID     string  `json:"machine_id" validate:"required"`
+	RiskLevel     string  `json:"risk_level" validate:"required,oneof=low medium high"`
+	UserScore     float64 `json:"user_score" validate:"required,min=0,max=100"`
+	MachineStatus string  `json:"machine_status" validate:"required"`
+	AutoApprove   bool    `json:"auto_approve"`
+	Confidence    float64 `json:"confidence" validate:"min=0,max=1"`
+	Reason        string  `json:"reason"`
+}
+
+// AutoApproveMachineRental 自动审批农机租赁申请 (供Dify工作流调用)
+func (h *DifyHandler) AutoApproveMachineRental(c *gin.Context) {
+	var req AutoApproveMachineRentalRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "请求参数格式错误: " + err.Error(),
+		})
+		return
+	}
+
+	if err := h.validator.Struct(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "请求参数验证失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 检查设备状态
+	if req.MachineStatus != "available" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"data": gin.H{
+				"request_id":   req.RequestID,
+				"decision":     "auto_reject",
+				"reason":       "设备不可用",
+				"processed_at": time.Now().Format(time.RFC3339),
+			},
+		})
+		return
+	}
+
+	// 根据风险等级和用户评分决定是否自动审批
+	decision := "manual" // 默认人工审核
+	if req.AutoApprove && req.Confidence >= 0.7 {
+		if req.RiskLevel == "low" && req.UserScore >= 80 {
+			decision = "auto_approve"
+		} else if req.RiskLevel == "medium" && req.UserScore >= 70 && req.Confidence >= 0.85 {
+			decision = "auto_approve"
+		}
+	}
+
+	// 如果是高风险或低评分用户，自动拒绝
+	if req.RiskLevel == "high" || req.UserScore < 40 {
+		decision = "auto_reject"
+	}
+
+	// 创建审批任务（如果需要人工审核）
+	taskID := ""
+	if decision == "manual" {
+		taskID = fmt.Sprintf("RENTAL_TASK_%s_%d", req.RequestID, time.Now().Unix())
+	}
+
+	response := gin.H{
+		"success": true,
+		"data": gin.H{
+			"request_id":   req.RequestID,
+			"decision":     decision,
+			"task_id":      taskID,
+			"confidence":   req.Confidence,
+			"reason":       req.Reason,
+			"processed_at": time.Now().Format(time.RFC3339),
+			"next_steps": func() []string {
+				switch decision {
+				case "auto_approve":
+					return []string{"自动批准租赁", "预留设备", "发送确认通知"}
+				case "auto_reject":
+					return []string{"自动拒绝申请", "发送拒绝通知", "记录拒绝原因"}
+				default:
+					return []string{"创建人工审核任务", "分配审核员", "等待审核"}
+				}
+			}(),
+		},
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// CreateApprovalTask 创建审批任务
+type CreateApprovalTaskRequest struct {
+	BusinessType   string                 `json:"business_type" validate:"required,oneof=loan_application machine_rental user_authentication"`
+	BusinessID     string                 `json:"business_id" validate:"required"`
+	UserID         string                 `json:"user_id" validate:"required"`
+	Priority       string                 `json:"priority" validate:"required,oneof=low normal high urgent"`
+	Title          string                 `json:"title" validate:"required"`
+	Description    string                 `json:"description" validate:"required"`
+	RequiredSkills []string               `json:"required_skills,omitempty"`
+	DueDate        string                 `json:"due_date,omitempty"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// CreateApprovalTask 创建审批任务 (供Dify工作流调用)
+func (h *DifyHandler) CreateApprovalTask(c *gin.Context) {
+	var req CreateApprovalTaskRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "请求参数格式错误: " + err.Error(),
+		})
+		return
+	}
+
+	if err := h.validator.Struct(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "请求参数验证失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 生成任务ID
+	taskID := fmt.Sprintf("TASK_%s_%s_%d", strings.ToUpper(req.BusinessType), req.BusinessID, time.Now().Unix())
+
+	// 根据业务类型和优先级估算处理时间
+	estimatedHours := 2
+	switch req.Priority {
+	case "urgent":
+		estimatedHours = 1
+	case "high":
+		estimatedHours = 2
+	case "normal":
+		estimatedHours = 4
+	case "low":
+		estimatedHours = 8
+	}
+
+	// 解析到期时间
+	var dueDate *time.Time
+	if req.DueDate != "" {
+		if parsed, err := time.Parse(time.RFC3339, req.DueDate); err == nil {
+			dueDate = &parsed
+		}
+	}
+
+	// 如果没有指定到期时间，根据优先级设置默认值
+	if dueDate == nil {
+		defaultDue := time.Now().Add(time.Duration(estimatedHours) * time.Hour)
+		dueDate = &defaultDue
+	}
+
+	response := gin.H{
+		"success": true,
+		"data": gin.H{
+			"task_id":                taskID,
+			"business_type":          req.BusinessType,
+			"business_id":            req.BusinessID,
+			"user_id":                req.UserID,
+			"priority":               req.Priority,
+			"title":                  req.Title,
+			"description":            req.Description,
+			"status":                 "pending",
+			"required_skills":        req.RequiredSkills,
+			"estimated_hours":        estimatedHours,
+			"due_date":               dueDate.Format(time.RFC3339),
+			"created_at":             time.Now().Format(time.RFC3339),
+			"metadata":               req.Metadata,
+			"assignment_suggestions": h.getSuggestedReviewers(req.BusinessType, req.RequiredSkills),
+		},
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// getSuggestedReviewers 获取推荐的审核员
+func (h *DifyHandler) getSuggestedReviewers(businessType string, requiredSkills []string) []gin.H {
+	// 根据业务类型和技能要求推荐审核员
+	suggestions := []gin.H{}
+
+	switch businessType {
+	case "loan_application":
+		suggestions = append(suggestions, gin.H{
+			"reviewer_id":   "OA001",
+			"reviewer_name": "张审核员",
+			"speciality":    "贷款审批",
+			"experience":    "5年",
+			"success_rate":  0.92,
+			"workload":      "中等",
+		})
+		suggestions = append(suggestions, gin.H{
+			"reviewer_id":   "OA002",
+			"reviewer_name": "李审核员",
+			"speciality":    "风险评估",
+			"experience":    "3年",
+			"success_rate":  0.89,
+			"workload":      "较低",
+		})
+	case "machine_rental":
+		suggestions = append(suggestions, gin.H{
+			"reviewer_id":   "OA003",
+			"reviewer_name": "王审核员",
+			"speciality":    "农机管理",
+			"experience":    "4年",
+			"success_rate":  0.94,
+			"workload":      "中等",
+		})
+	case "user_authentication":
+		suggestions = append(suggestions, gin.H{
+			"reviewer_id":   "OA004",
+			"reviewer_name": "赵审核员",
+			"speciality":    "身份认证",
+			"experience":    "2年",
+			"success_rate":  0.96,
+			"workload":      "较低",
+		})
+	}
+
+	return suggestions
+}
+
+// GetTaskStatus 获取任务状态
+type GetTaskStatusRequest struct {
+	TaskID string `json:"task_id" validate:"required"`
+}
+
+// GetTaskStatus 获取任务状态 (供Dify工作流调用)
+func (h *DifyHandler) GetTaskStatus(c *gin.Context) {
+	var req GetTaskStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "请求参数格式错误: " + err.Error(),
+		})
+		return
+	}
+
+	if err := h.validator.Struct(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "请求参数验证失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 模拟任务状态查询
+	// 在实际实现中，这里应该查询任务数据库
+
+	// 根据任务ID前缀判断任务类型
+	var taskType string
+	var status string
+	var progress int
+
+	if strings.Contains(req.TaskID, "LOAN_APPLICATION") {
+		taskType = "loan_application"
+		status = "in_progress"
+		progress = 60
+	} else if strings.Contains(req.TaskID, "RENTAL") {
+		taskType = "machine_rental"
+		status = "completed"
+		progress = 100
+	} else {
+		taskType = "unknown"
+		status = "pending"
+		progress = 0
+	}
+
+	response := gin.H{
+		"success": true,
+		"data": gin.H{
+			"task_id":              req.TaskID,
+			"task_type":            taskType,
+			"status":               status,
+			"progress":             progress,
+			"assigned_to":          "张审核员",
+			"created_at":           time.Now().Add(-2 * time.Hour).Format(time.RFC3339),
+			"updated_at":           time.Now().Add(-30 * time.Minute).Format(time.RFC3339),
+			"estimated_completion": time.Now().Add(1 * time.Hour).Format(time.RFC3339),
+			"current_step": func() string {
+				switch status {
+				case "pending":
+					return "等待分配"
+				case "in_progress":
+					return "审核中"
+				case "completed":
+					return "已完成"
+				default:
+					return "未知"
+				}
+			}(),
+			"notes": []gin.H{
+				{
+					"timestamp": time.Now().Add(-30 * time.Minute).Format(time.RFC3339),
+					"message":   "审核员已开始处理该任务",
+					"operator":  "张审核员",
+				},
+				{
+					"timestamp": time.Now().Add(-2 * time.Hour).Format(time.RFC3339),
+					"message":   "任务已创建并分配",
+					"operator":  "系统",
+				},
+			},
+		},
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// CompleteApprovalTask 完成审批任务
+type CompleteApprovalTaskRequest struct {
+	TaskID     string                 `json:"task_id" validate:"required"`
+	Decision   string                 `json:"decision" validate:"required,oneof=approve reject return"`
+	Comments   string                 `json:"comments" validate:"required"`
+	ReviewerID string                 `json:"reviewer_id" validate:"required"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// CompleteApprovalTask 完成审批任务 (供Dify工作流调用)
+func (h *DifyHandler) CompleteApprovalTask(c *gin.Context) {
+	var req CompleteApprovalTaskRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "请求参数格式错误: " + err.Error(),
+		})
+		return
+	}
+
+	if err := h.validator.Struct(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "请求参数验证失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 模拟任务完成处理
+	completedAt := time.Now()
+
+	response := gin.H{
+		"success": true,
+		"data": gin.H{
+			"task_id":      req.TaskID,
+			"decision":     req.Decision,
+			"comments":     req.Comments,
+			"reviewer_id":  req.ReviewerID,
+			"completed_at": completedAt.Format(time.RFC3339),
+			"metadata":     req.Metadata,
+			"next_actions": func() []string {
+				switch req.Decision {
+				case "approve":
+					return []string{"更新业务状态", "发送批准通知", "启动后续流程"}
+				case "reject":
+					return []string{"更新业务状态", "发送拒绝通知", "记录拒绝原因"}
+				case "return":
+					return []string{"返回申请人", "发送补充材料通知", "等待重新提交"}
+				default:
+					return []string{}
+				}
+			}(),
+			"performance_metrics": gin.H{
+				"processing_time_hours": 2.5,
+				"quality_score":         92,
+				"reviewer_efficiency":   "高效",
+			},
+		},
+	}
+
+	c.JSON(http.StatusOK, response)
 }

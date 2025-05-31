@@ -560,56 +560,354 @@ func (h *MachineHandler) CancelOrder(c *gin.Context) {
 
 // RateOrder 评价订单
 // @Summary 评价订单
-// @Description 对完成的订单进行评价
+// @Description 用户对完成的订单进行评价
 // @Tags 农机租赁
 // @Accept json
 // @Produce json
 // @Param id path int true "订单ID"
-// @Param request body service.SubmitRatingRequest true "评价信息"
+// @Param request body service.RateOrderRequest true "评价信息"
 // @Success 200 {object} StandardResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
-// @Failure 422 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /api/user/orders/{id}/rate [post]
 func (h *MachineHandler) RateOrder(c *gin.Context) {
 	// 从上下文获取用户ID
-	_, exists := c.Get("userID")
+	userIDInterface, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, NewErrorResponse(http.StatusUnauthorized, "用户未登录", "用户认证信息缺失"))
 		return
 	}
 
-	idStr := c.Param("id")
-	orderID, err := strconv.ParseUint(idStr, 10, 64)
+	userID, ok := userIDInterface.(uint64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "用户ID格式错误", "userID type assertion failed"))
+		return
+	}
+
+	orderIDStr := c.Param("id")
+	orderID, err := strconv.ParseUint(orderIDStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, NewErrorResponse(http.StatusBadRequest, "无效的订单ID", err.Error()))
 		return
 	}
 
-	var req service.SubmitRatingRequest
+	var req service.RateOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, NewErrorResponse(http.StatusBadRequest, "请求参数错误", err.Error()))
 		return
 	}
 
-	err = h.machineService.SubmitRating(c.Request.Context(), orderID, &req)
+	req.OrderID = orderID
+	req.UserID = userID
+
+	err = h.machineService.RateOrder(c.Request.Context(), &req)
 	if err != nil {
 		if err.Error() == "订单不存在" {
 			c.JSON(http.StatusNotFound, NewErrorResponse(http.StatusNotFound, "订单不存在", err.Error()))
 			return
 		}
-		if err.Error() == "无权评价该订单" {
-			c.JSON(http.StatusForbidden, NewErrorResponse(http.StatusForbidden, "无权评价该订单", err.Error()))
-			return
-		}
-		if err.Error() == "订单状态不允许评价" || err.Error() == "订单已评价" {
-			c.JSON(http.StatusUnprocessableEntity, NewErrorResponse(http.StatusUnprocessableEntity, err.Error(), err.Error()))
-			return
-		}
-		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "评价订单失败", err.Error()))
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "评价失败", err.Error()))
 		return
 	}
 
 	c.JSON(http.StatusOK, NewSuccessResponse("评价成功", nil))
+}
+
+// ============= OA管理员农机租赁审批功能 =============
+
+// GetRentalApplications 获取农机租赁申请列表(OA管理员)
+// @Summary 获取农机租赁申请列表
+// @Description OA管理员获取所有农机租赁申请，支持筛选和分页
+// @Tags OA农机管理
+// @Accept json
+// @Produce json
+// @Param status query string false "申请状态 (pending/approved/rejected/cancelled)"
+// @Param machine_type query string false "设备类型筛选"
+// @Param start_date query string false "申请开始日期"
+// @Param end_date query string false "申请结束日期"
+// @Param risk_level query string false "风险等级 (low/medium/high)"
+// @Param page query int false "页码" default(1)
+// @Param limit query int false "每页数量" default(20)
+// @Param sort_by query string false "排序字段" default(created_at)
+// @Param sort_order query string false "排序方向" default(desc)
+// @Success 200 {object} StandardResponse{data=service.GetRentalApplicationsResponse}
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/oa/admin/machines/rental-applications [get]
+func (h *MachineHandler) GetRentalApplications(c *gin.Context) {
+	status := c.Query("status")
+	machineType := c.Query("machine_type")
+	startDate := c.Query("start_date")
+	endDate := c.Query("end_date")
+	riskLevel := c.Query("risk_level")
+	sortBy := c.DefaultQuery("sort_by", "created_at")
+	sortOrder := c.DefaultQuery("sort_order", "desc")
+
+	pageStr := c.DefaultQuery("page", "1")
+	limitStr := c.DefaultQuery("limit", "20")
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 || limit > 100 {
+		limit = 20
+	}
+
+	req := &service.GetRentalApplicationsRequest{
+		Status:      status,
+		MachineType: machineType,
+		StartDate:   startDate,
+		EndDate:     endDate,
+		RiskLevel:   riskLevel,
+		Page:        page,
+		Limit:       limit,
+		SortBy:      sortBy,
+		SortOrder:   sortOrder,
+	}
+
+	response, err := h.machineService.GetRentalApplications(c.Request.Context(), req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "获取租赁申请列表失败", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse("获取成功", response))
+}
+
+// GetRentalApplicationDetail 获取农机租赁申请详情(OA管理员)
+// @Summary 获取农机租赁申请详情
+// @Description OA管理员获取指定租赁申请的详细信息
+// @Tags OA农机管理
+// @Accept json
+// @Produce json
+// @Param id path int true "申请ID"
+// @Success 200 {object} StandardResponse{data=service.GetRentalApplicationDetailResponse}
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/oa/admin/machines/rental-applications/{id} [get]
+func (h *MachineHandler) GetRentalApplicationDetail(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, NewErrorResponse(http.StatusBadRequest, "无效的申请ID", err.Error()))
+		return
+	}
+
+	req := &service.GetRentalApplicationDetailRequest{
+		ID: uint(id),
+	}
+
+	response, err := h.machineService.GetRentalApplicationDetail(c.Request.Context(), req)
+	if err != nil {
+		if err.Error() == "申请不存在" {
+			c.JSON(http.StatusNotFound, NewErrorResponse(http.StatusNotFound, "申请不存在", err.Error()))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "获取申请详情失败", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse("获取成功", response))
+}
+
+// ApproveRentalApplication 批准农机租赁申请(OA管理员)
+// @Summary 批准农机租赁申请
+// @Description OA管理员批准农机租赁申请
+// @Tags OA农机管理
+// @Accept json
+// @Produce json
+// @Param id path int true "申请ID"
+// @Param request body service.ApproveRentalRequest true "批准信息"
+// @Success 200 {object} StandardResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 422 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/oa/admin/machines/rental-applications/{id}/approve [post]
+func (h *MachineHandler) ApproveRentalApplication(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, NewErrorResponse(http.StatusBadRequest, "无效的申请ID", err.Error()))
+		return
+	}
+
+	var req service.ApproveRentalRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, NewErrorResponse(http.StatusBadRequest, "请求参数错误", err.Error()))
+		return
+	}
+
+	// 从上下文获取审批员ID
+	reviewerIDInterface, exists := c.Get("oaUserID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse(http.StatusUnauthorized, "审批员未登录", "OA用户认证信息缺失"))
+		return
+	}
+
+	reviewerID, ok := reviewerIDInterface.(uint64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "审批员ID格式错误", "reviewerID type assertion failed"))
+		return
+	}
+
+	req.ID = uint(id)
+	req.ReviewerID = reviewerID
+
+	err = h.machineService.ApproveRentalApplication(c.Request.Context(), &req)
+	if err != nil {
+		if err.Error() == "申请不存在" {
+			c.JSON(http.StatusNotFound, NewErrorResponse(http.StatusNotFound, "申请不存在", err.Error()))
+			return
+		}
+		if err.Error() == "申请状态不允许审批" {
+			c.JSON(http.StatusUnprocessableEntity, NewErrorResponse(http.StatusUnprocessableEntity, "申请状态不允许审批", err.Error()))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "批准申请失败", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse("申请已批准", nil))
+}
+
+// RejectRentalApplication 拒绝农机租赁申请(OA管理员)
+// @Summary 拒绝农机租赁申请
+// @Description OA管理员拒绝农机租赁申请
+// @Tags OA农机管理
+// @Accept json
+// @Produce json
+// @Param id path int true "申请ID"
+// @Param request body service.RejectRentalRequest true "拒绝信息"
+// @Success 200 {object} StandardResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 422 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/oa/admin/machines/rental-applications/{id}/reject [post]
+func (h *MachineHandler) RejectRentalApplication(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, NewErrorResponse(http.StatusBadRequest, "无效的申请ID", err.Error()))
+		return
+	}
+
+	var req service.RejectRentalRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, NewErrorResponse(http.StatusBadRequest, "请求参数错误", err.Error()))
+		return
+	}
+
+	// 从上下文获取审批员ID
+	reviewerIDInterface, exists := c.Get("oaUserID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse(http.StatusUnauthorized, "审批员未登录", "OA用户认证信息缺失"))
+		return
+	}
+
+	reviewerID, ok := reviewerIDInterface.(uint64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "审批员ID格式错误", "reviewerID type assertion failed"))
+		return
+	}
+
+	req.ID = uint(id)
+	req.ReviewerID = reviewerID
+
+	err = h.machineService.RejectRentalApplication(c.Request.Context(), &req)
+	if err != nil {
+		if err.Error() == "申请不存在" {
+			c.JSON(http.StatusNotFound, NewErrorResponse(http.StatusNotFound, "申请不存在", err.Error()))
+			return
+		}
+		if err.Error() == "申请状态不允许审批" {
+			c.JSON(http.StatusUnprocessableEntity, NewErrorResponse(http.StatusUnprocessableEntity, "申请状态不允许审批", err.Error()))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "拒绝申请失败", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse("申请已拒绝", nil))
+}
+
+// GetRentalStatistics 获取农机租赁统计(OA管理员)
+// @Summary 获取农机租赁统计
+// @Description OA管理员获取农机租赁业务统计数据
+// @Tags OA农机管理
+// @Accept json
+// @Produce json
+// @Param period query string false "统计周期 (day/week/month/year)" default(month)
+// @Param start_date query string false "统计开始日期"
+// @Param end_date query string false "统计结束日期"
+// @Success 200 {object} StandardResponse{data=service.GetRentalStatisticsResponse}
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/oa/admin/machines/rental-statistics [get]
+func (h *MachineHandler) GetRentalStatistics(c *gin.Context) {
+	period := c.DefaultQuery("period", "month")
+	startDate := c.Query("start_date")
+	endDate := c.Query("end_date")
+
+	req := &service.GetRentalStatisticsRequest{
+		Period:    period,
+		StartDate: startDate,
+		EndDate:   endDate,
+	}
+
+	response, err := h.machineService.GetRentalStatistics(c.Request.Context(), req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "获取统计数据失败", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse("获取成功", response))
+}
+
+// BatchApproveRentals 批量审批农机租赁申请(OA管理员)
+// @Summary 批量审批农机租赁申请
+// @Description OA管理员批量审批多个农机租赁申请
+// @Tags OA农机管理
+// @Accept json
+// @Produce json
+// @Param request body service.BatchApproveRentalsRequest true "批量审批信息"
+// @Success 200 {object} StandardResponse{data=service.BatchApproveRentalsResponse}
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/oa/admin/machines/rental-applications/batch-approve [post]
+func (h *MachineHandler) BatchApproveRentals(c *gin.Context) {
+	var req service.BatchApproveRentalsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, NewErrorResponse(http.StatusBadRequest, "请求参数错误", err.Error()))
+		return
+	}
+
+	// 从上下文获取审批员ID
+	reviewerIDInterface, exists := c.Get("oaUserID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse(http.StatusUnauthorized, "审批员未登录", "OA用户认证信息缺失"))
+		return
+	}
+
+	reviewerID, ok := reviewerIDInterface.(uint64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "审批员ID格式错误", "reviewerID type assertion failed"))
+		return
+	}
+
+	req.ReviewerID = reviewerID
+
+	response, err := h.machineService.BatchApproveRentals(c.Request.Context(), &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "批量审批失败", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse("批量审批完成", response))
 }

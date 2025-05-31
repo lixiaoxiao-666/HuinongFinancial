@@ -330,23 +330,149 @@ func (r *machineRepository) GetOrderCount(ctx context.Context) (int64, error) {
 
 // ==================== 时间冲突检查 ====================
 
-// CheckTimeConflict 检查租赁时间冲突
+// CheckTimeConflict 检查时间冲突
 func (r *machineRepository) CheckTimeConflict(ctx context.Context, machineID uint64, startTime, endTime time.Time, excludeOrderID uint64) (bool, error) {
 	var count int64
 	query := r.db.WithContext(ctx).Model(&model.RentalOrder{}).
-		Where("machine_id = ?", machineID).
-		Where("status IN (?)", []string{"pending", "confirmed", "in_progress"}).
-		Where("NOT (end_time <= ? OR start_time >= ?)", startTime, endTime)
+		Where("machine_id = ? AND status IN (?, ?, ?)", machineID, "confirmed", "paid", "in_progress").
+		Where("((start_time <= ? AND end_time >= ?) OR (start_time <= ? AND end_time >= ?) OR (start_time >= ? AND start_time <= ?))",
+			startTime, startTime, endTime, endTime, startTime, endTime)
 
-	// 排除指定的订单ID（用于更新操作）
 	if excludeOrderID > 0 {
 		query = query.Where("id != ?", excludeOrderID)
 	}
 
 	err := query.Count(&count).Error
+	return count > 0, err
+}
+
+// GetRentalOrderByID 根据ID获取租赁订单（别名方法）
+func (r *machineRepository) GetRentalOrderByID(ctx context.Context, id uint64) (*model.RentalOrder, error) {
+	return r.GetOrderByID(ctx, id)
+}
+
+// ==================== 租赁申请管理 ====================
+
+// CreateRentalApplication 创建租赁申请
+func (r *machineRepository) CreateRentalApplication(ctx context.Context, application *model.RentalApplication) error {
+	return r.db.WithContext(ctx).Create(application).Error
+}
+
+// GetRentalApplicationByID 根据ID获取租赁申请
+func (r *machineRepository) GetRentalApplicationByID(ctx context.Context, id uint64) (*model.RentalApplication, error) {
+	var application model.RentalApplication
+	err := r.db.WithContext(ctx).First(&application, id).Error
 	if err != nil {
-		return false, err
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("租赁申请不存在")
+		}
+		return nil, err
+	}
+	return &application, nil
+}
+
+// UpdateRentalApplication 更新租赁申请
+func (r *machineRepository) UpdateRentalApplication(ctx context.Context, application *model.RentalApplication) error {
+	return r.db.WithContext(ctx).Save(application).Error
+}
+
+// ListRentalApplications 租赁申请列表查询
+func (r *machineRepository) ListRentalApplications(ctx context.Context, req *ListRentalApplicationsRequest) (*ListRentalApplicationsResponse, error) {
+	var applications []*model.RentalApplication
+	var total int64
+
+	query := r.db.WithContext(ctx).Model(&model.RentalApplication{})
+
+	// 条件筛选
+	if req.Status != "" {
+		query = query.Where("status = ?", req.Status)
+	}
+	if req.MachineType != "" {
+		// 需要关联机器表来筛选机器类型
+		query = query.Joins("JOIN machines ON rental_applications.machine_id = machines.id").
+			Where("machines.machine_type = ?", req.MachineType)
+	}
+	if req.StartDate != "" {
+		query = query.Where("start_time >= ?", req.StartDate)
+	}
+	if req.EndDate != "" {
+		query = query.Where("end_time <= ?", req.EndDate)
+	}
+	if req.RiskLevel != "" {
+		query = query.Where("risk_level = ?", req.RiskLevel)
 	}
 
-	return count > 0, nil
+	// 获取总数
+	err := query.Count(&total).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// 排序
+	orderClause := "created_at DESC"
+	if req.SortBy != "" {
+		if req.SortOrder == "asc" {
+			orderClause = req.SortBy + " ASC"
+		} else {
+			orderClause = req.SortBy + " DESC"
+		}
+	}
+
+	// 分页查询
+	offset := (req.Page - 1) * req.Limit
+	err = query.Order(orderClause).
+		Offset(offset).Limit(req.Limit).
+		Find(&applications).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// 计算统计信息
+	stats := &RentalApplicationStatistics{}
+	r.db.WithContext(ctx).Model(&model.RentalApplication{}).Count(&stats.TotalApplications)
+	r.db.WithContext(ctx).Model(&model.RentalApplication{}).Where("status = ?", "pending").Count(&stats.PendingApplications)
+	r.db.WithContext(ctx).Model(&model.RentalApplication{}).Where("status = ?", "approved").Count(&stats.ApprovedApplications)
+	r.db.WithContext(ctx).Model(&model.RentalApplication{}).Where("status = ?", "rejected").Count(&stats.RejectedApplications)
+
+	return &ListRentalApplicationsResponse{
+		Applications: applications,
+		Total:        total,
+		Page:         req.Page,
+		Limit:        req.Limit,
+		Statistics:   stats,
+	}, nil
+}
+
+// ==================== 租赁评价管理 ====================
+
+// CreateRentalRating 创建租赁评价
+func (r *machineRepository) CreateRentalRating(ctx context.Context, rating *model.RentalRating) error {
+	return r.db.WithContext(ctx).Create(rating).Error
+}
+
+// GetRentalRatings 获取租赁评价
+func (r *machineRepository) GetRentalRatings(ctx context.Context, orderID uint64) ([]*model.RentalRating, error) {
+	var ratings []*model.RentalRating
+	err := r.db.WithContext(ctx).
+		Where("order_id = ?", orderID).
+		Order("created_at DESC").
+		Find(&ratings).Error
+	return ratings, err
+}
+
+// ==================== 审核日志管理 ====================
+
+// CreateRentalReviewLog 创建租赁审核日志
+func (r *machineRepository) CreateRentalReviewLog(ctx context.Context, log *model.RentalReviewLog) error {
+	return r.db.WithContext(ctx).Create(log).Error
+}
+
+// GetRentalReviewLogs 获取租赁审核日志
+func (r *machineRepository) GetRentalReviewLogs(ctx context.Context, applicationID uint64) ([]*model.RentalReviewLog, error) {
+	var logs []*model.RentalReviewLog
+	err := r.db.WithContext(ctx).
+		Where("application_id = ?", applicationID).
+		Order("created_at ASC").
+		Find(&logs).Error
+	return logs, err
 }

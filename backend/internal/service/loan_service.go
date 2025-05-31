@@ -752,6 +752,193 @@ func (s *loanService) UpdateLoanApplication(application *model.LoanApplication) 
 	return s.loanRepo.UpdateApplication(ctx, application)
 }
 
+// generateApplicationNo 生成申请编号
 func generateApplicationNo() string {
-	return fmt.Sprintf("LA%d%06d", time.Now().Unix(), time.Now().Nanosecond()%1000000)
+	return fmt.Sprintf("LA%d", time.Now().UnixNano()/1000000)
+}
+
+// ==================== 增强审批功能 ====================
+
+// BatchApproveLoanApplications 批量审批贷款申请
+func (s *loanService) BatchApproveLoanApplications(ctx context.Context, req *BatchApproveLoanRequest) (*BatchApproveLoanResponse, error) {
+	results := make([]BatchOperationResult, 0, len(req.ApplicationIDs))
+	successCount := 0
+	failureCount := 0
+	batchID := fmt.Sprintf("BATCH_%d", time.Now().UnixNano())
+
+	for _, appID := range req.ApplicationIDs {
+		result := BatchOperationResult{
+			ID:      appID,
+			Success: false,
+		}
+
+		// 获取申请
+		_, err := s.loanRepo.GetApplicationByID(ctx, uint(appID))
+		if err != nil {
+			result.Error = fmt.Sprintf("获取申请失败: %v", err)
+			failureCount++
+		} else {
+			// 执行审批
+			if req.Decision == "approve" {
+				err = s.ApproveApplication(ctx, &ApproveApplicationRequest{
+					ID:           uint(appID),
+					ApprovalNote: req.ReviewComments,
+				})
+			} else {
+				err = s.RejectApplication(ctx, &RejectApplicationRequest{
+					ID:            uint(appID),
+					RejectionNote: req.ReviewComments,
+				})
+			}
+
+			if err != nil {
+				result.Error = fmt.Sprintf("审批失败: %v", err)
+				failureCount++
+			} else {
+				result.Success = true
+				result.Message = "审批成功"
+				successCount++
+			}
+		}
+
+		results = append(results, result)
+	}
+
+	return &BatchApproveLoanResponse{
+		TotalCount:   len(req.ApplicationIDs),
+		SuccessCount: successCount,
+		FailureCount: failureCount,
+		Results:      results,
+		BatchID:      batchID,
+		ProcessedBy:  req.ReviewerID,
+		ProcessedAt:  time.Now(),
+	}, nil
+}
+
+// RetryAIAssessment 重试AI评估
+func (s *loanService) RetryAIAssessment(ctx context.Context, req *RetryAIAssessmentRequest) error {
+	return s.TriggerAIAssessment(ctx, uint64(req.ID), "loan_approval")
+}
+
+// EnableAutoApproval 启用自动审批
+func (s *loanService) EnableAutoApproval(ctx context.Context, req *EnableAutoApprovalRequest) error {
+	// TODO: 实现自动审批配置的创建
+	return fmt.Errorf("暂未实现自动审批功能")
+}
+
+// DisableAutoApproval 禁用自动审批
+func (s *loanService) DisableAutoApproval(ctx context.Context, req *DisableAutoApprovalRequest) error {
+	// TODO: 实现自动审批配置的禁用
+	return fmt.Errorf("暂未实现自动审批功能")
+}
+
+// GetAutoApprovalConfig 获取自动审批配置
+func (s *loanService) GetAutoApprovalConfig(ctx context.Context) (*GetAutoApprovalConfigResponse, error) {
+	// TODO: 实现获取自动审批配置
+	return &GetAutoApprovalConfigResponse{
+		LoanConfig:   nil,
+		RentalConfig: nil,
+		GlobalSettings: GlobalAutoApprovalSettings{
+			MaxDailyAutoApprovals: 0,
+			MaxAmountPerDay:       0,
+			RequireSecondApproval: true,
+			MonitoringEnabled:     true,
+		},
+	}, nil
+}
+
+// GetApplicationsByRiskLevel 按风险等级获取申请
+func (s *loanService) GetApplicationsByRiskLevel(ctx context.Context, req *GetApplicationsByRiskLevelRequest) (*GetApplicationsByRiskLevelResponse, error) {
+	// TODO: 实现按风险等级查询申请
+	return &GetApplicationsByRiskLevelResponse{
+		Applications: []LoanApplicationSummary{},
+		Pagination: PaginationInfo{
+			Page:  req.Page,
+			Limit: req.Limit,
+			Total: 0,
+			Pages: 0,
+		},
+		RiskAnalysis: RiskLevelAnalysis{
+			RiskLevel:      req.RiskLevel,
+			TotalCount:     0,
+			ApprovalRate:   0,
+			AverageAmount:  0,
+			AverageScore:   0,
+			TrendDirection: "stable",
+		},
+	}, nil
+}
+
+// GetAIAssessmentHistory 获取AI评估历史
+func (s *loanService) GetAIAssessmentHistory(ctx context.Context, req *GetAIAssessmentHistoryRequest) (*GetAIAssessmentHistoryResponse, error) {
+	// TODO: 实现获取AI评估历史
+	return &GetAIAssessmentHistoryResponse{
+		ApplicationID: req.ApplicationID,
+		Assessments:   []AIAssessmentRecord{},
+		Summary: AIAssessmentSummary{
+			TotalAssessments:  0,
+			LatestVersion:     1,
+			CurrentRiskLevel:  "medium",
+			RiskTrend:         "stable",
+			AverageConfidence: 0.8,
+			ModelConsistency:  0.9,
+		},
+	}, nil
+}
+
+// CreateApplicationTask 创建申请任务
+func (s *loanService) CreateApplicationTask(ctx context.Context, req *CreateApplicationTaskRequest) (*CreateApplicationTaskResponse, error) {
+	// TODO: 实现创建申请任务
+	return &CreateApplicationTaskResponse{
+		TaskID:        uint64(time.Now().UnixNano()),
+		ApplicationID: req.ApplicationID,
+		Status:        "created",
+		CreatedAt:     time.Now(),
+	}, nil
+}
+
+// GetApplicationTasks 获取申请任务
+func (s *loanService) GetApplicationTasks(ctx context.Context, req *GetApplicationTasksRequest) (*GetApplicationTasksResponse, error) {
+	// TODO: 实现获取申请任务
+	return &GetApplicationTasksResponse{
+		ApplicationID: req.ApplicationID,
+		Tasks:         []TaskInfo{},
+		Summary: TaskSummary{
+			TotalTasks:      0,
+			PendingTasks:    0,
+			InProgressTasks: 0,
+			CompletedTasks:  0,
+			OverdueTasks:    0,
+		},
+	}, nil
+}
+
+// GetAdvancedStatistics 获取高级统计
+func (s *loanService) GetAdvancedStatistics(ctx context.Context, req *GetAdvancedStatisticsRequest) (*GetAdvancedStatisticsResponse, error) {
+	// TODO: 实现获取高级统计
+	return &GetAdvancedStatisticsResponse{
+		Overview: StatisticsOverview{
+			TotalApplications:    0,
+			ApprovedApplications: 0,
+			RejectedApplications: 0,
+			PendingApplications:  0,
+			TotalAmount:          0,
+			ApprovedAmount:       0,
+			ApprovalRate:         0,
+			AverageProcessTime:   0,
+		},
+		RiskAnalysis: RiskAnalysis{
+			RiskDistribution: map[string]int{},
+			HighRiskFactors:  []RiskFactorStats{},
+			RiskTrends:       []RiskTrendPoint{},
+		},
+		Performance: PerformanceMetrics{
+			AverageProcessingTime: 0,
+			AutoApprovalRate:      0,
+			ManualReviewRate:      0,
+			ReviewerEfficiency:    0,
+			SystemUptime:          0.99,
+			ErrorRate:             0.01,
+		},
+	}, nil
 }

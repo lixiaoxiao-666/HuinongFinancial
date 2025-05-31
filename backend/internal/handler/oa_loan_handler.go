@@ -345,7 +345,7 @@ func (h *OALoanHandler) GetStatistics(c *gin.Context) {
 
 // RetryAIAssessment 重试AI评估
 // @Summary 重试AI评估
-// @Description 对AI评估失败的申请重新触发评估
+// @Description 重新触发AI风险评估流程
 // @Tags OA贷款管理
 // @Accept json
 // @Produce json
@@ -353,7 +353,6 @@ func (h *OALoanHandler) GetStatistics(c *gin.Context) {
 // @Success 200 {object} StandardResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
-// @Failure 422 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /api/admin/loans/applications/{id}/retry-ai [post]
 func (h *OALoanHandler) RetryAIAssessment(c *gin.Context) {
@@ -364,14 +363,11 @@ func (h *OALoanHandler) RetryAIAssessment(c *gin.Context) {
 		return
 	}
 
-	// 从上下文获取操作员ID
-	_, exists := c.Get("oaUserID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, NewErrorResponse(http.StatusUnauthorized, "操作员未登录", "OA用户认证信息缺失"))
-		return
+	req := &service.RetryAIAssessmentRequest{
+		ID: uint(id),
 	}
 
-	err = h.loanService.TriggerAIAssessment(c.Request.Context(), id, "loan_approval")
+	err = h.loanService.RetryAIAssessment(c.Request.Context(), req)
 	if err != nil {
 		if err.Error() == "申请不存在" {
 			c.JSON(http.StatusNotFound, NewErrorResponse(http.StatusNotFound, "申请不存在", err.Error()))
@@ -382,4 +378,359 @@ func (h *OALoanHandler) RetryAIAssessment(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, NewSuccessResponse("AI评估已重新启动", nil))
+}
+
+// ============= 新增的增强审批功能 =============
+
+// BatchApproveLoanApplications 批量审批贷款申请
+// @Summary 批量审批贷款申请
+// @Description 批量审批多个贷款申请，支持统一条件设置
+// @Tags OA贷款管理
+// @Accept json
+// @Produce json
+// @Param request body service.BatchApproveLoanRequest true "批量审批信息"
+// @Success 200 {object} StandardResponse{data=service.BatchApproveLoanResponse}
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/oa/admin/loans/applications/batch-approve [post]
+func (h *OALoanHandler) BatchApproveLoanApplications(c *gin.Context) {
+	var req service.BatchApproveLoanRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, NewErrorResponse(http.StatusBadRequest, "请求参数错误", err.Error()))
+		return
+	}
+
+	// 从上下文获取审批员ID
+	reviewerIDInterface, exists := c.Get("oaUserID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse(http.StatusUnauthorized, "审批员未登录", "OA用户认证信息缺失"))
+		return
+	}
+
+	reviewerID, ok := reviewerIDInterface.(uint64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "审批员ID格式错误", "reviewerID type assertion failed"))
+		return
+	}
+
+	req.ReviewerID = reviewerID
+
+	response, err := h.loanService.BatchApproveLoanApplications(c.Request.Context(), &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "批量审批失败", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse("批量审批完成", response))
+}
+
+// EnableAutoApproval 启用自动审批
+// @Summary 启用自动审批
+// @Description 为指定条件的申请启用自动审批功能
+// @Tags OA贷款管理
+// @Accept json
+// @Produce json
+// @Param request body service.EnableAutoApprovalRequest true "自动审批配置"
+// @Success 200 {object} StandardResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/oa/admin/loans/auto-approval/enable [post]
+func (h *OALoanHandler) EnableAutoApproval(c *gin.Context) {
+	var req service.EnableAutoApprovalRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, NewErrorResponse(http.StatusBadRequest, "请求参数错误", err.Error()))
+		return
+	}
+
+	// 从上下文获取操作员ID
+	operatorIDInterface, exists := c.Get("oaUserID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse(http.StatusUnauthorized, "操作员未登录", "OA用户认证信息缺失"))
+		return
+	}
+
+	operatorID, ok := operatorIDInterface.(uint64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "操作员ID格式错误", "operatorID type assertion failed"))
+		return
+	}
+
+	req.OperatorID = operatorID
+
+	err := h.loanService.EnableAutoApproval(c.Request.Context(), &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "启用自动审批失败", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse("自动审批已启用", nil))
+}
+
+// DisableAutoApproval 禁用自动审批
+// @Summary 禁用自动审批
+// @Description 禁用自动审批功能
+// @Tags OA贷款管理
+// @Accept json
+// @Produce json
+// @Param request body service.DisableAutoApprovalRequest true "禁用配置"
+// @Success 200 {object} StandardResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/oa/admin/loans/auto-approval/disable [post]
+func (h *OALoanHandler) DisableAutoApproval(c *gin.Context) {
+	var req service.DisableAutoApprovalRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, NewErrorResponse(http.StatusBadRequest, "请求参数错误", err.Error()))
+		return
+	}
+
+	// 从上下文获取操作员ID
+	operatorIDInterface, exists := c.Get("oaUserID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse(http.StatusUnauthorized, "操作员未登录", "OA用户认证信息缺失"))
+		return
+	}
+
+	operatorID, ok := operatorIDInterface.(uint64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "操作员ID格式错误", "operatorID type assertion failed"))
+		return
+	}
+
+	req.OperatorID = operatorID
+
+	err := h.loanService.DisableAutoApproval(c.Request.Context(), &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "禁用自动审批失败", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse("自动审批已禁用", nil))
+}
+
+// GetAutoApprovalConfig 获取自动审批配置
+// @Summary 获取自动审批配置
+// @Description 获取当前自动审批配置信息
+// @Tags OA贷款管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} StandardResponse{data=service.GetAutoApprovalConfigResponse}
+// @Failure 500 {object} ErrorResponse
+// @Router /api/oa/admin/loans/auto-approval/config [get]
+func (h *OALoanHandler) GetAutoApprovalConfig(c *gin.Context) {
+	response, err := h.loanService.GetAutoApprovalConfig(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "获取自动审批配置失败", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse("获取成功", response))
+}
+
+// GetApplicationsByRiskLevel 按风险等级获取申请
+// @Summary 按风险等级获取申请
+// @Description 根据AI评估的风险等级筛选申请
+// @Tags OA贷款管理
+// @Accept json
+// @Produce json
+// @Param risk_level query string true "风险等级 (low/medium/high)"
+// @Param status query string false "申请状态"
+// @Param page query int false "页码" default(1)
+// @Param limit query int false "每页数量" default(20)
+// @Success 200 {object} StandardResponse{data=service.GetApplicationsByRiskLevelResponse}
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/oa/admin/loans/applications/by-risk-level [get]
+func (h *OALoanHandler) GetApplicationsByRiskLevel(c *gin.Context) {
+	riskLevel := c.Query("risk_level")
+	if riskLevel == "" {
+		c.JSON(http.StatusBadRequest, NewErrorResponse(http.StatusBadRequest, "风险等级不能为空", "risk_level is required"))
+		return
+	}
+
+	status := c.Query("status")
+	pageStr := c.DefaultQuery("page", "1")
+	limitStr := c.DefaultQuery("limit", "20")
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 || limit > 100 {
+		limit = 20
+	}
+
+	req := &service.GetApplicationsByRiskLevelRequest{
+		RiskLevel: riskLevel,
+		Status:    status,
+		Page:      page,
+		Limit:     limit,
+	}
+
+	response, err := h.loanService.GetApplicationsByRiskLevel(c.Request.Context(), req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "获取申请列表失败", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse("获取成功", response))
+}
+
+// GetAIAssessmentHistory 获取AI评估历史
+// @Summary 获取AI评估历史
+// @Description 获取指定申请的AI评估历史记录
+// @Tags OA贷款管理
+// @Accept json
+// @Produce json
+// @Param id path int true "申请ID"
+// @Success 200 {object} StandardResponse{data=service.GetAIAssessmentHistoryResponse}
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/oa/admin/loans/applications/{id}/ai-assessment-history [get]
+func (h *OALoanHandler) GetAIAssessmentHistory(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, NewErrorResponse(http.StatusBadRequest, "无效的申请ID", err.Error()))
+		return
+	}
+
+	req := &service.GetAIAssessmentHistoryRequest{
+		ApplicationID: uint(id),
+	}
+
+	response, err := h.loanService.GetAIAssessmentHistory(c.Request.Context(), req)
+	if err != nil {
+		if err.Error() == "申请不存在" {
+			c.JSON(http.StatusNotFound, NewErrorResponse(http.StatusNotFound, "申请不存在", err.Error()))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "获取AI评估历史失败", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse("获取成功", response))
+}
+
+// CreateApplicationTask 创建申请任务
+// @Summary 创建申请任务
+// @Description 为贷款申请创建审批任务
+// @Tags OA贷款管理
+// @Accept json
+// @Produce json
+// @Param request body service.CreateApplicationTaskRequest true "任务信息"
+// @Success 200 {object} StandardResponse{data=service.CreateApplicationTaskResponse}
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/oa/admin/loans/applications/create-task [post]
+func (h *OALoanHandler) CreateApplicationTask(c *gin.Context) {
+	var req service.CreateApplicationTaskRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, NewErrorResponse(http.StatusBadRequest, "请求参数错误", err.Error()))
+		return
+	}
+
+	// 从上下文获取创建者ID
+	creatorIDInterface, exists := c.Get("oaUserID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse(http.StatusUnauthorized, "用户未登录", "OA用户认证信息缺失"))
+		return
+	}
+
+	creatorID, ok := creatorIDInterface.(uint64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "用户ID格式错误", "creatorID type assertion failed"))
+		return
+	}
+
+	req.CreatorID = creatorID
+
+	response, err := h.loanService.CreateApplicationTask(c.Request.Context(), &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "创建任务失败", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse("任务创建成功", response))
+}
+
+// GetApplicationTasks 获取申请相关任务
+// @Summary 获取申请相关任务
+// @Description 获取指定申请的所有相关任务
+// @Tags OA贷款管理
+// @Accept json
+// @Produce json
+// @Param id path int true "申请ID"
+// @Success 200 {object} StandardResponse{data=service.GetApplicationTasksResponse}
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/oa/admin/loans/applications/{id}/tasks [get]
+func (h *OALoanHandler) GetApplicationTasks(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, NewErrorResponse(http.StatusBadRequest, "无效的申请ID", err.Error()))
+		return
+	}
+
+	req := &service.GetApplicationTasksRequest{
+		ApplicationID: uint(id),
+	}
+
+	response, err := h.loanService.GetApplicationTasks(c.Request.Context(), req)
+	if err != nil {
+		if err.Error() == "申请不存在" {
+			c.JSON(http.StatusNotFound, NewErrorResponse(http.StatusNotFound, "申请不存在", err.Error()))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "获取任务列表失败", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse("获取成功", response))
+}
+
+// GetAdvancedStatistics 获取高级统计数据
+// @Summary 获取高级统计数据
+// @Description 获取贷款业务的高级统计分析数据
+// @Tags OA贷款管理
+// @Accept json
+// @Produce json
+// @Param period query string false "统计周期 (day/week/month/quarter/year)" default(month)
+// @Param start_date query string false "开始日期"
+// @Param end_date query string false "结束日期"
+// @Param include_trends query bool false "是否包含趋势分析" default(true)
+// @Success 200 {object} StandardResponse{data=service.GetAdvancedStatisticsResponse}
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /api/oa/admin/loans/advanced-statistics [get]
+func (h *OALoanHandler) GetAdvancedStatistics(c *gin.Context) {
+	period := c.DefaultQuery("period", "month")
+	startDate := c.Query("start_date")
+	endDate := c.Query("end_date")
+	includeTrendsStr := c.DefaultQuery("include_trends", "true")
+
+	includeTrends, err := strconv.ParseBool(includeTrendsStr)
+	if err != nil {
+		includeTrends = true
+	}
+
+	req := &service.GetAdvancedStatisticsRequest{
+		Period:        period,
+		StartDate:     startDate,
+		EndDate:       endDate,
+		IncludeTrends: includeTrends,
+	}
+
+	response, err := h.loanService.GetAdvancedStatistics(c.Request.Context(), req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(http.StatusInternalServerError, "获取统计数据失败", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, NewSuccessResponse("获取成功", response))
 }

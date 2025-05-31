@@ -76,6 +76,18 @@ type LoanService interface {
 	// AI辅助审批
 	TriggerAIAssessment(ctx context.Context, applicationID uint64, workflowType string) error
 	ProcessDifyCallback(ctx context.Context, req *DifyCallbackRequest) error
+	RetryAIAssessment(ctx context.Context, req *RetryAIAssessmentRequest) error
+
+	// 增强审批功能
+	BatchApproveLoanApplications(ctx context.Context, req *BatchApproveLoanRequest) (*BatchApproveLoanResponse, error)
+	EnableAutoApproval(ctx context.Context, req *EnableAutoApprovalRequest) error
+	DisableAutoApproval(ctx context.Context, req *DisableAutoApprovalRequest) error
+	GetAutoApprovalConfig(ctx context.Context) (*GetAutoApprovalConfigResponse, error)
+	GetApplicationsByRiskLevel(ctx context.Context, req *GetApplicationsByRiskLevelRequest) (*GetApplicationsByRiskLevelResponse, error)
+	GetAIAssessmentHistory(ctx context.Context, req *GetAIAssessmentHistoryRequest) (*GetAIAssessmentHistoryResponse, error)
+	CreateApplicationTask(ctx context.Context, req *CreateApplicationTaskRequest) (*CreateApplicationTaskResponse, error)
+	GetApplicationTasks(ctx context.Context, req *GetApplicationTasksRequest) (*GetApplicationTasksResponse, error)
+	GetAdvancedStatistics(ctx context.Context, req *GetAdvancedStatisticsRequest) (*GetAdvancedStatisticsResponse, error)
 
 	// 统计和报表
 	GetLoanStatistics(ctx context.Context, req *StatisticsRequest) (*LoanStatistics, error)
@@ -114,6 +126,15 @@ type MachineService interface {
 	// 评价系统
 	SubmitRating(ctx context.Context, orderID uint64, req *SubmitRatingRequest) error
 	GetMachineRatings(ctx context.Context, machineID uint64) (*MachineRatingsResponse, error)
+	RateOrder(ctx context.Context, req *RateOrderRequest) error
+
+	// OA农机租赁审批
+	GetRentalApplications(ctx context.Context, req *GetRentalApplicationsRequest) (*GetRentalApplicationsResponse, error)
+	GetRentalApplicationDetail(ctx context.Context, req *GetRentalApplicationDetailRequest) (*GetRentalApplicationDetailResponse, error)
+	ApproveRentalApplication(ctx context.Context, req *ApproveRentalRequest) error
+	RejectRentalApplication(ctx context.Context, req *RejectRentalRequest) error
+	GetRentalStatistics(ctx context.Context, req *GetRentalStatisticsRequest) (*GetRentalStatisticsResponse, error)
+	BatchApproveRentals(ctx context.Context, req *BatchApproveRentalsRequest) (*BatchApproveRentalsResponse, error)
 }
 
 // ContentService 内容管理服务接口
@@ -459,13 +480,19 @@ type GetAdminApplicationsRequest struct {
 }
 
 type AdminApplicationResponse struct {
-	ID            uint      `json:"id"`
-	ApplicationNo string    `json:"application_no"`
-	UserName      string    `json:"user_name"`
-	ProductName   string    `json:"product_name"`
-	LoanAmount    int64     `json:"loan_amount"`
-	Status        string    `json:"status"`
-	CreatedAt     time.Time `json:"created_at"`
+	ID              uint      `json:"id"`
+	ApplicationNo   string    `json:"application_no"`
+	UserID          uint64    `json:"user_id"`
+	UserName        string    `json:"user_name"`
+	ApplicantName   string    `json:"applicant_name"`
+	ProductName     string    `json:"product_name"`
+	LoanAmount      int64     `json:"loan_amount"`
+	ApplyAmount     int64     `json:"apply_amount"`
+	ApplyTermMonths int       `json:"apply_term_months"`
+	Status          string    `json:"status"`
+	RiskLevel       string    `json:"risk_level"`
+	AssignedTo      *uint64   `json:"assigned_to"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 type GetAdminApplicationsResponse struct {

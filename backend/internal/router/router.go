@@ -95,18 +95,28 @@ func SetupRouter(config *RouterConfig) *gin.Engine {
 				{
 					loan.POST("/get-application-details", difyHandler.GetLoanApplicationDetails)
 					loan.POST("/submit-assessment", difyHandler.SubmitRiskAssessment)
+					loan.POST("/auto-approve", difyHandler.AutoApproveLoanApplication)
 				}
 
 				// 农机相关接口
 				machine := dify.Group("/machine")
 				{
 					machine.POST("/get-rental-details", difyHandler.GetMachineRentalDetails)
+					machine.POST("/auto-approve-rental", difyHandler.AutoApproveMachineRental)
 				}
 
 				// 征信相关接口
 				credit := dify.Group("/credit")
 				{
 					credit.POST("/query", difyHandler.QueryCreditReport)
+				}
+
+				// 任务管理接口
+				task := dify.Group("/task")
+				{
+					task.POST("/create", difyHandler.CreateApprovalTask)
+					task.POST("/status", difyHandler.GetTaskStatus)
+					task.POST("/complete", difyHandler.CompleteApprovalTask)
 				}
 			}
 		}

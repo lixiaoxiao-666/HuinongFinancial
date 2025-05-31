@@ -96,10 +96,25 @@ type MachineRepository interface {
 	// 租赁订单
 	CreateOrder(ctx context.Context, order *model.RentalOrder) error
 	GetOrderByID(ctx context.Context, id uint64) (*model.RentalOrder, error)
+	GetRentalOrderByID(ctx context.Context, id uint64) (*model.RentalOrder, error)
 	GetOrderByNo(ctx context.Context, orderNo string) (*model.RentalOrder, error)
 	UpdateOrder(ctx context.Context, order *model.RentalOrder) error
 	ListOrders(ctx context.Context, req *ListOrdersRequest) (*ListOrdersResponse, error)
 	GetUserOrders(ctx context.Context, userID uint64, userType string, limit, offset int) ([]*model.RentalOrder, error)
+
+	// 租赁申请
+	CreateRentalApplication(ctx context.Context, application *model.RentalApplication) error
+	GetRentalApplicationByID(ctx context.Context, id uint64) (*model.RentalApplication, error)
+	UpdateRentalApplication(ctx context.Context, application *model.RentalApplication) error
+	ListRentalApplications(ctx context.Context, req *ListRentalApplicationsRequest) (*ListRentalApplicationsResponse, error)
+
+	// 租赁评价
+	CreateRentalRating(ctx context.Context, rating *model.RentalRating) error
+	GetRentalRatings(ctx context.Context, orderID uint64) ([]*model.RentalRating, error)
+
+	// 审核日志
+	CreateRentalReviewLog(ctx context.Context, log *model.RentalReviewLog) error
+	GetRentalReviewLogs(ctx context.Context, applicationID uint64) ([]*model.RentalReviewLog, error)
 
 	// 时间冲突检查
 	CheckTimeConflict(ctx context.Context, machineID uint64, startTime, endTime time.Time, excludeOrderID uint64) (bool, error)
@@ -401,4 +416,34 @@ type ListAPILogsResponse struct {
 	Total int64           `json:"total"`
 	Page  int             `json:"page"`
 	Limit int             `json:"limit"`
+}
+
+// ListRentalApplicationsRequest 租赁申请列表请求
+type ListRentalApplicationsRequest struct {
+	Page        int    `json:"page"`
+	Limit       int    `json:"limit"`
+	Status      string `json:"status"`
+	MachineType string `json:"machine_type"`
+	StartDate   string `json:"start_date"`
+	EndDate     string `json:"end_date"`
+	RiskLevel   string `json:"risk_level"`
+	SortBy      string `json:"sort_by"`
+	SortOrder   string `json:"sort_order"`
+}
+
+// ListRentalApplicationsResponse 租赁申请列表响应
+type ListRentalApplicationsResponse struct {
+	Applications []*model.RentalApplication   `json:"applications"`
+	Total        int64                        `json:"total"`
+	Page         int                          `json:"page"`
+	Limit        int                          `json:"limit"`
+	Statistics   *RentalApplicationStatistics `json:"statistics"`
+}
+
+// RentalApplicationStatistics 租赁申请统计
+type RentalApplicationStatistics struct {
+	TotalApplications    int64 `json:"total_applications"`
+	PendingApplications  int64 `json:"pending_applications"`
+	ApprovedApplications int64 `json:"approved_applications"`
+	RejectedApplications int64 `json:"rejected_applications"`
 }
