@@ -316,83 +316,53 @@ Authorization: Bearer {oa_access_token}
 -   `ip_address` (string, 可选): 按IP地址筛选
 -   `page`, `limit` (int, 可选): 分页参数
 
-**响应 (成功):**
+**响应示例 (成功):**
 ```json
 {
     "code": 200,
-    "message": "获取成功",
+    "message": "获取活跃会话列表",
     "data": {
-        "total": 5,
+        "total": 150,
         "sessions": [
             {
                 "session_id": "sess_abc",
                 "user_id": 101,
-                "user_real_name": "张三 (惠农用户)", // 关联查询的用户真实姓名
+                "user_real_name": "张三 (惠农用户)",
                 "platform": "app",
                 "device_name": "张三的iPhone",
                 "ip_address": "1.2.3.4",
                 "location": "北京市",
                 "login_time": "2024-01-15T09:00:00Z",
-                "last_active_at": "2024-01-15T14:00:00Z"
+                "last_active_at": "2024-01-15T14:00:00Z",
+                "duration_minutes": 300,
+                "user_agent": "HuinongApp/1.3.1 (iOS 17.0)"
+            },
+            {
+                "session_id": "oa_sess_def",
+                "user_id": 201,
+                "user_real_name": "管理员李四 (OA用户)",
+                "platform": "oa",
+                "device_name": "Chrome浏览器",
+                "ip_address": "192.168.1.100",
+                "location": "内网",
+                "login_time": "2024-01-15T08:30:00Z",
+                "last_active_at": "2024-01-15T14:15:00Z",
+                "duration_minutes": 345,
+                "user_agent": "Mozilla/5.0..."
             }
-            // ... more sessions
         ]
     }
 }
 ```
 
-#### 4.2 管理员强制注销指定会话
-
-```http
-POST /api/oa/admin/sessions/revoke
-Authorization: Bearer {oa_access_token}
-Content-Type: application/json
-
-{
-    "session_id_to_revoke": "sess_abc"
-}
-```
-
-**响应 (成功):**
-```json
-{
-    "code": 200,
-    "message": "会话 sess_abc 已被管理员强制注销"
-}
-```
-
-#### 4.3 管理员强制注销指定用户的所有会话
-
-```http
-POST /api/oa/admin/sessions/revoke-user
-Authorization: Bearer {oa_access_token}
-Content-Type: application/json
-
-{
-    "user_id_to_revoke": 101, // 惠农用户ID
-    "user_id_type": "app_user" // 或 "oa_user" 及对应的OA用户ID
-}
-```
-
-**响应 (成功):**
-```json
-{
-    "code": 200,
-    "message": "用户 惠农用户ID:101 的所有会话已被强制注销",
-    "data": {
-        "revoked_count": 2
-    }
-}
-```
-
-#### 4.4 获取会话统计信息
+#### 4.2 获取会话统计信息
 
 ```http
 GET /api/oa/admin/sessions/statistics
 Authorization: Bearer {oa_access_token}
 ```
 
-**响应 (成功):**
+**响应示例 (成功):**
 ```json
 {
     "code": 200,
@@ -405,7 +375,243 @@ Authorization: Bearer {oa_access_token}
             "oa": 20
         },
         "daily_peak_users": 120,
-        "average_session_duration_minutes": 30
+        "average_session_duration_minutes": 30,
+        "today_stats": {
+            "new_sessions": 45,
+            "expired_sessions": 28,
+            "active_users": 156
+        },
+        "hourly_distribution": {
+            "00": 5, "01": 2, "02": 1, "03": 1,
+            "08": 25, "09": 45, "10": 65, "11": 78,
+            "14": 89, "15": 95, "16": 87, "17": 76,
+            "20": 45, "21": 32, "22": 18, "23": 12
+        }
+    }
+}
+```
+
+#### 4.3 手动清理过期会话
+
+```http
+POST /api/oa/admin/sessions/cleanup
+Authorization: Bearer {oa_access_token}
+Content-Type: application/json
+
+{
+    "cleanup_type": "expired", // expired, inactive, all
+    "inactive_threshold_hours": 24 // 可选，指定不活跃时间阈值
+}
+```
+
+**响应示例 (成功):**
+```json
+{
+    "code": 200,
+    "message": "会话清理完成",
+    "data": {
+        "cleaned": 23,
+        "cleanup_type": "expired",
+        "cleanup_time": "2024-01-15T16:30:00Z",
+        "details": {
+            "expired_sessions": 15,
+            "inactive_sessions": 8,
+            "total_before": 173,
+            "total_after": 150
+        }
+    }
+}
+```
+
+#### 4.4 管理员强制注销指定会话
+
+```http
+DELETE /api/oa/admin/sessions/{session_id}
+Authorization: Bearer {oa_access_token}
+Content-Type: application/json
+
+{
+    "reason": "安全检查",
+    "notify_user": true // 是否通知用户
+}
+```
+
+**响应示例 (成功):**
+```json
+{
+    "code": 200,
+    "message": "会话已强制注销",
+    "data": {
+        "session_id": "sess_abc",
+        "user_info": {
+            "user_id": 101,
+            "real_name": "张三",
+            "platform": "app"
+        },
+        "revoked_at": "2024-01-15T16:45:00Z",
+        "revoked_by": {
+            "admin_id": 201,
+            "admin_name": "管理员李四"
+        },
+        "reason": "安全检查",
+        "user_notified": true
+    }
+}
+```
+
+#### 4.5 批量强制注销会话
+
+```http
+POST /api/oa/admin/sessions/batch-revoke
+Authorization: Bearer {oa_access_token}
+Content-Type: application/json
+
+{
+    "session_ids": ["sess_abc", "sess_def", "sess_ghi"],
+    "reason": "系统维护",
+    "notify_users": true
+}
+```
+
+**响应示例 (成功):**
+```json
+{
+    "code": 200,
+    "message": "批量注销完成",
+    "data": {
+        "total_requested": 3,
+        "successful_revokes": 2,
+        "failed_revokes": 1,
+        "results": [
+            {
+                "session_id": "sess_abc",
+                "status": "success",
+                "revoked_at": "2024-01-15T17:00:00Z"
+            },
+            {
+                "session_id": "sess_def", 
+                "status": "success",
+                "revoked_at": "2024-01-15T17:00:00Z"
+            },
+            {
+                "session_id": "sess_ghi",
+                "status": "failed",
+                "error": "Session not found"
+            }
+        ],
+        "revoked_by": {
+            "admin_id": 201,
+            "admin_name": "管理员李四"
+        }
+    }
+}
+```
+
+#### 4.6 管理员强制注销指定用户的所有会话
+
+```http
+POST /api/oa/admin/sessions/revoke-user
+Authorization: Bearer {oa_access_token}
+Content-Type: application/json
+
+{
+    "user_id_to_revoke": 101, // 惠农用户ID
+    "user_id_type": "app_user", // 或 "oa_user" 及对应的OA用户ID
+    "reason": "账户异常活动",
+    "exclude_current": true, // 是否排除当前会话（如果是OA管理员注销自己）
+    "notify_user": true
+}
+```
+
+**响应示例 (成功):**
+```json
+{
+    "code": 200,
+    "message": "用户 惠农用户ID:101 的所有会话已被强制注销",
+    "data": {
+        "user_id": 101,
+        "user_id_type": "app_user",
+        "user_real_name": "张三",
+        "revoked_count": 2,
+        "revoked_sessions": [
+            {
+                "session_id": "sess_abc",
+                "platform": "app",
+                "device_name": "张三的iPhone"
+            },
+            {
+                "session_id": "sess_def",
+                "platform": "web", 
+                "device_name": "Chrome浏览器"
+            }
+        ],
+        "revoked_at": "2024-01-15T17:15:00Z",
+        "revoked_by": {
+            "admin_id": 201,
+            "admin_name": "管理员李四"
+        },
+        "reason": "账户异常活动"
+    }
+}
+```
+
+#### 4.7 获取会话详细信息 (管理员)
+
+```http
+GET /api/oa/admin/sessions/{session_id}/details
+Authorization: Bearer {oa_access_token}
+```
+
+**响应示例 (成功):**
+```json
+{
+    "code": 200,
+    "message": "获取成功",
+    "data": {
+        "session_id": "sess_abc",
+        "user_info": {
+            "user_id": 101,
+            "user_id_type": "app_user",
+            "real_name": "张三",
+            "phone": "138****8000",
+            "user_type": "farmer"
+        },
+        "session_details": {
+            "platform": "app",
+            "device_info": {
+                "device_id": "iPhone_12_ABC123",
+                "device_type": "ios",
+                "device_name": "张三的iPhone",
+                "app_version": "1.3.1",
+                "os_version": "iOS 17.0"
+            },
+            "network_info": {
+                "ip_address": "1.2.3.4",
+                "location": "北京市海淀区",
+                "isp": "中国联通",
+                "ip_type": "mobile"
+            },
+            "session_timeline": {
+                "created_at": "2024-01-15T09:00:00Z",
+                "last_active_at": "2024-01-15T14:00:00Z",
+                "expires_at": "2024-01-16T09:00:00Z",
+                "total_duration_minutes": 300,
+                "idle_duration_minutes": 15
+            },
+            "security_info": {
+                "login_method": "password",
+                "is_trusted_device": true,
+                "risk_score": "low",
+                "security_events": []
+            }
+        },
+        "activity_summary": {
+            "api_calls_count": 156,
+            "last_endpoint": "/api/user/loan/applications",
+            "most_used_features": ["profile", "loan_application", "file_upload"],
+            "pages_visited": 25,
+            "files_uploaded": 3
+        }
     }
 }
 ```
@@ -421,7 +627,20 @@ Authorization: Bearer {oa_access_token}
         -   `user_id_type`可以是 `app` (对应 `User` 模型ID) 或 `oa` (对应 `OAUser` 模型ID)
     -   Access Token 到 Session ID 映射: `token_access:{access_token_hash}` (STRING, value: session_id)
     -   Refresh Token 到 Session ID 映射: `token_refresh:{refresh_token_hash}` (STRING, value: session_id)
+    -   会话统计缓存: `session_stats:daily:{date}` (HASH)
+        -   包含每日的会话统计数据
+    -   活跃用户计数: `active_users:{platform}:{date}` (SET)
+        -   存储每日活跃用户ID集合
+
 -   **Token哈希**: 存储在Redis中的Token均为哈希值 (如SHA256)，不存储明文Token。
--   **会话清理**: 定期任务清理Redis中过期的会话数据。
+
+-   **会话清理**: 定期任务清理Redis中过期的会话数据，管理员也可手动触发清理。
+
+-   **安全监控**: 记录异常登录行为，如异地登录、设备变更等。
+
+-   **性能优化**: 
+    -   使用Redis管道批量操作
+    -   会话统计数据缓存
+    -   分页查询优化
 
 **此文档旨在提供清晰的API使用说明，帮助前端工程师快速接入。** 

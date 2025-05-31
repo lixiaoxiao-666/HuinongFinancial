@@ -456,7 +456,225 @@ Content-Type: application/json
 
 ---
 
-## 🔧 错误码说明
+## 🏷️ 惠农APP/Web - 用户标签管理接口
+
+**认证要求**: `RequireAuth`
+**适用平台**: `app`, `web`
+
+### 3.1 获取当前用户的标签列表
+
+```http
+GET /api/user/tags
+Authorization: Bearer {access_token}
+```
+
+**响应示例:**
+```json
+{
+    "code": 200,
+    "message": "获取成功",
+    "data": {
+        "user_id": 1001,
+        "tags": [
+            {
+                "tag_key": "user_type",
+                "tag_value": "farmer",
+                "display_name": "农户",
+                "category": "基础信息",
+                "created_at": "2024-01-01T10:00:00Z",
+                "is_system": true,
+                "is_editable": false
+            },
+            {
+                "tag_key": "crop_type",
+                "tag_value": "rice,wheat",
+                "display_name": "种植作物",
+                "category": "业务信息",
+                "created_at": "2024-01-15T14:30:00Z",
+                "is_system": false,
+                "is_editable": true
+            },
+            {
+                "tag_key": "farm_scale",
+                "tag_value": "medium",
+                "display_name": "农场规模",
+                "category": "业务信息",
+                "created_at": "2024-01-10T09:20:00Z",
+                "is_system": false,
+                "is_editable": true
+            },
+            {
+                "tag_key": "credit_level",
+                "tag_value": "good",
+                "display_name": "信用等级",
+                "category": "风控标签",
+                "created_at": "2024-01-12T16:45:00Z",
+                "is_system": true,
+                "is_editable": false
+            }
+        ],
+        "categories": {
+            "基础信息": ["user_type", "region"],
+            "业务信息": ["crop_type", "farm_scale", "business_type"],
+            "风控标签": ["credit_level", "risk_score", "loan_history"],
+            "行为标签": ["login_frequency", "feature_usage", "active_level"]
+        }
+    }
+}
+```
+
+### 3.2 添加用户标签
+
+```http
+POST /api/user/tags
+Authorization: Bearer {access_token}
+Content-Type: application/json
+
+{
+    "tag_key": "preferred_contact",
+    "tag_value": "sms",
+    "category": "偏好设置",
+    "description": "用户偏好的联系方式"
+}
+```
+
+**响应示例 (成功):**
+```json
+{
+    "code": 200,
+    "message": "标签添加成功",
+    "data": {
+        "tag_key": "preferred_contact",
+        "tag_value": "sms",
+        "display_name": "偏好联系方式",
+        "category": "偏好设置",
+        "created_at": "2024-01-15T17:00:00Z",
+        "is_system": false,
+        "is_editable": true
+    }
+}
+```
+
+### 3.3 更新用户标签
+
+```http
+PUT /api/user/tags/{tag_key}
+Authorization: Bearer {access_token}
+Content-Type: application/json
+
+{
+    "tag_value": "email,sms",
+    "description": "更新为多种联系方式"
+}
+```
+
+**响应示例 (成功):**
+```json
+{
+    "code": 200,
+    "message": "标签更新成功",
+    "data": {
+        "tag_key": "preferred_contact",
+        "old_value": "sms",
+        "new_value": "email,sms",
+        "updated_at": "2024-01-15T17:30:00Z"
+    }
+}
+```
+
+### 3.4 删除用户标签
+
+```http
+DELETE /api/user/tags/{tag_key}
+Authorization: Bearer {access_token}
+```
+
+**响应示例 (成功):**
+```json
+{
+    "code": 200,
+    "message": "标签删除成功",
+    "data": {
+        "tag_key": "preferred_contact",
+        "deleted_at": "2024-01-15T18:00:00Z"
+    }
+}
+```
+
+**错误响应 (系统标签不可删除):**
+```json
+{
+    "code": 1011,
+    "message": "系统标签不允许删除",
+    "data": {
+        "tag_key": "user_type",
+        "is_system": true
+    }
+}
+```
+
+### 标签系统说明
+
+#### 标签分类
+- **基础信息**: 用户基本属性，如用户类型、地区等
+- **业务信息**: 业务相关属性，如种植作物、农场规模等
+- **风控标签**: 风险控制相关，如信用等级、风险评分等
+- **行为标签**: 用户行为分析，如登录频率、功能使用等
+- **偏好设置**: 用户个性化设置
+
+#### 标签类型
+- **系统标签** (`is_system: true`): 由系统自动生成和维护，用户不可修改
+- **用户标签** (`is_system: false`): 用户可以自定义添加、修改和删除
+
+#### 常用标签示例
+```javascript
+const COMMON_TAGS = {
+    // 基础信息标签
+    'user_type': {
+        values: ['farmer', 'farm_owner', 'cooperative', 'enterprise'],
+        display: '用户类型'
+    },
+    'region': {
+        values: ['华北', '华东', '华南', '西北', '西南', '东北'],
+        display: '所在地区'
+    },
+    
+    // 业务信息标签  
+    'crop_type': {
+        values: ['rice', 'wheat', 'corn', 'soybean', 'vegetable', 'fruit'],
+        display: '种植作物'
+    },
+    'farm_scale': {
+        values: ['small', 'medium', 'large', 'extra_large'],
+        display: '农场规模'
+    },
+    'business_type': {
+        values: ['planting', 'breeding', 'mixed', 'processing'],
+        display: '经营类型'
+    },
+    
+    // 风控标签
+    'credit_level': {
+        values: ['excellent', 'good', 'fair', 'poor'],
+        display: '信用等级'
+    },
+    'risk_score': {
+        values: ['low', 'medium', 'high'],
+        display: '风险评分'
+    },
+    
+    // 行为标签
+    'login_frequency': {
+        values: ['daily', 'weekly', 'monthly', 'occasional'],
+        display: '登录频率'
+    },
+    'active_level': {
+        values: ['very_active', 'active', 'normal', 'inactive'],
+    }
+}
+```
+
+### 错误码说明
 
 | 错误码 | 说明 | 处理建议 |
 |-------|------|---------|
