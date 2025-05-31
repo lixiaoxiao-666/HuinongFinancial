@@ -13,7 +13,8 @@ const loading = ref(false)
 const FormData = reactive({
   phone: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  realName: ''
 })
 
 // 表单验证规则
@@ -47,10 +48,21 @@ const validateConfirmPassword = (rule: any, value: any, callback: any) => {
   }
 }
 
+const validateRealName = (rule: any, value: any, callback: any) => {
+  if (value === '') {
+    callback(new Error('请输入真实姓名'))
+  } else if (value.length < 2) {
+    callback(new Error('请输入真实姓名'))
+  } else {
+    callback()
+  }
+}
+
 const rules = reactive<FormRules<typeof FormData>>({
   phone: [{ validator: validatePhone, trigger: 'blur' }],
   password: [{ validator: validatePassword, trigger: 'blur' }],
-  confirmPassword: [{ validator: validateConfirmPassword, trigger: 'blur' }]
+  confirmPassword: [{ validator: validateConfirmPassword, trigger: 'blur' }],
+  realName: [{ validator: validateRealName, trigger: 'blur' }]
 })
 
 // 注册
@@ -63,17 +75,45 @@ const submitForm = async (formEl: FormInstance | undefined) => {
     
     loading.value = true
     
-    await userApi.register({
+    // 添加调试日志
+    console.log('表单数据:', FormData)
+    
+    // 验证数据完整性
+    if (!FormData.phone || !FormData.password || !FormData.realName) {
+      ElMessage.error('请填写所有必填字段')
+      return
+    }
+    
+    if (FormData.password !== FormData.confirmPassword) {
+      ElMessage.error('两次输入的密码不一致')
+      return
+    }
+    
+    console.log('准备发送注册请求...')
+    
+    const response = await userApi.register({
       phone: FormData.phone,
-      password: FormData.password
+      password: FormData.password,
+      real_name: FormData.realName
     })
+    
+    console.log('注册响应:', response)
     
     ElMessage.success('注册成功，请登录')
     router.push('/login')
     
   } catch (error: any) {
     console.error('注册失败:', error)
-    ElMessage.error(error.message || '注册失败')
+    
+    // 更详细的错误提示
+    let errorMessage = '注册失败'
+    if (error.message) {
+      errorMessage = error.message
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    }
+    
+    ElMessage.error(errorMessage)
   } finally {
     loading.value = false
   }
@@ -103,34 +143,52 @@ const goToLogin = () => {
       >
         <div class="form-item">
           <div class="form-label">手机号码</div>
-          <el-input 
-            v-model="FormData.phone" 
-            placeholder="请输入手机号码" 
-            size="large"
-            maxlength="11"
-          />
+          <el-form-item prop="phone">
+            <el-input 
+              v-model="FormData.phone" 
+              placeholder="请输入手机号码" 
+              size="large"
+              maxlength="11"
+            />
+          </el-form-item>
+        </div>
+
+        <div class="form-item">
+          <div class="form-label">真实姓名</div>
+          <el-form-item prop="realName">
+            <el-input
+              v-model="FormData.realName"
+              placeholder="请输入真实姓名"
+              size="large"
+              maxlength="20"
+            />
+          </el-form-item>
         </div>
 
         <div class="form-item">
           <div class="form-label">密码</div>
-          <el-input
-            v-model="FormData.password"
-            type="password"
-            placeholder="请输入密码"
-            size="large"
-            show-password
-          />
+          <el-form-item prop="password">
+            <el-input
+              v-model="FormData.password"
+              type="password"
+              placeholder="请输入密码"
+              size="large"
+              show-password
+            />
+          </el-form-item>
         </div>
 
         <div class="form-item">
           <div class="form-label">确认密码</div>
-          <el-input
-            v-model="FormData.confirmPassword"
-            type="password"
-            placeholder="请再次输入密码"
-            size="large"
-            show-password
-          />
+          <el-form-item prop="confirmPassword">
+            <el-input
+              v-model="FormData.confirmPassword"
+              type="password"
+              placeholder="请再次输入密码"
+              size="large"
+              show-password
+            />
+          </el-form-item>
         </div>
 
         <div class="submit-btn">

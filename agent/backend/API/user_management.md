@@ -30,7 +30,6 @@ Content-Type: application/json
 {
     "phone": "13800138000",
     "password": "password123",
-    "verification_code": "123456", // 可选，取决于系统配置
     "user_type": "farmer", // 用户类型: farmer, farm_owner, cooperative, enterprise
     "real_name": "张三",
     "platform": "app", // 客户端平台: app, web
@@ -42,6 +41,19 @@ Content-Type: application/json
     }
 }
 ```
+
+**字段说明:**
+- `phone`: 手机号（必填）
+- `password`: 密码（必填，最少6位）
+- `user_type`: 用户类型（必填）- farmer（农户）, farm_owner（农场主）, cooperative（合作社）, enterprise（企业）
+- `real_name`: 真实姓名（必填）
+- `platform`: 平台标识（必填）- app（移动端）, web（网页端）
+- `device_info`: 设备信息（可选）
+
+**注意事项:**
+- 当前版本不需要短信验证码，可直接注册
+- 系统会自动为用户分配UUID
+- 注册成功后会同时返回认证令牌，无需再次登录
 
 **响应示例 (成功):**
 ```json

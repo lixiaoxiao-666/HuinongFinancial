@@ -69,6 +69,8 @@ func (s *userService) Register(ctx context.Context, req *RegisterRequest) (*Regi
 		County:       req.County,
 		Address:      req.Address,
 		Status:       "active",
+		RegisterTime: time.Now(),            // 设置注册时间
+		RegisterIP:   getIPFromContext(ctx), // 设置注册IP
 	}
 
 	// 保存用户

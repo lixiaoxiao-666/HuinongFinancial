@@ -16,9 +16,11 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
     "@vant/icons": "^1.2.2",
     "axios": "^1.6.7",
     "dayjs": "^1.11.10",
+    "element-plus": "^2.9.11",
     "lodash-es": "^4.17.21",
     "pinia": "^3.0.1",
     "vant": "^4.8.8",

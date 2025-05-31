@@ -252,7 +252,7 @@ type RegisterRequest struct {
 	City     string `json:"city"`
 	County   string `json:"county"`
 	Address  string `json:"address"`
-	SmsCode  string `json:"sms_code" binding:"required"`
+	SmsCode  string `json:"sms_code"`
 }
 
 type RegisterResponse struct {
