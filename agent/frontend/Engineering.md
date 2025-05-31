@@ -1332,3 +1332,560 @@ gh release create v1.0.0 --notes "发布说明"
 ---
 
 本工程化文档将随着项目发展持续更新，确保开发规范的时效性和实用性。所有团队成员都应遵循本文档的规范，以保证代码质量和项目的可维护性。 
+
+## 📋 项目架构
+
+本项目采用现代化前端开发架构，基于Vue 3 + TypeScript构建，支持用户端和管理端的双端应用。
+
+## 🏗️ 目录结构
+
+```
+frontend/
+├── users/                    # 用户端应用
+│   ├── src/
+│   │   ├── views/           # 页面组件
+│   │   │   ├── FinancePage.vue          # 理财页面 ✨新增完善
+│   │   │   ├── LoanApplicationPage.vue   # 贷款申请页面
+│   │   │   ├── IndexPage.vue            # 首页
+│   │   │   └── ...
+│   │   ├── services/        # API服务
+│   │   │   └── api.ts       # API接口定义 ✨更新完善
+│   │   ├── stores/          # 状态管理
+│   │   ├── router/          # 路由配置
+│   │   └── components/      # 通用组件
+│   └── package.json
+├── admin/                   # 管理端应用
+│   └── ...
+```
+
+## 🔧 技术栈
+
+### 核心框架
+- **Vue 3**: 响应式框架，支持Composition API
+- **TypeScript**: 类型安全的JavaScript超集
+- **Vite**: 现代化构建工具，支持热重载
+- **Element Plus**: UI组件库
+
+### 状态管理与路由
+- **Pinia**: 轻量级状态管理
+- **Vue Router 4**: 客户端路由
+
+### 开发工具
+- **ESLint**: 代码质量检查
+- **Prettier**: 代码格式化
+- **Husky**: Git钩子管理
+
+## 📱 页面功能模块
+
+### 1. 理财页面模块 ✨完善重点
+
+#### 功能架构
+```
+FinancePage.vue
+├── 用户状态管理
+│   ├── 登录状态检测
+│   ├── 用户信息展示
+│   └── 权限验证
+├── 产品数据管理
+│   ├── 智能数据源 (开发/生产环境)
+│   ├── 产品分类筛选
+│   └── 实时数据加载
+├── UI交互组件
+│   ├── 产品卡片展示
+│   ├── 分类选择器
+│   └── 操作按钮组
+└── 路由集成
+    ├── 产品详情跳转
+    ├── 申请页面跳转
+    └── 登录页面引导
+```
+
+#### 数据流管理
+```typescript
+// 数据源智能切换
+const getProducts = async () => {
+  // 开发环境: 模拟数据
+  if (isDevelopment) {
+    return getMockProducts()
+  }
+  
+  // 生产环境: 真实API
+  return await loanApi.getProducts()
+}
+```
+
+### 2. API服务架构
+
+#### 服务分层
+```typescript
+// services/api.ts
+export const loanApi = {
+  // 贷款产品管理
+  getProducts(category?: string): Promise<ApiResponse<LoanProduct[]>>
+  getProductDetail(id: string): Promise<ApiResponse<LoanProduct>>
+  
+  // 贷款申请管理
+  submitApplication(data: LoanApplicationRequest): Promise<ApiResponse>
+  getMyApplications(): Promise<PaginatedResponse<LoanApplication>>
+  
+  // 模拟数据系统 ✨新增
+  getMockProducts(): Promise<ApiResponse<LoanProduct[]>>
+}
+```
+
+#### 模拟数据系统 ✨新增特性
+```typescript
+// 完善的模拟数据
+const mockProducts = [
+  {
+    product_id: 'NYCD001',
+    name: '农业创业贷',
+    category: '创业贷',
+    min_amount: 50000,
+    max_amount: 500000,
+    interest_rate_yearly: '6.5%',
+    // ... 完整产品信息
+  }
+  // ... 6款产品
+]
+
+// 智能环境检测
+const isDev = import.meta.env?.DEV || window.location.hostname === 'localhost'
+```
+
+## 🎨 UI/UX设计规范
+
+### 设计原则
+1. **用户优先**: 以用户体验为核心
+2. **响应式**: 适配多端设备
+3. **一致性**: 统一的视觉语言
+4. **可访问性**: 满足无障碍标准
+
+### 色彩系统
+```scss
+// 主色调
+$primary-color: #27ae60;      // 惠农绿
+$primary-light: #2ecc71;      // 浅绿色
+$primary-dark: #219a52;       // 深绿色
+
+// 辅助色
+$success-color: #67c23a;      // 成功绿
+$warning-color: #e6a23c;      // 警告橙
+$danger-color: #f56c6c;       // 危险红
+$info-color: #909399;         // 信息灰
+
+// 中性色
+$text-primary: #2c3e50;       // 主文字
+$text-regular: #606266;       // 常规文字
+$text-secondary: #909399;     // 次要文字
+$border-color: #dcdfe6;       // 边框色
+$bg-color: #f5f5f5;          // 背景色
+```
+
+### 组件规范
+```vue
+<!-- 产品卡片组件标准 -->
+<template>
+  <div class="product-card">
+    <div class="card-header">
+      <h4 class="product-name">{{ product.name }}</h4>
+      <el-tag type="success">{{ product.category }}</el-tag>
+    </div>
+    
+    <div class="card-body">
+      <div class="product-details">
+        <div class="detail-item">
+          <span class="label">贷款金额</span>
+          <span class="value">{{ formatAmount(product.min_amount) }} - {{ formatAmount(product.max_amount) }}元</span>
+        </div>
+        <!-- ... 其他信息 -->
+      </div>
+    </div>
+    
+    <div class="card-footer">
+      <el-button type="info" size="small">查看详情</el-button>
+      <el-button type="primary" size="small">立即申请</el-button>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.product-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+</style>
+```
+
+## 🔗 路由配置
+
+### 页面路由
+```typescript
+// router/index.ts
+const routes = [
+  // 理财相关路由
+  {
+    path: '/finance',
+    name: 'finance',
+    component: () => import('../views/FinancePage.vue'),
+    meta: { requiresAuth: false, title: '惠农金融' }
+  },
+  
+  // 贷款申请流程
+  {
+    path: '/loan/apply/:productId',
+    name: 'loanApplication',
+    component: () => import('../views/LoanApplicationPage.vue'),
+    meta: { requiresAuth: true, title: '贷款申请' }
+  },
+  
+  {
+    path: '/loan/products/:productId',
+    name: 'loanProductDetail',
+    component: () => import('../views/LoanProductDetailPage.vue'),
+    meta: { requiresAuth: false, title: '产品详情' }
+  },
+  
+  // 申请管理
+  {
+    path: '/loan/my-applications',
+    name: 'myLoanApplications',
+    component: () => import('../views/MyLoanApplicationsPage.vue'),
+    meta: { requiresAuth: true, title: '我的申请' }
+  }
+]
+```
+
+### 路由守卫
+```typescript
+// 认证守卫
+router.beforeEach((to, from, next) => {
+  if (to.meta.requiresAuth && !userStore.isLoggedIn) {
+    next('/login')
+  } else {
+    next()
+  }
+})
+```
+
+## 📊 状态管理
+
+### 用户状态管理
+```typescript
+// stores/user.ts
+export const useUserStore = defineStore('user', () => {
+  const userInfo = ref<UserInfo | null>(null)
+  const isLoggedIn = computed(() => !!userInfo.value)
+  
+  // 用户信息展示
+  const getUserTypeDisplay = computed(() => {
+    const typeMap = {
+      farmer: '农户',
+      farm_owner: '农场主',
+      cooperative: '合作社',
+      enterprise: '企业'
+    }
+    return typeMap[userInfo.value?.user_type] || '普通用户'
+  })
+  
+  // 认证状态
+  const getAuthStatus = computed(() => {
+    // 返回认证状态信息
+  })
+  
+  return {
+    userInfo,
+    isLoggedIn,
+    getUserTypeDisplay,
+    getAuthStatus
+  }
+})
+```
+
+## 🛠️ 开发工具配置
+
+### Vite配置
+```typescript
+// vite.config.ts
+export default defineConfig({
+  plugins: [vue()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src')
+    }
+  },
+  server: {
+    port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://172.18.120.10:8080',
+        changeOrigin: true
+      }
+    }
+  }
+})
+```
+
+### TypeScript配置
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "preserve",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}
+```
+
+## 🚀 构建与部署
+
+### 开发环境
+```bash
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+
+# 类型检查
+npm run type-check
+
+# 代码检查
+npm run lint
+```
+
+### 生产环境
+```bash
+# 构建项目
+npm run build
+
+# 预览构建结果
+npm run preview
+
+# 部署到服务器
+npm run deploy
+```
+
+### 环境变量
+```env
+# .env.development
+VITE_API_BASE_URL=http://172.18.120.10:8080/api
+VITE_APP_TITLE=惠农金融-开发环境
+
+# .env.production
+VITE_API_BASE_URL=https://api.huinong.com/api
+VITE_APP_TITLE=惠农金融
+```
+
+## 📈 性能优化
+
+### 代码分割
+```typescript
+// 路由懒加载
+const routes = [
+  {
+    path: '/finance',
+    component: () => import('../views/FinancePage.vue')
+  }
+]
+
+// 组件懒加载
+const AsyncComponent = defineAsyncComponent(() => import('./HeavyComponent.vue'))
+```
+
+### 数据缓存
+```typescript
+// API响应缓存
+const cache = new Map()
+
+const getCachedData = async (key: string, fetcher: () => Promise<any>) => {
+  if (cache.has(key)) {
+    return cache.get(key)
+  }
+  
+  const data = await fetcher()
+  cache.set(key, data)
+  return data
+}
+```
+
+## 🔍 测试策略
+
+### 单元测试
+```typescript
+// 使用Vitest进行单元测试
+import { describe, it, expect } from 'vitest'
+import { mount } from '@vue/test-utils'
+import FinancePage from '@/views/FinancePage.vue'
+
+describe('FinancePage', () => {
+  it('渲染产品列表', () => {
+    const wrapper = mount(FinancePage)
+    expect(wrapper.find('.product-list').exists()).toBe(true)
+  })
+})
+```
+
+### 端到端测试
+```typescript
+// 使用Playwright进行E2E测试
+import { test, expect } from '@playwright/test'
+
+test('贷款申请流程', async ({ page }) => {
+  await page.goto('/finance')
+  await page.click('.product-card .apply-button')
+  await expect(page).toHaveURL(/\/loan\/apply/)
+})
+```
+
+## 📱 移动端适配
+
+### 响应式设计
+```scss
+// 移动端优先
+.finance-page {
+  padding: 16px;
+  
+  @media (min-width: 768px) {
+    padding: 24px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  @media (min-width: 1200px) {
+    max-width: 800px;
+  }
+}
+```
+
+### 移动端优化
+- Touch事件支持
+- 滚动性能优化
+- 图片懒加载
+- 网络状态感知
+
+## 🔐 安全考虑
+
+### 前端安全
+```typescript
+// XSS防护
+const sanitizeHtml = (html: string) => {
+  // 使用DOMPurify清理HTML
+  return DOMPurify.sanitize(html)
+}
+
+// CSRF防护
+const apiClient = axios.create({
+  headers: {
+    'X-Requested-With': 'XMLHttpRequest'
+  }
+})
+```
+
+### 数据验证
+```typescript
+// 输入验证
+const validateAmount = (amount: number, min: number, max: number) => {
+  if (amount < min || amount > max) {
+    throw new Error(`金额必须在${min}-${max}之间`)
+  }
+}
+```
+
+## 📚 开发规范
+
+### 组件命名
+- 页面组件: `PascalCase` + `Page` 后缀
+- 通用组件: `PascalCase`
+- 工具组件: `camelCase`
+
+### 文件组织
+```
+src/
+├── views/           # 页面组件
+├── components/      # 通用组件
+├── services/        # API服务
+├── stores/          # 状态管理
+├── utils/           # 工具函数
+├── types/           # TypeScript类型定义
+└── styles/          # 全局样式
+```
+
+### 代码风格
+- 使用ESLint + Prettier
+- 遵循Vue 3 Style Guide
+- TypeScript严格模式
+- 组件Props类型定义
+
+## 🔄 持续集成
+
+### CI/CD流程
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - run: npm install
+      - run: npm run build
+      - run: npm run test
+      - name: Deploy
+        run: npm run deploy
+```
+
+## 📋 待办事项
+
+### 近期优化
+- [ ] 产品对比功能
+- [ ] 收藏/关注功能
+- [ ] 申请进度可视化
+- [ ] 消息推送集成
+
+### 长期规划
+- [ ] PWA支持
+- [ ] 国际化(i18n)
+- [ ] 主题切换
+- [ ] 无障碍优化
+
+---
+
+**文档版本**: v2.0  
+**最后更新**: 2024年1月15日  
+**维护者**: 前端开发团队 

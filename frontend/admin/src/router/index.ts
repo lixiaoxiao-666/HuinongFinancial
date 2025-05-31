@@ -1,100 +1,116 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import type { RouteRecordRaw } from 'vue-router'
-import { setupRouterGuards } from './guards'
+import { useAuthStore } from '@/stores/auth'
 
-// 基础布局组件
-const Layout = () => import('@/components/layout/MainLayout.vue')
-
-// 路由配置
-const routes: RouteRecordRaw[] = [
-  {
-    path: '/login',
-    name: 'Login',
-    component: () => import('@/views/auth/Login.vue'),
-    meta: {
-      title: '登录',
-      requiresAuth: false
-    }
-  },
-  {
-    path: '/register',
-    name: 'Register',
-    component: () => import('@/views/auth/Register.vue'),
-    meta: {
-      title: '注册',
-      requiresAuth: false
-    }
-  },
-  {
-    path: '/',
-    component: Layout,
-    redirect: '/dashboard',
-    children: [
-      {
-        path: 'dashboard',
-        name: 'Dashboard',
-        component: () => import('@/views/dashboard/index.vue'),
-        meta: {
-          title: '工作台',
-          icon: 'dashboard',
-          requiresAuth: true
-        }
-      },
-      {
-        path: 'loan',
-        name: 'Loan',
-        meta: {
-          title: '贷款管理',
-          icon: 'bank',
-          requiresAuth: true
-        },
-        children: [
-          {
-            path: 'applications',
-            name: 'LoanApplications',
-            component: () => import('@/views/loan/index.vue'),
-            meta: {
-              title: '申请审批',
-              requiresAuth: true,
-              requiredPermissions: ['loan:manage']
-            }
-          }
-        ]
-      }
-    ]
-  },
-  // 捕获所有未匹配的路由
-  {
-    path: '/:pathMatch(.*)*',
-    redirect: '/dashboard'
-  }
-]
-
-// 创建路由实例
 const router = createRouter({
-  history: createWebHistory(),
-  routes,
-  scrollBehavior(to, from, savedPosition) {
-    if (savedPosition) {
-      return savedPosition
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: [
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('@/views/LoginView.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/',
+      name: 'layout',
+      component: () => import('@/views/LayoutView.vue'),
+      meta: { requiresAuth: true },
+      redirect: '/dashboard',
+      children: [
+        {
+          path: '/dashboard',
+          name: 'dashboard',
+          component: () => import('@/views/DashboardView.vue'),
+          meta: { 
+            requiresAuth: true,
+            title: '工作台',
+            permission: 'dashboard:view'
+          }
+        },
+        {
+          path: '/approval',
+          name: 'approval',
+          component: () => import('@/views/ApprovalView.vue'),
+          meta: { 
+            requiresAuth: true,
+            title: '审批看板',
+            permission: 'approval:view'
+          }
+        },
+        {
+          path: '/approval/:id',
+          name: 'approval-detail',
+          component: () => import('@/views/ApprovalDetailView.vue'),
+          meta: { 
+            requiresAuth: true,
+            title: '审批详情',
+            permission: 'approval:view'
+          }
+        },
+        {
+          path: '/users',
+          name: 'users',
+          component: () => import('@/views/UsersView.vue'),
+          meta: { 
+            requiresAuth: true,
+            title: '用户管理',
+            permission: 'user:manage'
+          }
+        },
+        {
+          path: '/logs',
+          name: 'logs',
+          component: () => import('@/views/LogsView.vue'),
+          meta: { 
+            requiresAuth: true,
+            title: '操作日志',
+            permission: 'log:view'
+          }
+        },
+        {
+          path: '/system',
+          name: 'system',
+          component: () => import('@/views/SystemView.vue'),
+          meta: { 
+            requiresAuth: true,
+            title: '系统设置',
+            permission: 'system:manage'
+          }
+        }
+      ]
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      component: () => import('@/views/NotFoundView.vue')
     }
-    return { top: 0 }
-  }
+  ],
 })
 
-// 设置路由守卫
-setupRouterGuards(router)
+// 路由守卫
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore()
+  
+  // 检查是否需要认证
+  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
+    next('/login')
+    return
+  }
+  
+  // 如果已登录且访问登录页，重定向到首页
+  if (to.name === 'login' && authStore.isLoggedIn) {
+    next('/dashboard')
+    return
+  }
+  
+  // 权限检查
+  if (to.meta.permission && !authStore.hasPermission(to.meta.permission as string)) {
+    // 如果没有权限，可以重定向到无权限页面或首页
+    next('/dashboard')
+    return
+  }
+  
+  next()
+})
 
 export default router
-
-// 导出路由类型声明
-declare module 'vue-router' {
-  interface RouteMeta {
-    title?: string
-    icon?: string
-    requiresAuth?: boolean
-    requiredRoles?: string | string[]
-    requiredPermissions?: string | string[]
-    hidden?: boolean
-  }
-}
