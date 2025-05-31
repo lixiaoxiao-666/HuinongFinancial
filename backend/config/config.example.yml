@@ -1,0 +1,51 @@
+app:
+  # 应用名称
+  name: "HuinongFinancial"
+  # 应用端口
+  port: 8081
+# 数据库配置
+database:
+  host: "10.10.10.10"
+  # 数据库端口
+  port: 4000
+  # 数据库用户名
+  user: "root"
+  # 数据库密码
+  password: ""
+  # 数据库名称
+  name: "app_bs"
+  # 数据库字符集
+  charset: "utf8mb4"
+  # 是否解析时间
+  parseTime: true
+  # 时区
+  loc: "Asia/Shanghai"
+  # 最大空闲连接数
+  SetMaxIdleConns: 10
+  # 最大打开连接数
+  SetMaxOpenConns: 100
+  # 连接最大生存时间
+  SetConnMaxLifetime: 60
+  # 连接最大空闲时间
+  SetConnMaxIdleTime: 60
+# Redis配置
+redis:
+  host: "10.10.10.10"
+  # Redis端口
+  port: 6379
+  # Redis密码
+  password: ""
+  # Redis数据库
+  db: 0
+# 跨域配置
+cors:
+  # 允许的域名
+  allow_origins: ["http://localhost:5173"]
+  # 允许携带凭证
+  allow_credentials: true
+  # 允许的请求方法
+  allow_methods: ["POST", "GET", "OPTIONS", "PUT", "DELETE"]
+  # 允许的请求头
+  allow_headers: ["Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization", "accept", "origin", "Cache-Control", "X-Requested-With"]
+  # 预检请求缓存时间
+  max_age: 86400
