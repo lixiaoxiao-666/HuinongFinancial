@@ -48,6 +48,36 @@ const router = createRouter({
           }
         },
         {
+          path: '/smart-approval',
+          name: 'smart-approval',
+          component: () => import('@/views/SmartApprovalView.vue'),
+          meta: { 
+            requiresAuth: true,
+            title: '智能审批',
+            permission: 'approval:view'
+          }
+        },
+        {
+          path: '/ai-workflow',
+          name: 'ai-workflow',
+          component: () => import('@/views/AIWorkflowView.vue'),
+          meta: { 
+            requiresAuth: true,
+            title: 'AI审批流管理',
+            permission: 'approval:manage'
+          }
+        },
+        {
+          path: '/lease-approval',
+          name: 'lease-approval',
+          component: () => import('@/views/LeaseApprovalView.vue'),
+          meta: { 
+            requiresAuth: true,
+            title: '租赁审批',
+            permission: 'approval:view'
+          }
+        },
+        {
           path: '/users',
           name: 'users',
           component: () => import('@/views/UsersView.vue'),

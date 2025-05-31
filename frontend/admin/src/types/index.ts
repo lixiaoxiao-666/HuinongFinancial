@@ -19,12 +19,12 @@ export interface LoginResponse {
 
 // 工作台数据类型
 export interface DashboardData {
-  pending_count: number
-  approved_count: number
-  rejected_count: number
-  ai_processing_count: number
-  ai_enabled: boolean
-  ai_processing_rate: number
+  stats: {
+    total_applications: number
+    pending_review: number
+    approved_today: number
+    ai_efficiency: number
+  }
   pending_tasks: Array<{
     task_id: string
     task_type: string

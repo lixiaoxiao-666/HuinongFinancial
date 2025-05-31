@@ -34,17 +34,17 @@ export const mockDashboard = async (): Promise<DashboardData> => {
   await delay(800)
   
   return {
-    pending_count: 8,
-    approved_count: 25,
-    rejected_count: 3,
-    ai_processing_count: 5,
-    ai_enabled: true,
-    ai_processing_rate: 85,
+    stats: {
+      total_applications: 1234,
+      pending_review: 89,
+      approved_today: 23,
+      ai_efficiency: 87.5
+    },
     pending_tasks: [
       {
         task_id: 'T001',
         task_type: '贷款审批',
-        title: '张三的贷款申请需要审核',
+        title: '张*的贷款申请等待处理',
         priority: 'high',
         created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2小时前
         application_id: 'APP001'
@@ -52,7 +52,7 @@ export const mockDashboard = async (): Promise<DashboardData> => {
       {
         task_id: 'T002',
         task_type: '贷款审批',
-        title: '李四的补充材料已提交',
+        title: '李*的贷款申请等待处理',
         priority: 'medium',
         created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4小时前
         application_id: 'APP002'
@@ -60,7 +60,7 @@ export const mockDashboard = async (): Promise<DashboardData> => {
       {
         task_id: 'T003',
         task_type: '贷款审批',
-        title: '王五的贷款申请等待处理',
+        title: '王*的贷款申请等待处理',
         priority: 'low',
         created_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6小时前
         application_id: 'APP003'
@@ -70,7 +70,7 @@ export const mockDashboard = async (): Promise<DashboardData> => {
       {
         activity_id: 'A001',
         activity_type: '贷款审批',
-        description: '批准了张三的贷款申请',
+        description: '批准了张*的贷款申请',
         timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30分钟前
         operator: '管理员'
       },
@@ -99,7 +99,7 @@ export const mockApplications = async (params: any): Promise<PaginationResponse<
   const allApplications: LoanApplication[] = [
     {
       application_id: 'APP001',
-      applicant_name: '张三',
+      applicant_name: '张*',
       amount: 50000,
       status: '待人工复核',
       ai_risk_score: 25,
@@ -108,7 +108,7 @@ export const mockApplications = async (params: any): Promise<PaginationResponse<
     },
     {
       application_id: 'APP002',
-      applicant_name: '李四',
+      applicant_name: '李*',
       amount: 80000,
       status: 'AI_审批中',
       ai_risk_score: 45,
@@ -117,7 +117,7 @@ export const mockApplications = async (params: any): Promise<PaginationResponse<
     },
     {
       application_id: 'APP003',
-      applicant_name: '王五',
+      applicant_name: '王*',
       amount: 30000,
       status: '已批准',
       ai_risk_score: 15,
@@ -126,7 +126,7 @@ export const mockApplications = async (params: any): Promise<PaginationResponse<
     },
     {
       application_id: 'APP004',
-      applicant_name: '赵六',
+      applicant_name: '赵*',
       amount: 120000,
       status: '已拒绝',
       ai_risk_score: 85,
@@ -135,7 +135,7 @@ export const mockApplications = async (params: any): Promise<PaginationResponse<
     },
     {
       application_id: 'APP005',
-      applicant_name: '孙七',
+      applicant_name: '孙*',
       amount: 65000,
       status: '待人工复核',
       ai_risk_score: 55,
@@ -188,7 +188,7 @@ export const mockApplicationDetail = async (applicationId: string): Promise<Appl
     approved_amount: undefined,
     applicant_details: {
       user_id: 'U001',
-      real_name: '张三',
+      real_name: '张*',
       id_card_number: '320123199001011234',
       phone: '13812345678',
       address: '江苏省南京市玄武区某某街道123号',
@@ -221,7 +221,7 @@ export const mockApplicationDetail = async (applicationId: string): Promise<Appl
     history: [
       {
         status: '已提交',
-        operator: '张三',
+        operator: '张*',
         timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
       },
       {
@@ -407,4 +407,4 @@ export const mockToggleAI = async (enabled: boolean): Promise<void> => {
 export const mockUpdateConfig = async (key: string, value: string): Promise<void> => {
   await delay(800)
   console.log(`更新配置: ${key} = ${value}`)
-} 
+}

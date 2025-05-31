@@ -58,24 +58,36 @@
         <div class="stat-content">
           <div class="stat-value">{{ statistics.total }}</div>
           <div class="stat-label">总申请数</div>
+          <div class="chart-container">
+            <div ref="barChartRef" class="mini-chart"></div>
+          </div>
         </div>
       </el-card>
       <el-card class="stat-item" shadow="hover">
         <div class="stat-content">
           <div class="stat-value pending">{{ statistics.pending }}</div>
           <div class="stat-label">待处理</div>
+          <div class="chart-container chart-container-large">
+            <div ref="pieChartRef" class="mini-chart"></div>
+          </div>
         </div>
       </el-card>
       <el-card class="stat-item" shadow="hover">
         <div class="stat-content">
           <div class="stat-value approved">{{ statistics.approved }}</div>
           <div class="stat-label">已批准</div>
+          <div class="chart-container">
+            <div ref="lineChartRef" class="mini-chart"></div>
+          </div>
         </div>
       </el-card>
       <el-card class="stat-item" shadow="hover">
         <div class="stat-content">
           <div class="stat-value rejected">{{ statistics.rejected }}</div>
           <div class="stat-label">已拒绝</div>
+          <div class="chart-container chart-container-large">
+            <div ref="doughnutChartRef" class="mini-chart"></div>
+          </div>
         </div>
       </el-card>
     </div>
@@ -282,7 +294,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import {
@@ -293,6 +305,7 @@ import {
 import { getPendingApplications, submitReview } from '@/api/admin'
 import type { LoanApplication } from '@/types'
 import dayjs from 'dayjs'
+import * as echarts from 'echarts'
 
 const router = useRouter()
 
@@ -302,6 +315,18 @@ const quickApprovalVisible = ref(false)
 const selectedRows = ref<LoanApplication[]>([])
 const selectedApplication = ref<LoanApplication | null>(null)
 const quickApprovalFormRef = ref<FormInstance>()
+
+// 图表DOM引用
+const barChartRef = ref<HTMLElement | null>(null)
+const pieChartRef = ref<HTMLElement | null>(null)
+const lineChartRef = ref<HTMLElement | null>(null)
+const doughnutChartRef = ref<HTMLElement | null>(null)
+
+// 图表实例
+let barChart: echarts.ECharts | null = null
+let pieChart: echarts.ECharts | null = null
+let lineChart: echarts.ECharts | null = null
+let doughnutChart: echarts.ECharts | null = null
 
 // 筛选表单
 const filterForm = reactive({
@@ -320,16 +345,14 @@ const pagination = reactive({
 // 申请列表
 const applications = ref<LoanApplication[]>([])
 
-// 统计信息
+// 统计信息 - 固定数值
 const statistics = computed(() => {
-  const total = applications.value.length
-  const pending = applications.value.filter(app => 
-    app.status === 'AI_审批中' || app.status === '待人工复核'
-  ).length
-  const approved = applications.value.filter(app => app.status === '已批准').length
-  const rejected = applications.value.filter(app => app.status === '已拒绝').length
-  
-  return { total, pending, approved, rejected }
+  return {
+    total: 278,
+    pending: 38,
+    approved: 195,
+    rejected: 45
+  }
 })
 
 // 快速审批表单
@@ -483,8 +506,159 @@ const formatDateTime = (datetime: string) => {
   return dayjs(datetime).format('YYYY-MM-DD HH:mm')
 }
 
+// 初始化图表
+const initCharts = () => {
+  // 柱状图 - 总申请数
+  if (barChartRef.value) {
+    barChart = echarts.init(barChartRef.value)
+    const option = {
+      tooltip: {
+        trigger: 'axis'
+      },
+      grid: {
+        left: '5%',
+        right: '5%',
+        bottom: '5%',
+        top: '5%',
+        containLabel: false
+      },
+      xAxis: {
+        type: 'category',
+        data: ['1月', '2月', '3月', '4月', '5月', '6月'],
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { show: false }
+      },
+      yAxis: {
+        type: 'value',
+        show: false
+      },
+      series: [{
+        data: [220, 240, 260, 250, 270, 278],
+        type: 'bar',
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#667eea' },
+            { offset: 1, color: '#764ba2' }
+          ])
+        },
+        barWidth: '60%'
+      }]
+    }
+    barChart.setOption(option)
+  }
+
+  // 饼图 - 待处理
+  if (pieChartRef.value) {
+    pieChart = echarts.init(pieChartRef.value)
+    const option = {
+      tooltip: {
+        trigger: 'item'
+      },
+      series: [{
+        type: 'pie',
+        radius: ['40%', '70%'],
+        data: [
+          { value: 38, name: '待处理', itemStyle: { color: '#e6a23c' } },
+          { value: 240, name: '其他', itemStyle: { color: '#f0f2f5' } }
+        ],
+        label: { show: false },
+        emphasis: { label: { show: false } }
+      }]
+    }
+    pieChart.setOption(option)
+  }
+
+  // 走势图 - 已批准
+  if (lineChartRef.value) {
+    lineChart = echarts.init(lineChartRef.value)
+    const option = {
+      tooltip: {
+        trigger: 'axis'
+      },
+      grid: {
+        left: '5%',
+        right: '5%',
+        bottom: '5%',
+        top: '5%',
+        containLabel: false
+      },
+      xAxis: {
+        type: 'category',
+        data: ['1月', '2月', '3月', '4月', '5月', '6月'],
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { show: false }
+      },
+      yAxis: {
+        type: 'value',
+        show: false
+      },
+      series: [{
+        data: [150, 160, 170, 180, 190, 195],
+        type: 'line',
+        smooth: true,
+        symbol: 'none',
+        lineStyle: {
+          width: 3,
+          color: '#67c23a'
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(103, 194, 58, 0.3)' },
+            { offset: 1, color: 'rgba(103, 194, 58, 0.05)' }
+          ])
+        }
+      }]
+    }
+    lineChart.setOption(option)
+  }
+
+  // 扇形图 - 已拒绝
+  if (doughnutChartRef.value) {
+    doughnutChart = echarts.init(doughnutChartRef.value)
+    const option = {
+      tooltip: {
+        trigger: 'item'
+      },
+      series: [{
+        type: 'pie',
+        radius: ['50%', '80%'],
+        data: [
+          { value: 45, name: '已拒绝', itemStyle: { color: '#f56c6c' } },
+          { value: 233, name: '其他', itemStyle: { color: '#f0f2f5' } }
+        ],
+        label: { show: false },
+        emphasis: { label: { show: false } },
+        startAngle: 90
+      }]
+    }
+    doughnutChart.setOption(option)
+  }
+}
+
+const resizeCharts = () => {
+  barChart?.resize()
+  pieChart?.resize()
+  lineChart?.resize()
+  doughnutChart?.resize()
+}
+
 onMounted(() => {
   fetchApplications()
+  // 等待DOM更新后初始化图表
+  setTimeout(() => {
+    initCharts()
+    window.addEventListener('resize', resizeCharts)
+  }, 200)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', resizeCharts)
+  barChart?.dispose()
+  pieChart?.dispose()
+  lineChart?.dispose()
+  doughnutChart?.dispose()
 })
 </script>
 
@@ -522,10 +696,16 @@ onMounted(() => {
 .stat-item {
   border-radius: 8px;
   text-align: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
 .stat-content {
-  padding: 20px;
+  padding: 30px;
 }
 
 .stat-value {
@@ -550,6 +730,22 @@ onMounted(() => {
 .stat-label {
   color: #666;
   font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.chart-container {
+  height: 80px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.chart-container-large {
+  height: 120px;
+}
+
+.mini-chart {
+  height: 100%;
+  width: 100%;
 }
 
 .table-card {
