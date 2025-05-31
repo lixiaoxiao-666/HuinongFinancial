@@ -99,9 +99,9 @@ func main() {
 	)
 
 	difyService := service.NewDifyService(cfg, loanRepo)
-	loanService := service.NewLoanService(loanRepo, userRepo, difyService)
-	machineService := service.NewMachineService(machineRepo, userRepo)
 	taskService := service.NewTaskService(taskRepo, userRepo, loanRepo, db)
+	loanService := service.NewLoanService(loanRepo, userRepo, difyService, taskService)
+	machineService := service.NewMachineService(machineRepo, userRepo, taskService)
 	// articleService := service.NewArticleService(articleRepo, userRepo, cacheClient)
 	// expertService := service.NewExpertService(expertRepo, userRepo)
 	// fileService := service.NewFileService(fileRepo, cfg.File.UploadPath)

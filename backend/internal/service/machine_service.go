@@ -14,13 +14,19 @@ import (
 type machineService struct {
 	machineRepo repository.MachineRepository
 	userRepo    repository.UserRepository
+	taskService TaskService
 }
 
 // NewMachineService 创建农机服务实例
-func NewMachineService(machineRepo repository.MachineRepository, userRepo repository.UserRepository) MachineService {
+func NewMachineService(
+	machineRepo repository.MachineRepository,
+	userRepo repository.UserRepository,
+	taskService TaskService,
+) MachineService {
 	return &machineService{
 		machineRepo: machineRepo,
 		userRepo:    userRepo,
+		taskService: taskService,
 	}
 }
 

@@ -570,3 +570,14 @@ type LoanApplicationSummary struct {
 	CreatedAt       time.Time `json:"created_at"`
 	AssignedTo      *uint64   `json:"assigned_to"`
 }
+
+// RequestMoreInfoRentalRequest 请求农机租赁补充信息请求
+type RequestMoreInfoRentalRequest struct {
+	ID           uint   `json:"id" binding:"required"`
+	ReviewerID   uint64 `json:"reviewer_id" binding:"required"`
+	RequiredInfo string `json:"required_info" binding:"required"` // 需要补充的信息描述
+	RequestNote  string `json:"request_note"`                     // 审批员的备注
+}
+
+// BatchApproveRentalsRequest 批量批准农机租赁请求
+// ... existing code ...

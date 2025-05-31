@@ -14,6 +14,7 @@ type loanService struct {
 	loanRepo    repository.LoanRepository
 	userRepo    repository.UserRepository
 	difyService DifyService
+	taskService TaskService
 }
 
 // NewLoanService 创建贷款服务实例
@@ -21,11 +22,13 @@ func NewLoanService(
 	loanRepo repository.LoanRepository,
 	userRepo repository.UserRepository,
 	difyService DifyService,
+	taskService TaskService,
 ) LoanService {
 	return &loanService{
 		loanRepo:    loanRepo,
 		userRepo:    userRepo,
 		difyService: difyService,
+		taskService: taskService,
 	}
 }
 
@@ -249,6 +252,7 @@ func (s *loanService) ApproveApplication(ctx context.Context, req *ApproveApplic
 	}
 
 	// 更新申请状态
+	previousStatus := application.Status
 	application.Status = "approved"
 	if application.FinalApprovedAt == nil {
 		now := time.Now()
@@ -260,7 +264,38 @@ func (s *loanService) ApproveApplication(ctx context.Context, req *ApproveApplic
 		return fmt.Errorf("更新申请状态失败: %v", err)
 	}
 
-	// TODO: 记录审批日志
+	// 记录审批日志
+	approvalLog := &model.ApprovalLog{
+		ApplicationID:  application.ID,
+		ApproverID:     0, // TODO: 从上下文中获取当前操作员ID
+		Action:         "approve",
+		Step:           "manual_review", // 假设这是人工审核步骤
+		Result:         "approved",
+		Status:         "approved",
+		Comment:        req.ApprovalNote,
+		Note:           "人工批准贷款申请",
+		PreviousStatus: previousStatus,
+		NewStatus:      application.Status,
+		ActionTime:     time.Now(),
+	}
+	if err := s.loanRepo.CreateApprovalLog(ctx, approvalLog); err != nil {
+		// 记录日志创建失败，但不影响主流程
+		fmt.Printf("创建贷款审批日志失败 - 申请ID %d: %v\n", application.ID, err)
+	}
+
+	// 如果存在关联的待处理任务，则将其标记为完成
+	// 这里假设我们通过某种方式（例如，在AI评估后创建任务时存储关联）找到任务ID
+	// 简化处理：假设从 application 模型的某个字段获取 taskID
+	/*
+		if application.RelatedTaskID != nil && *application.RelatedTaskID > 0 {
+			err = s.taskService.CompleteTask(ctx, *application.RelatedTaskID)
+			if err != nil {
+				fmt.Printf("完成贷款审批任务失败 - 任务ID %d: %v\n", *application.RelatedTaskID, err)
+				// 即使任务完成失败，也不应阻塞主流程，但需要记录
+			}
+		}
+	*/
+
 	// TODO: 发送通知
 
 	return nil
@@ -274,6 +309,7 @@ func (s *loanService) RejectApplication(ctx context.Context, req *RejectApplicat
 	}
 
 	// 更新申请状态
+	previousStatus := application.Status
 	application.Status = "rejected"
 	application.RejectionReason = req.RejectionNote
 
@@ -282,7 +318,35 @@ func (s *loanService) RejectApplication(ctx context.Context, req *RejectApplicat
 		return fmt.Errorf("更新申请状态失败: %v", err)
 	}
 
-	// TODO: 记录审批日志
+	// 记录审批日志
+	approvalLog := &model.ApprovalLog{
+		ApplicationID:  application.ID,
+		ApproverID:     0, // TODO: 从上下文中获取当前操作员ID
+		Action:         "reject",
+		Step:           "manual_review", // 假设这是人工审核步骤
+		Result:         "rejected",
+		Status:         "rejected",
+		Comment:        req.RejectionNote,
+		Note:           "人工拒绝贷款申请",
+		PreviousStatus: previousStatus,
+		NewStatus:      application.Status,
+		ActionTime:     time.Now(),
+	}
+	if err := s.loanRepo.CreateApprovalLog(ctx, approvalLog); err != nil {
+		fmt.Printf("创建贷款审批日志失败 - 申请ID %d: %v\n", application.ID, err)
+	}
+
+	// 如果存在关联的待处理任务，则将其标记为完成（或取消）
+	/*
+		if application.RelatedTaskID != nil && *application.RelatedTaskID > 0 {
+			// 拒绝也意味着任务结束
+			err = s.taskService.CompleteTask(ctx, *application.RelatedTaskID) // 或者一个特定的取消方法
+			if err != nil {
+				fmt.Printf("完成/取消贷款审批任务失败 - 任务ID %d: %v\n", *application.RelatedTaskID, err)
+			}
+		}
+	*/
+
 	// TODO: 发送通知
 
 	return nil
@@ -461,9 +525,61 @@ func (s *loanService) ReturnApplication(ctx context.Context, applicationID uint6
 		return fmt.Errorf("获取申请失败: %v", err)
 	}
 
+	previousStatus := application.Status
 	application.Status = "returned"
+	// 可以考虑将退回原因保存到某个字段，例如 application.ReturnReason = req.ReturnReason
 
-	return s.loanRepo.UpdateApplication(ctx, application)
+	if err := s.loanRepo.UpdateApplication(ctx, application); err != nil {
+		return fmt.Errorf("更新申请状态为退回失败: %v", err)
+	}
+
+	// 记录审批日志
+	approverID := uint64(0) // TODO: 从上下文中获取当前操作员ID
+	approvalLog := &model.ApprovalLog{
+		ApplicationID:  application.ID,
+		ApproverID:     approverID,
+		Action:         "return",
+		Step:           "manual_review",
+		Result:         "returned",
+		Status:         "returned",
+		Comment:        req.ReturnNote,
+		Note:           fmt.Sprintf("贷款申请被退回，原因: %s", req.ReturnReason),
+		PreviousStatus: previousStatus,
+		NewStatus:      application.Status,
+		ActionTime:     time.Now(),
+	}
+	if err := s.loanRepo.CreateApprovalLog(ctx, approvalLog); err != nil {
+		fmt.Printf("创建贷款退回审批日志失败 - 申请ID %d: %v\n", application.ID, err)
+	}
+
+	// 创建任务：通知用户修改申请或进行其他处理
+	// 假设退回的任务需要指派给申请提交用户或特定处理人
+	// var assignedTo *uint64 // 可以根据业务逻辑设置指派人
+	// if application.UserID > 0 { assignedTo = &application.UserID }
+
+	taskReq := &CreateTaskRequest{
+		Title:        fmt.Sprintf("贷款申请被退回: %s", application.ApplicationNo),
+		Description:  fmt.Sprintf("您的贷款申请 %s 已被退回，原因: %s。请根据审批意见修改后重新提交。退回备注: %s", application.ApplicationNo, req.ReturnReason, req.ReturnNote),
+		Type:         "loan_application_returned",
+		Priority:     "high",
+		BusinessID:   application.ID,
+		BusinessType: "loan_application",
+		// AssignedTo:   assignedTo, // 指派给申请人或特定处理角色
+		Data: fmt.Sprintf(`{"application_id": %d, "application_no": "%s", "return_reason": "%s", "return_note": "%s"}`, application.ID, application.ApplicationNo, req.ReturnReason, req.ReturnNote),
+	}
+
+	taskResp, err := s.taskService.CreateTask(ctx, taskReq)
+	if err != nil {
+		fmt.Printf("为退回的贷款申请创建任务失败 - 申请ID %d: %v\n", application.ID, err)
+		// 即使创建任务失败，也不应阻塞主流程，但需要记录
+	} else {
+		fmt.Printf("为退回的贷款申请创建任务成功 - 申请ID %d, 任务ID %d\n", application.ID, taskResp.ID)
+		// 可以考虑将taskID关联到application模型
+		// application.RelatedTaskID = &taskResp.ID
+		// s.loanRepo.UpdateApplication(ctx, application) // 再次更新
+	}
+
+	return nil
 }
 
 // ==================== AI集成功能 ====================
@@ -624,10 +740,58 @@ func (s *loanService) processAIAssessmentResult(ctx context.Context, application
 			actionComment = "AI智能评估建议人工审核"
 			application.ApprovalLevel = 1
 
+			// 创建人工审核任务
+			taskTitle := fmt.Sprintf("贷款申请需人工审核: %s", application.ApplicationNo)
+			taskDescription := fmt.Sprintf("贷款申请 %s (ID: %d) AI评估完成，建议进行人工审核。AI建议: %s", application.ApplicationNo, application.ID, recommendation)
+			taskData := fmt.Sprintf(`{"application_id": %d, "application_no": "%s", "ai_recommendation": "%s", "risk_level": "%s"}`, application.ID, application.ApplicationNo, recommendation, application.RiskLevel)
+
+			taskReq := &CreateTaskRequest{
+				Title:        taskTitle,
+				Description:  taskDescription,
+				Type:         "loan_manual_review",
+				Priority:     "medium",
+				BusinessID:   application.ID,
+				BusinessType: "loan_application",
+				// AssignedTo: nil, // 可以后续通过OA系统指派给特定审核员或审核组
+				Data: taskData,
+			}
+			taskResp, taskErr := s.taskService.CreateTask(ctx, taskReq)
+			if taskErr != nil {
+				fmt.Printf("为贷款申请创建人工审核任务失败 - 申请ID %d: %v\n", application.ID, taskErr)
+				// 创建任务失败也记录，但不中断流程
+				actionComment = actionComment + " (创建审核任务失败)"
+			} else {
+				fmt.Printf("为贷款申请创建人工审核任务成功 - 申请ID %d, 任务ID %d\n", application.ID, taskResp.ID)
+				// TODO: 考虑将taskID关联到application，用于后续跟踪
+				// application.RelatedTaskID = &taskResp.ID
+			}
+
 		default:
 			newStatus = "manual_review"
 			actionResult = "returned"
-			actionComment = "AI评估完成，建议人工审核"
+			actionComment = "AI评估完成，建议人工审核 (未知决策)"
+			application.ApprovalLevel = 1
+
+			// 也为未知决策创建人工审核任务
+			taskTitle := fmt.Sprintf("贷款申请需人工审核 (未知AI决策): %s", application.ApplicationNo)
+			taskDescription := fmt.Sprintf("贷款申请 %s (ID: %d) AI评估决策未知，建议进行人工审核。AI建议: %s", application.ApplicationNo, application.ID, recommendation)
+			taskData := fmt.Sprintf(`{"application_id": %d, "application_no": "%s", "ai_recommendation": "%s", "risk_level": "%s", "raw_decision": "%s"}`, application.ID, application.ApplicationNo, recommendation, application.RiskLevel, decision)
+
+			taskReq := &CreateTaskRequest{
+				Title:        taskTitle,
+				Description:  taskDescription,
+				Type:         "loan_manual_review_unknown",
+				Priority:     "medium",
+				BusinessID:   application.ID,
+				BusinessType: "loan_application",
+				Data:         taskData,
+			}
+			taskResp, taskErr := s.taskService.CreateTask(ctx, taskReq)
+			if taskErr != nil {
+				fmt.Printf("为贷款申请创建人工审核任务失败 (未知AI决策) - 申请ID %d: %v\n", application.ID, taskErr)
+			} else {
+				fmt.Printf("为贷款申请创建人工审核任务成功 (未知AI决策) - 申请ID %d, 任务ID %d\n", application.ID, taskResp.ID)
+			}
 		}
 
 		application.Status = newStatus

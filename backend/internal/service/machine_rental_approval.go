@@ -178,90 +178,82 @@ func (s *machineService) GetRentalApplicationDetail(ctx context.Context, req *Ge
 
 // ApproveRentalApplication 批准农机租赁申请(OA管理员)
 func (s *machineService) ApproveRentalApplication(ctx context.Context, req *ApproveRentalRequest) error {
-	// 获取申请信息
 	application, err := s.machineRepo.GetRentalApplicationByID(ctx, uint64(req.ID))
 	if err != nil {
-		return fmt.Errorf("申请不存在")
+		return fmt.Errorf("获取租赁申请失败: %v", err)
 	}
 
-	if application.Status != "pending" {
-		return fmt.Errorf("申请状态不允许审批")
+	if application.Status != "pending_approval" && application.Status != "manual_review" && application.Status != "pending" {
+		return fmt.Errorf("申请状态 '%s' 不正确，无法批准", application.Status)
 	}
 
-	// 更新申请状态
+	previousStatus := application.Status
 	application.Status = "approved"
 	application.ReviewerID = &req.ReviewerID
-	application.ReviewedAt = &time.Time{}
-	*application.ReviewedAt = time.Now()
+	now := time.Now()
+	application.ReviewedAt = &now
 	application.ReviewNote = req.ApprovalNote
-	application.UpdatedAt = time.Now()
 
-	err = s.machineRepo.UpdateRentalApplication(ctx, application)
-	if err != nil {
-		return fmt.Errorf("更新申请状态失败: %v", err)
+	if err := s.machineRepo.UpdateRentalApplication(ctx, application); err != nil {
+		return fmt.Errorf("更新租赁申请状态失败: %v", err)
 	}
 
-	// 创建审核记录
-	reviewLog := &model.RentalReviewLog{
-		ApplicationID: uint64(req.ID),
+	// 记录审核日志
+	logEntry := &model.RentalReviewLog{
+		ApplicationID: application.ID,
 		ReviewerID:    req.ReviewerID,
 		Action:        "approve",
-		Note:          req.ApprovalNote,
-		CreatedAt:     time.Now(),
+		Note:          fmt.Sprintf("状态从 %s 变更为 %s. 备注: %s", previousStatus, application.Status, req.ApprovalNote),
+	}
+	if err := s.machineRepo.CreateRentalReviewLog(ctx, logEntry); err != nil {
+		fmt.Printf("创建农机租赁审核日志失败 - 申请ID %d: %v\n", application.ID, err)
 	}
 
-	err = s.machineRepo.CreateRentalReviewLog(ctx, reviewLog)
-	if err != nil {
-		return fmt.Errorf("创建审核记录失败: %v", err)
-	}
+	// TODO: 如果有关联的任务，则完成任务
+	// 例如: if application.RelatedTaskID != nil { s.taskService.CompleteTask(ctx, *application.RelatedTaskID) }
 
-	// TODO: 发送通知给申请人
-	// s.notificationService.SendApprovalNotification(application.UserID, application.ID, "approved")
+	// TODO: 发送通知给用户，告知状态从 previousStatus 变为 approved
 
 	return nil
 }
 
 // RejectRentalApplication 拒绝农机租赁申请(OA管理员)
 func (s *machineService) RejectRentalApplication(ctx context.Context, req *RejectRentalRequest) error {
-	// 获取申请信息
 	application, err := s.machineRepo.GetRentalApplicationByID(ctx, uint64(req.ID))
 	if err != nil {
-		return fmt.Errorf("申请不存在")
+		return fmt.Errorf("获取租赁申请失败: %v", err)
 	}
 
-	if application.Status != "pending" {
-		return fmt.Errorf("申请状态不允许审批")
+	if application.Status != "pending_approval" && application.Status != "manual_review" && application.Status != "pending" {
+		return fmt.Errorf("申请状态 '%s' 不正确，无法拒绝", application.Status)
 	}
 
-	// 更新申请状态
+	previousStatus := application.Status
 	application.Status = "rejected"
 	application.ReviewerID = &req.ReviewerID
-	application.ReviewedAt = &time.Time{}
-	*application.ReviewedAt = time.Now()
+	now := time.Now()
+	application.ReviewedAt = &now
 	application.ReviewNote = req.RejectionReason
-	application.UpdatedAt = time.Now()
 
-	err = s.machineRepo.UpdateRentalApplication(ctx, application)
-	if err != nil {
-		return fmt.Errorf("更新申请状态失败: %v", err)
+	if err := s.machineRepo.UpdateRentalApplication(ctx, application); err != nil {
+		return fmt.Errorf("更新租赁申请状态失败: %v", err)
 	}
 
-	// 创建审核记录
-	reviewLog := &model.RentalReviewLog{
-		ApplicationID: uint64(req.ID),
+	// 记录审核日志
+	logEntry := &model.RentalReviewLog{
+		ApplicationID: application.ID,
 		ReviewerID:    req.ReviewerID,
 		Action:        "reject",
-		Note:          req.RejectionReason,
-		CreatedAt:     time.Now(),
+		Note:          fmt.Sprintf("状态从 %s 变更为 %s. 拒绝原因: %s", previousStatus, application.Status, req.RejectionReason),
+	}
+	if err := s.machineRepo.CreateRentalReviewLog(ctx, logEntry); err != nil {
+		fmt.Printf("创建农机租赁审核日志失败 - 申请ID %d: %v\n", application.ID, err)
 	}
 
-	err = s.machineRepo.CreateRentalReviewLog(ctx, reviewLog)
-	if err != nil {
-		return fmt.Errorf("创建审核记录失败: %v", err)
-	}
+	// TODO: 如果有关联的任务，则完成/取消任务
+	// 例如: if application.RelatedTaskID != nil { s.taskService.CompleteTask(ctx, *application.RelatedTaskID) }
 
-	// TODO: 发送通知给申请人
-	// s.notificationService.SendApprovalNotification(application.UserID, application.ID, "rejected")
+	// TODO: 发送通知给用户，告知状态从 previousStatus 变为 rejected
 
 	return nil
 }
@@ -386,4 +378,71 @@ func assessRiskFactors(user *model.User, machine *model.Machine, amount int64) [
 	}
 
 	return factors
+}
+
+// RequestMoreInfoForRentalApplication 请求农机租赁申请提供更多信息 (OA管理员)
+func (s *machineService) RequestMoreInfoForRentalApplication(ctx context.Context, req *RequestMoreInfoRentalRequest) error {
+	application, err := s.machineRepo.GetRentalApplicationByID(ctx, uint64(req.ID))
+	if err != nil {
+		return fmt.Errorf("获取租赁申请失败: %v", err)
+	}
+
+	if application.Status != "pending" && application.Status != "pending_approval" && application.Status != "manual_review" {
+		return fmt.Errorf("申请状态 '%s' 不正确，无法请求更多信息", application.Status)
+	}
+
+	previousStatus := application.Status
+	application.Status = "pending_more_info"
+	application.ReviewerID = &req.ReviewerID
+	now := time.Now()
+	application.ReviewedAt = &now
+	application.ReviewNote = req.RequestNote
+
+	if err := s.machineRepo.UpdateRentalApplication(ctx, application); err != nil {
+		return fmt.Errorf("更新租赁申请状态失败: %v", err)
+	}
+
+	// 记录审核日志
+	logEntry := &model.RentalReviewLog{
+		ApplicationID: application.ID,
+		ReviewerID:    req.ReviewerID,
+		Action:        "request_more_info",
+		Note:          fmt.Sprintf("状态从 %s 变更为 %s. 请求补充信息: %s. 审批备注: %s", previousStatus, application.Status, req.RequiredInfo, req.RequestNote),
+	}
+	if err := s.machineRepo.CreateRentalReviewLog(ctx, logEntry); err != nil {
+		fmt.Printf("创建农机租赁审核日志(请求更多信息)失败 - 申请ID %d: %v\n", application.ID, err)
+	}
+
+	// 创建任务给申请用户，要求补充信息
+	taskTitle := fmt.Sprintf("农机租赁申请需补充信息: %s", application.ApplicationNo)
+	taskDescription := fmt.Sprintf("您的农机租赁申请 %s (ID: %d) 需要补充以下信息: %s。请尽快处理。审批备注: %s", application.ApplicationNo, application.ID, req.RequiredInfo, req.RequestNote)
+	// 确保 UserID 是有效的，并且我们希望指派给该用户
+	var assignedTo *uint64
+	if application.UserID > 0 {
+		assignedTo = &application.UserID
+	}
+	taskData := fmt.Sprintf(`{"application_id": %d, "application_no": "%s", "required_info": "%s", "request_note": "%s"}`, application.ID, application.ApplicationNo, req.RequiredInfo, req.RequestNote)
+
+	taskReq := &CreateTaskRequest{
+		Title:        taskTitle,
+		Description:  taskDescription,
+		Type:         "machine_rental_more_info",
+		Priority:     "high",
+		BusinessID:   application.ID,
+		BusinessType: "machine_rental_application",
+		AssignedTo:   assignedTo,
+		Data:         taskData,
+	}
+
+	taskResp, taskErr := s.taskService.CreateTask(ctx, taskReq)
+	if taskErr != nil {
+		fmt.Printf("为农机租赁申请创建补充信息任务失败 - 申请ID %d: %v\n", application.ID, taskErr)
+	} else {
+		fmt.Printf("为农机租赁申请创建补充信息任务成功 - 申请ID %d, 任务ID %d\n", application.ID, taskResp.ID)
+		// TODO: 可选: 将 taskID 关联到 application.RelatedTaskID
+	}
+
+	// TODO: 发送通知给用户，告知状态从 previousStatus 变为 pending_more_info，并说明需补充信息
+
+	return nil
 }

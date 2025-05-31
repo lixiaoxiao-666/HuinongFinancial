@@ -429,6 +429,189 @@ Content-Type: application/json
 
 ---
 
+## 🔧 任务管理接口 (供Dify工作流调用)
+
+**接口路径前缀**: `/api/internal/dify/task`
+
+这些接口用于Dify工作流与后端任务系统的交互，例如在AI评估后创建人工审核任务，或在外部事件完成后通知后端任务已完成。
+
+### 3.1 创建审批/处理任务
+
+此接口用于在Dify工作流中触发在后端系统中创建一个新的待处理任务。例如，当AI评估建议人工审核时，Dify工作流可以调用此接口创建一个人工审核任务。
+
+```http
+POST /api/internal/dify/task/create
+Authorization: Bearer {dify_api_token}
+Content-Type: application/json
+
+{
+    "title": "贷款申请需人工审核: LA20240115001",
+    "description": "贷款申请 LA20240115001 (ID: 123) AI评估完成，建议进行人工审核。AI建议: 风险等级中，建议关注还款能力。",
+    "type": "loan_manual_review", 
+    "priority": "medium",         
+    "business_id": 123,           
+    "business_type": "loan_application", 
+    "assigned_to": null,          
+    "due_date": "2024-01-20T18:00:00Z", 
+    "data": {                      
+        "application_id": 123,
+        "application_no": "LA20240115001",
+        "ai_recommendation": "风险等级中，建议关注还款能力。",
+        "risk_level": "medium"
+    }
+}
+```
+
+**请求参数说明:**
+
+*   `title` (string, required): 任务标题。
+*   `description` (string, optional): 任务详细描述。
+*   `type` (string, required): 任务类型，用于分类和后续处理。例如: `loan_manual_review`, `machine_rental_manual_review`
+*   `priority` (string, optional, default: "medium"): 任务优先级: `low`, `medium`, `high`, `urgent`
+*   `business_id` (uint64, required): 关联的业务实体ID (例如：贷款申请ID, 农机租赁申请ID)。
+*   `business_type` (string, required): 关联的业务实体类型: `loan_application`, `machine_rental_application`
+*   `assigned_to` (uint64, optional): 任务指派给的用户ID。如果为null，则进入待分配池。
+*   `due_date` (string, optional): ISO 8601格式的任务截止日期。
+*   `data` (object, optional): 包含与任务相关的自定义数据的JSON对象。
+
+**响应示例 (成功):**
+
+```json
+{
+    "code": 200,
+    "message": "任务创建成功",
+    "data": {
+        "task_id": 789,
+        "task_no": "TASK-20240115-00789",
+        "status": "pending", 
+        "created_at": "2024-01-15T15:00:00Z"
+    }
+}
+```
+
+**响应示例 (失败):**
+
+```json
+{
+    "code": 400,
+    "message": "创建任务失败: 无效的业务类型",
+    "data": null
+}
+```
+
+### 3.2 获取任务状态
+
+此接口用于Dify工作流查询后端系统中特定任务的当前状态。
+
+```http
+POST /api/internal/dify/task/status
+Authorization: Bearer {dify_api_token}
+Content-Type: application/json
+
+{
+    "task_id": 789
+}
+```
+
+**请求参数说明:**
+
+*   `task_id` (uint64, required): 要查询状态的任务ID。
+
+**响应示例 (成功):**
+
+```json
+{
+    "code": 200,
+    "message": "获取任务状态成功",
+    "data": {
+        "task_id": 789,
+        "task_no": "TASK-20240115-00789",
+        "title": "贷款申请需人工审核: LA20240115001",
+        "type": "loan_manual_review",
+        "status": "in_progress", 
+        "priority": "medium",
+        "assigned_to": 105, 
+        "assigned_user_name": "李审批员", 
+        "progress": 50.0, 
+        "created_at": "2024-01-15T15:00:00Z",
+        "updated_at": "2024-01-15T16:30:00Z",
+        "due_date": "2024-01-20T18:00:00Z",
+        "business_id": 123,
+        "business_type": "loan_application",
+        "data": {
+            "application_id": 123,
+            "application_no": "LA20240115001"
+        }
+    }
+}
+```
+
+**响应示例 (任务未找到):**
+
+```json
+{
+    "code": 404,
+    "message": "任务未找到",
+    "data": null
+}
+```
+
+### 3.3 完成/关闭任务
+
+此接口用于Dify工作流通知后端系统某个任务已经处理完毕或可以关闭。例如，当一个外部依赖的处理（如用户补充材料并通过Dify上传）完成后，Dify可以调用此接口关闭关联的"等待用户补充材料"任务。
+
+```http
+POST /api/internal/dify/task/complete
+Authorization: Bearer {dify_api_token}
+Content-Type: application/json
+
+{
+    "task_id": 789,
+    "resolution": "completed_by_workflow", 
+    "comment": "用户已通过Dify流程补充所需材料，自动关闭关联任务。",
+    "data": { 
+        "materials_uploaded": ["doc1.pdf", "image2.jpg"],
+        "workflow_execution_id": "wf_exec_abc123"
+    }
+}
+```
+
+**请求参数说明:**
+
+*   `task_id` (uint64, required): 要完成的任务ID。
+*   `resolution` (string, optional): 任务的解决方式或最终状态的简短描述 (例如: "completed_by_reviewer", "auto_closed_obsolete", "escalated")。
+*   `comment` (string, optional): 关于任务完成的备注。
+*   `data` (object, optional): 包含与任务完成相关的自定义数据的JSON对象。
+
+**响应示例 (成功):**
+
+```json
+{
+    "code": 200,
+    "message": "任务完成成功",
+    "data": {
+        "task_id": 789,
+        "new_status": "completed",
+        "completed_at": "2024-01-16T09:00:00Z"
+    }
+}
+```
+
+**响应示例 (失败):**
+
+```json
+{
+    "code": 400,
+    "message": "任务完成失败: 任务当前状态不允许完成",
+    "data": {
+        "task_id": 789,
+        "current_status": "cancelled"
+    }
+}
+```
+
+---
+
 ## 🔧 错误码说明
 
 | 错误码 | 说明 | 处理建议 |
