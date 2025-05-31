@@ -167,7 +167,7 @@ watch(siderCollapsed, (collapsed) => {
     height: 100%;
     position: relative;
   }
-}
+ }
 
 .sider-logo {
   display: flex;
