@@ -30,16 +30,17 @@
         <div class="header-right">
           <!-- AI审批状态指示器 -->
           <div class="ai-status" v-if="hasPermission('system:manage')">
-            <el-tooltip content="AI审批功能状态 - 始终运行" placement="bottom">
-              <div class="status-indicator active">
+            <el-tooltip :content="aiApprovalEnabled ? 'AI审批正在运行中，点击暂停' : 'AI审批已暂停，点击启动'" placement="bottom">
+              <div class="status-indicator" :class="{ active: aiApprovalEnabled }" @click="toggleAIApproval">
                 <div class="status-icon">
-                  <el-icon><Cpu /></el-icon>
+                  <el-icon v-if="aiApprovalEnabled"><Cpu /></el-icon>
+                  <el-icon v-else><VideoPause /></el-icon>
                 </div>
                 <div class="status-text">
                   <span class="status-label">AI审批</span>
-                  <span class="status-value">运行中</span>
+                  <span class="status-value">{{ aiApprovalEnabled ? '运行中' : '已暂停' }}</span>
                 </div>
-                <div class="status-dot active"></div>
+                <div class="status-dot" :class="{ active: aiApprovalEnabled }"></div>
               </div>
             </el-tooltip>
           </div>
@@ -250,23 +251,26 @@ import {
   Promotion,
   Van,
   Bell,
-  InfoFilled
+  InfoFilled,
+  VideoPause
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+import { useAIStatusStore } from '@/stores/aiStatus'
 import { getDashboard } from '@/api/admin'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const aiStatusStore = useAIStatusStore()
 
 const isCollapse = ref(false)
-const aiApprovalEnabled = ref(true)
 const userAvatar = ref('')
 const notificationCount = ref(5)
 
 // 计算属性
 const currentUser = computed(() => authStore.user)
 const hasPermission = computed(() => authStore.hasPermission)
+const aiApprovalEnabled = computed(() => aiStatusStore.globalAIStatus)
 
 const activeMenu = computed(() => {
   const path = route.path
@@ -331,21 +335,18 @@ const getRoleName = (role?: string) => {
 }
 
 const handleAIToggle = async (enabled: boolean) => {
-  // AI功能始终保持运行状态，不允许切换
-  aiApprovalEnabled.value = true
-  ElMessage.info('AI审批功能始终保持运行状态')
+  // 保持当前状态，不强制修改
+  ElMessage.info('请使用AI审批状态切换器来控制状态')
 }
 
 // 获取系统状态
 const fetchAIStatus = async () => {
   try {
     const data = await getDashboard()
-    // AI状态始终设置为运行中
-    aiApprovalEnabled.value = true
+    // 不再强制设置AI状态，使用store的默认值
   } catch (error) {
     console.error('获取AI状态失败:', error)
-    // 即使获取失败，也保持运行状态
-    aiApprovalEnabled.value = true
+    // 即使获取失败，也不强制设置状态
   }
 }
 
@@ -357,6 +358,10 @@ watch(() => route.path, () => {
 onMounted(() => {
   fetchAIStatus()
 })
+
+const toggleAIApproval = () => {
+  aiStatusStore.toggleAIStatus()
+}
 </script>
 
 <style scoped>
@@ -479,11 +484,22 @@ onMounted(() => {
   border-radius: 12px;
   transition: all 0.3s ease;
   min-height: 44px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.status-indicator:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(234, 84, 85, 0.2);
 }
 
 .status-indicator.active {
   background: rgba(40, 199, 111, 0.1);
   border-color: rgba(40, 199, 111, 0.2);
+}
+
+.status-indicator.active:hover {
+  box-shadow: 0 4px 12px rgba(40, 199, 111, 0.2);
 }
 
 .status-icon {
