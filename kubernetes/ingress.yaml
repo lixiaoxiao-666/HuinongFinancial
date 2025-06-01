@@ -1,0 +1,88 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: huinong-ingress
+  namespace: huinong-financial
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: huinong-admin.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: huinong-admin
+            port:
+              number: 3001
+  - host: huinong-users.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: huinong-users
+            port:
+              number: 3000
+  - host: huinong-api.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: huinong-backend
+            port:
+              number: 8080
+
+---
+# LoadBalancer类型的服务（适用于云环境）
+apiVersion: v1
+kind: Service
+metadata:
+  name: huinong-admin-lb
+  namespace: huinong-financial
+spec:
+  type: LoadBalancer
+  selector:
+    app: huinong-admin
+  ports:
+  - port: 3001
+    targetPort: 3001
+    nodePort: 30081
+  
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: huinong-users-lb
+  namespace: huinong-financial
+spec:
+  type: LoadBalancer
+  selector:
+    app: huinong-users
+  ports:
+  - port: 3000
+    targetPort: 3000
+    nodePort: 30080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: huinong-backend-lb
+  namespace: huinong-financial
+spec:
+  type: LoadBalancer
+  selector:
+    app: huinong-backend
+  ports:
+  - port: 8080
+    targetPort: 8080
+    nodePort: 30082 
