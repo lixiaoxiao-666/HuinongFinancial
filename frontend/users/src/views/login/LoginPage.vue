@@ -109,6 +109,21 @@ const register = () => {
       <h1 class="system-title">数字惠农</h1>
       <p class="system-subtitle">金融助力，共富乡村</p>
 
+      <!-- 测试账号提示 -->
+      <div class="test-account-tip">
+        <el-alert 
+          title="测试账号" 
+          type="info" 
+          :closable="false"
+          show-icon
+        >
+          <template #default>
+            <p>手机号：13800138000</p>
+            <p>密码：123456</p>
+          </template>
+        </el-alert>
+      </div>
+
       <el-form 
         ref="FormRef" 
         :model="FormData" 
@@ -272,6 +287,25 @@ const register = () => {
   color: #666;
   font-size: clamp(16px, 4vw, 20px);
   margin-bottom: 30px;
+}
+
+.test-account-tip {
+  margin-bottom: 20px;
+}
+
+.test-account-tip :deep(.el-alert) {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+}
+
+.test-account-tip :deep(.el-alert__content) {
+  text-align: left;
+}
+
+.test-account-tip p {
+  margin: 2px 0;
+  font-size: 14px;
+  color: #0369a1;
 }
 
 .form-container {

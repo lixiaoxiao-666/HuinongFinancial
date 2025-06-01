@@ -5,6 +5,22 @@
         <div class="card-header">
           <span>AI审批流程管理</span>
           <div class="header-actions">
+            <!-- AI审批全局状态切换 -->
+            <div class="ai-status-toggle">
+              <el-tooltip :content="globalAIStatus ? 'AI审批正在运行中，点击暂停' : 'AI审批已暂停，点击启动'" placement="bottom">
+                <div class="status-switch" @click="toggleGlobalAIStatus" :class="{ active: globalAIStatus }">
+                  <div class="status-indicator">
+                    <el-icon v-if="globalAIStatus"><Cpu /></el-icon>
+                    <el-icon v-else><VideoPause /></el-icon>
+                  </div>
+                  <div class="status-text">
+                    <span class="status-label">AI审批</span>
+                    <span class="status-value">{{ globalAIStatus ? '运行中' : '已暂停' }}</span>
+                  </div>
+                  <div class="status-dot" :class="{ active: globalAIStatus }"></div>
+                </div>
+              </el-tooltip>
+            </div>
             <el-button type="primary" @click="createWorkflow">
               <el-icon><Plus /></el-icon>
               管理Dify AI工作流
@@ -167,6 +183,8 @@
               v-if="row.status === 'active'"
               type="info"
               size="small"
+              :loading="operationLoading[row.id + '_pause']"
+              :disabled="!globalAIStatus"
               @click="pauseWorkflow(row)"
             >
               暂停
@@ -175,6 +193,8 @@
               v-else-if="row.status === 'paused'"
               type="success"
               size="small"
+              :loading="operationLoading[row.id + '_resume']"
+              :disabled="!globalAIStatus"
               @click="resumeWorkflow(row)"
             >
               恢复
@@ -311,7 +331,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Plus,
@@ -319,8 +339,10 @@ import {
   Cpu,
   Document,
   Loading,
-  Select
+  Select,
+  VideoPause
 } from '@element-plus/icons-vue'
+import { useAIStatusStore } from '@/stores/aiStatus'
 import dayjs from 'dayjs'
 
 // 接口定义
@@ -354,6 +376,9 @@ interface WorkflowForm {
   status: string
 }
 
+// 使用全局AI状态store
+const aiStatusStore = useAIStatusStore()
+
 // 响应式数据
 const loading = ref(false)
 const workflowData = ref<WorkflowRecord[]>([])
@@ -366,6 +391,10 @@ const detailDialogVisible = ref(false)
 const formDialogVisible = ref(false)
 const selectedWorkflow = ref<WorkflowRecord | null>(null)
 const isEdit = ref(false)
+const operationLoading = ref<Record<string, boolean>>({})
+
+// 计算属性 - 使用全局AI状态
+const globalAIStatus = computed(() => aiStatusStore.globalAIStatus)
 
 // 统计数据
 const stats = reactive({
@@ -410,31 +439,40 @@ const fetchWorkflows = async () => {
     await new Promise(resolve => setTimeout(resolve, 500))
     
     // 模拟数据
-    const mockData = Array.from({ length: pageSize.value }, (_, index) => ({
-      id: `WF${String(currentPage.value * 100 + index + 1).padStart(4, '0')}`,
-      name: `${['贷款审批', '补贴申请', '保险理赔'][index % 3]}流程${index + 1}`,
-      category: ['loan', 'subsidy', 'insurance'][index % 3],
-      status: ['active', 'paused', 'stopped'][Math.floor(Math.random() * 3)],
-      version: `v${Math.floor(Math.random() * 3) + 1}.${Math.floor(Math.random() * 10)}`,
-      ai_confidence_threshold: [75, 80, 85, 90][Math.floor(Math.random() * 4)],
-      processed_count: Math.floor(Math.random() * 5000) + 100,
-      success_rate: Math.floor(Math.random() * 30) + 70,
-      avg_processing_time: Math.floor(Math.random() * 30) + 5,
-      created_at: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-      updated_at: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-      description: '这是一个智能审批流程的描述信息',
-      steps: [
-        { name: '材料收集', description: '收集申请材料' },
-        { name: 'AI初审', description: 'AI自动初步审核' },
-        { name: '人工复审', description: '人工复审确认' },
-        { name: '结果通知', description: '通知审批结果' }
-      ],
-      config: {
-        maxAmount: 100000,
-        minCreditScore: 600,
-        autoApprovalThreshold: 85
+    const mockData = Array.from({ length: pageSize.value }, (_, index) => {
+      // 根据全局AI状态决定流程状态
+      let status = 'paused' // 默认为暂停
+      if (globalAIStatus.value) {
+        // AI运行时，随机分配状态
+        status = ['active', 'paused', 'stopped'][Math.floor(Math.random() * 3)]
       }
-    }))
+      
+      return {
+        id: `WF${String(currentPage.value * 100 + index + 1).padStart(4, '0')}`,
+        name: `${['贷款审批', '补贴申请', '保险理赔'][index % 3]}流程${index + 1}`,
+        category: ['loan', 'subsidy', 'insurance'][index % 3],
+        status: status,
+        version: `v${Math.floor(Math.random() * 3) + 1}.${Math.floor(Math.random() * 10)}`,
+        ai_confidence_threshold: [75, 80, 85, 90][Math.floor(Math.random() * 4)],
+        processed_count: globalAIStatus.value ? Math.floor(Math.random() * 5000) + 100 : Math.floor(Math.random() * 100),
+        success_rate: Math.floor(Math.random() * 30) + 70,
+        avg_processing_time: Math.floor(Math.random() * 30) + 5,
+        created_at: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+        updated_at: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+        description: '这是一个智能审批流程的描述信息',
+        steps: [
+          { name: '材料收集', description: '收集申请材料' },
+          { name: 'AI初审', description: 'AI自动初步审核' },
+          { name: '人工复审', description: '人工复审确认' },
+          { name: '结果通知', description: '通知审批结果' }
+        ],
+        config: {
+          maxAmount: 100000,
+          minCreditScore: 600,
+          autoApprovalThreshold: 85
+        }
+      }
+    })
     
     workflowData.value = mockData
     total.value = 150
@@ -447,11 +485,19 @@ const fetchWorkflows = async () => {
 
 const fetchStats = async () => {
   try {
-    // 模拟统计数据
-    stats.activeWorkflows = 25
-    stats.totalWorkflows = 38
-    stats.processingTasks = 156
-    stats.completedToday = 89
+    // 模拟统计数据，根据AI状态动态调整
+    if (globalAIStatus.value) {
+      stats.activeWorkflows = 25
+      stats.totalWorkflows = 38
+      stats.processingTasks = 156
+      stats.completedToday = 89
+    } else {
+      // AI暂停状态下的统计数据
+      stats.activeWorkflows = 0
+      stats.totalWorkflows = 38
+      stats.processingTasks = 0
+      stats.completedToday = 0
+    }
   } catch (error) {
     console.error('获取统计数据失败:', error)
   }
@@ -505,22 +551,81 @@ const editWorkflow = (row: WorkflowRecord) => {
 }
 
 const pauseWorkflow = async (row: WorkflowRecord) => {
+  if (!globalAIStatus.value) {
+    ElMessage.warning('AI审批已全局暂停，无法操作单个流程')
+    return
+  }
+  
   try {
     await ElMessageBox.confirm('确定要暂停此审批流程吗？', '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning'
     })
-    ElMessage.success('流程已暂停')
-    refreshData()
+    
+    // 设置加载状态
+    operationLoading.value[row.id + '_pause'] = true
+    
+    // 调用API暂停工作流
+    try {
+      // 这里应该调用真实的API
+      // await pauseAIWorkflow(row.id)
+      
+      // 模拟API调用
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // 更新本地状态
+      row.status = 'paused'
+      ElMessage.success('流程已暂停')
+      refreshData()
+    } catch (error) {
+      ElMessage.error('暂停流程失败，请稍后重试')
+    } finally {
+      // 清除加载状态
+      operationLoading.value[row.id + '_pause'] = false
+    }
   } catch {
     // 用户取消
   }
 }
 
 const resumeWorkflow = async (row: WorkflowRecord) => {
-  ElMessage.success('流程已恢复')
-  refreshData()
+  if (!globalAIStatus.value) {
+    ElMessage.warning('AI审批已全局暂停，请先启动全局AI审批')
+    return
+  }
+  
+  try {
+    await ElMessageBox.confirm('确定要恢复此审批流程吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'success'
+    })
+    
+    // 设置加载状态
+    operationLoading.value[row.id + '_resume'] = true
+    
+    // 调用API恢复工作流
+    try {
+      // 这里应该调用真实的API
+      // await resumeAIWorkflow(row.id)
+      
+      // 模拟API调用
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // 更新本地状态
+      row.status = 'active'
+      ElMessage.success('流程已恢复')
+      refreshData()
+    } catch (error) {
+      ElMessage.error('恢复流程失败，请稍后重试')
+    } finally {
+      // 清除加载状态
+      operationLoading.value[row.id + '_resume'] = false
+    }
+  } catch {
+    // 用户取消
+  }
 }
 
 const deleteWorkflow = async (row: WorkflowRecord) => {
@@ -598,6 +703,13 @@ const getSuccessRateColor = (rate: number) => {
   if (rate >= 90) return '#67c23a'
   if (rate >= 80) return '#e6a23c'
   return '#f56c6c'
+}
+
+const toggleGlobalAIStatus = () => {
+  aiStatusStore.toggleAIStatus()
+  
+  // 刷新数据以反映状态变化
+  refreshData()
 }
 
 onMounted(() => {
@@ -846,5 +958,94 @@ onMounted(() => {
 :deep(.el-pagination) {
   margin-top: 20px;
   justify-content: center;
+}
+
+.ai-status-toggle {
+  display: flex;
+  align-items: center;
+  margin-right: 16px;
+}
+
+.status-switch {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  min-width: 120px;
+}
+
+.status-switch:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.status-switch.active {
+  background: linear-gradient(135deg, #67c23a, #85ce61);
+  border-color: #67c23a;
+}
+
+.status-indicator {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  margin-right: 8px;
+  font-size: 14px;
+  color: #409eff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.status-switch.active .status-indicator {
+  color: #67c23a;
+}
+
+.status-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.status-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  line-height: 1;
+}
+
+.status-switch.active .status-label {
+  color: #fff;
+}
+
+.status-value {
+  font-size: 11px;
+  color: #999;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.status-switch.active .status-value {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e4e7ed;
+  margin-left: 8px;
+  transition: all 0.3s ease;
+}
+
+.status-dot.active {
+  background: #fff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
 }
 </style> 

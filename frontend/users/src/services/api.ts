@@ -209,21 +209,127 @@ export interface FileUploadResult {
   file_size: number
 }
 
-// 用户服务API
+// 模拟用户数据存储
+const mockUsers = [
+  {
+    user_id: '1',
+    phone: '13800138000',
+    password: '123456',
+    nickname: '张三',
+    avatar_url: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
+    real_name: '张三',
+    id_card_number: '110101199001011234',
+    address: '北京市朝阳区'
+  },
+  {
+    user_id: '2', 
+    phone: '13800138001',
+    password: '123456',
+    nickname: '李四',
+    avatar_url: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
+    real_name: '李四',
+    id_card_number: '110101199001011235',
+    address: '上海市浦东新区'
+  }
+]
+
+// 用户相关API
 export const userApi = {
-  // 用户注册
-  register(data: RegisterRequest): Promise<ApiResponse<{ user_id: string }>> {
-    return apiClient.post('/users/register', data)
+  // 注册 - 模拟实现
+  async register(data: RegisterRequest): Promise<ApiResponse<{ user_id: string }>> {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        // 检查手机号是否已存在
+        const existingUser = mockUsers.find(user => user.phone === data.phone)
+        if (existingUser) {
+          reject(new Error('手机号已注册'))
+          return
+        }
+        
+        // 模拟创建新用户
+        const newUser = {
+          user_id: String(mockUsers.length + 1),
+          phone: data.phone,
+          password: data.password,
+          nickname: '新用户',
+          avatar_url: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
+          real_name: '',
+          id_card_number: '',
+          address: ''
+        }
+        
+        mockUsers.push(newUser)
+        
+        resolve({
+          code: 0,
+          message: '注册成功',
+          data: { user_id: newUser.user_id }
+        })
+      }, 1000) // 模拟网络延迟
+    })
   },
 
-  // 用户登录
-  login(data: LoginRequest): Promise<ApiResponse<LoginResponse>> {
-    return apiClient.post('/users/login', data)
+  // 登录 - 模拟实现
+  async login(data: LoginRequest): Promise<ApiResponse<LoginResponse>> {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        // 查找用户
+        const user = mockUsers.find(u => u.phone === data.phone && u.password === data.password)
+        
+        if (!user) {
+          reject(new Error('手机号或密码错误'))
+          return
+        }
+        
+        // 模拟生成token
+        const token = `mock_token_${user.user_id}_${Date.now()}`
+        const expiresIn = 24 * 60 * 60 // 24小时
+        
+        resolve({
+          code: 0,
+          message: '登录成功',
+          data: {
+            user_id: user.user_id,
+            token: token,
+            expires_in: expiresIn,
+            user_type: 'user'
+          }
+        })
+      }, 1000) // 模拟网络延迟
+    })
   },
 
-  // 获取用户信息
-  getUserInfo(): Promise<ApiResponse<UserInfo>> {
-    return apiClient.get('/users/me')
+  // 获取用户信息 - 模拟实现
+  async getUserInfo(): Promise<ApiResponse<UserInfo>> {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        // 从token中获取user_id (简单模拟)
+        const userStore = useUserStore()
+        const token = userStore.token
+        
+        if (!token || !token.startsWith('mock_token_')) {
+          reject(new Error('无效的token'))
+          return
+        }
+        
+        // 从token中提取user_id
+        const userId = token.split('_')[2]
+        const user = mockUsers.find(u => u.user_id === userId)
+        
+        if (!user) {
+          reject(new Error('用户不存在'))
+          return
+        }
+        
+        const { password, ...userInfo } = user
+        
+        resolve({
+          code: 0,
+          message: '获取用户信息成功',
+          data: userInfo as UserInfo
+        })
+      }, 500) // 模拟网络延迟
+    })
   },
 
   // 更新用户信息

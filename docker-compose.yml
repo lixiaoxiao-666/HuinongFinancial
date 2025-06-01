@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  # 后端服务 - 暂时注释掉
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   image: huinong-backend:latest
+  #   container_name: huinong-backend
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8081:8080"
+  #   environment:
+  #     - GIN_MODE=release
+  #     - TZ=Asia/Shanghai
+  #     # 数据库配置
+  #     - DB_HOST=10.10.10.10
+  #     - DB_PORT=4000
+  #     - DB_USER=root
+  #     - DB_PASSWORD=
+  #     - DB_NAME=app_bs
+  #     - DB_CHARSET=utf8mb4
+  #     # Redis配置
+  #     - REDIS_HOST=10.10.10.10
+  #     - REDIS_PORT=6379
+  #     - REDIS_PASSWORD=
+  #     - REDIS_DB=0
+  #   networks:
+  #     - huinong-network
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 40s
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 512M
+  #         cpus: '0.5'
+  #       reservations:
+  #         memory: 256M
+  #         cpus: '0.2'
+
+  # 前端管理端
+  admin:
+    build:
+      context: ./frontend/admin
+      dockerfile: Dockerfile
+    image: huinong-admin:latest
+    container_name: huinong-admin
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - TZ=Asia/Shanghai
+    # depends_on:
+    #   backend:
+    #     condition: service_healthy
+    networks:
+      - huinong-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.1'
+        reservations:
+          memory: 64M
+          cpus: '0.05'
+
+  # 前端用户端
+  users:
+    build:
+      context: ./frontend/users
+      dockerfile: Dockerfile
+    image: huinong-users:latest
+    container_name: huinong-users
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - TZ=Asia/Shanghai
+    # depends_on:
+    #   backend:
+    #     condition: service_healthy
+    networks:
+      - huinong-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.1'
+        reservations:
+          memory: 64M
+          cpus: '0.05'
+
+networks:
+  huinong-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16 
