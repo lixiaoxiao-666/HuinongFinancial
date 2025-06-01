@@ -1413,8 +1413,9 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .dashboard {
-  padding: 0;
+  padding: 20px;
   min-height: 100%;
+  box-sizing: border-box;
 }
 
 .page-header {
@@ -1423,7 +1424,6 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   padding: 0 0 20px 0;
   margin-bottom: 20px;
-  margin-left: -8px;
   border-bottom: 1px solid #ebeef5;
 }
 
@@ -2192,7 +2192,6 @@ onBeforeUnmount(() => {
     flex-direction: column;
     align-items: stretch;
     gap: 16px;
-    margin-left: -6px;
   }
   
   .page-title-container {

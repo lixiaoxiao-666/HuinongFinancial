@@ -407,7 +407,6 @@ onMounted(() => {
   width: 259px;
   height: 48px;
   justify-content: flex-start;
-  margin-left: -8px;
 }
 
 .logo-container:hover {
@@ -666,7 +665,6 @@ onMounted(() => {
   overflow: hidden;
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
   position: relative;
-  margin-left: -8px;
 }
 
 .sidebar::before {
@@ -830,16 +828,16 @@ onMounted(() => {
   padding: 0;
   overflow: hidden;
   position: relative;
-  margin-left: -8px;
 }
 
 .content-wrapper {
   height: 100%;
-  padding: 24px;
+  padding: 0;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(79, 172, 254, 0.3) transparent;
   position: relative;
+  box-sizing: border-box;
 }
 
 /* WebKit浏览器滚动条样式 */
@@ -998,7 +996,6 @@ onMounted(() => {
     width: 219px;
     height: 40px;
     padding: 0;
-    margin-left: -25px;
   }
   
   .logo-text {
@@ -1010,7 +1007,7 @@ onMounted(() => {
   }
   
   .content-wrapper {
-    padding: 16px;
+    padding: 0;
   }
   
   .user-info {
@@ -1026,11 +1023,9 @@ onMounted(() => {
   }
   
   .sidebar {
-    margin-left: -6px;
   }
   
   .main-content {
-    margin-left: -6px;
   }
 }
 
