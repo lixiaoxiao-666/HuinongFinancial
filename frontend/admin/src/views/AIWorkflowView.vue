@@ -258,13 +258,6 @@
             />
           </el-steps>
         </div>
-
-        <div class="workflow-config" v-if="selectedWorkflow.config">
-          <h4>配置信息</h4>
-          <el-card>
-            <pre>{{ JSON.stringify(selectedWorkflow.config, null, 2) }}</pre>
-          </el-card>
-        </div>
       </div>
     </el-dialog>
 
@@ -876,24 +869,6 @@ onMounted(() => {
 .workflow-steps h4 {
   margin-bottom: 16px;
   color: #333;
-}
-
-.workflow-config {
-  margin-top: 20px;
-}
-
-.workflow-config h4 {
-  margin-bottom: 12px;
-  color: #333;
-}
-
-.workflow-config pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  line-height: 1.5;
-  color: #555;
 }
 
 /* Element Plus卡片内容区域样式 */

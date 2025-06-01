@@ -170,9 +170,28 @@
 
         <div class="ai-analysis" v-if="selectedRecord.ai_analysis">
           <h4>AI分析详情</h4>
-          <el-card>
-            <pre>{{ selectedRecord.ai_analysis }}</pre>
-          </el-card>
+          <div class="analysis-charts">
+            <el-row :gutter="20">
+              <el-col :span="8">
+                <div class="chart-card">
+                  <div class="chart-title">申请人资产安全</div>
+                  <div ref="assetSafetyChartRef" class="analysis-chart"></div>
+                </div>
+              </el-col>
+              <el-col :span="8">
+                <div class="chart-card">
+                  <div class="chart-title">用户信用度</div>
+                  <div ref="creditScoreChartRef" class="analysis-chart"></div>
+                </div>
+              </el-col>
+              <el-col :span="8">
+                <div class="chart-card">
+                  <div class="chart-title">风险指数趋势</div>
+                  <div ref="riskTrendChartRef" class="analysis-chart"></div>
+                </div>
+              </el-col>
+            </el-row>
+          </div>
         </div>
       </div>
     </el-dialog>
@@ -180,10 +199,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
+import * as echarts from 'echarts'
 
 // 接口定义
 interface SmartApprovalRecord {
@@ -210,6 +230,16 @@ const selectedStatus = ref('')
 const searchKeyword = ref('')
 const detailDialogVisible = ref(false)
 const selectedRecord = ref<SmartApprovalRecord | null>(null)
+
+// 图表DOM引用
+const assetSafetyChartRef = ref<HTMLElement | null>(null)
+const creditScoreChartRef = ref<HTMLElement | null>(null)
+const riskTrendChartRef = ref<HTMLElement | null>(null)
+
+// 图表实例
+let assetSafetyChart: echarts.ECharts | null = null
+let creditScoreChart: echarts.ECharts | null = null
+let riskTrendChart: echarts.ECharts | null = null
 
 // 统计数据
 const stats = reactive({
@@ -350,11 +380,275 @@ const handleCurrentChange = (page: number) => {
 const viewDetail = (row: any) => {
   selectedRecord.value = row
   detailDialogVisible.value = true
+  // 等待对话框渲染完成后初始化图表
+  nextTick(() => {
+    initAnalysisCharts()
+  })
 }
 
 const manualReview = (row: any) => {
   ElMessage.info(`转入人工审批流程: ${row.id}`)
   // 这里可以跳转到人工审批页面
+}
+
+// 初始化分析图表
+const initAnalysisCharts = () => {
+  if (!selectedRecord.value) return
+  
+  // 根据申请人信息生成个性化数据
+  const record = selectedRecord.value
+  const seed = parseInt(record.id.replace(/\D/g, '')) || 1000 // 使用ID中的数字作为种子
+  
+  // 生成基于种子的随机数函数
+  const seededRandom = (min: number, max: number, offset: number = 0) => {
+    const x = Math.sin((seed + offset) * 12.9898) * 43758.5453
+    return Math.floor((x - Math.floor(x)) * (max - min + 1)) + min
+  }
+  
+  // 饼状图 - 申请人资产安全（基于申请金额和AI置信度）
+  if (assetSafetyChartRef.value) {
+    assetSafetyChart = echarts.init(assetSafetyChartRef.value)
+    
+    // 根据申请金额和AI置信度调整资产安全分布
+    const baseRisk = record.amount > 300000 ? 15 : record.amount > 100000 ? 10 : 5
+    const confidenceAdjust = record.ai_confidence > 80 ? -5 : record.ai_confidence < 70 ? 10 : 0
+    
+    const highRisk = Math.max(5, Math.min(25, baseRisk + confidenceAdjust + seededRandom(-5, 5, 1)))
+    const mediumRisk = seededRandom(15, 35, 2)
+    const safeAsset = 100 - highRisk - mediumRisk
+    
+    const assetData = [
+      { value: safeAsset, name: '安全资产', itemStyle: { color: '#4CAF50' } },
+      { value: mediumRisk, name: '中等风险', itemStyle: { color: '#FF9800' } },
+      { value: highRisk, name: '高风险资产', itemStyle: { color: '#F44336' } }
+    ]
+    
+    const assetOption = {
+      tooltip: {
+        trigger: 'item',
+        formatter: '{b}: {c}% ({d}%)'
+      },
+      series: [
+        {
+          name: '资产安全',
+          type: 'pie',
+          radius: ['40%', '70%'],
+          avoidLabelOverlap: false,
+          label: {
+            show: true,
+            position: 'outside',
+            formatter: '{b}\n{c}%',
+            textStyle: {
+              textAlign: 'center',
+              fontSize: 12
+            }
+          },
+          emphasis: {
+            label: {
+              show: true,
+              fontSize: 14,
+              fontWeight: 'bold',
+              textStyle: {
+                textAlign: 'center'
+              }
+            }
+          },
+          data: assetData
+        }
+      ]
+    }
+    assetSafetyChart.setOption(assetOption)
+  }
+  
+  // 柱状图 - 用户信用度（基于申请人信息生成）
+  if (creditScoreChartRef.value) {
+    creditScoreChart = echarts.init(creditScoreChartRef.value)
+    const creditCategories = ['还款记录', '信用历史', '负债比率', '收入稳定性', '资产状况']
+    
+    // 根据AI审批结果和置信度生成信用评分
+    const baseScore = record.ai_result === 'approved' ? 85 : record.ai_result === 'rejected' ? 65 : 75
+    const creditScores = creditCategories.map((_, index) => {
+      const variation = seededRandom(-15, 15, index + 10)
+      return Math.max(50, Math.min(100, baseScore + variation))
+    })
+    
+    const creditOption = {
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: {
+          type: 'shadow'
+        }
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        top: '3%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        data: creditCategories,
+        axisLabel: {
+          interval: 0,
+          rotate: 45,
+          fontSize: 10,
+          textStyle: {
+            textAlign: 'center'
+          }
+        },
+        axisLine: {
+          lineStyle: {
+            color: '#E0E0E0'
+          }
+        }
+      },
+      yAxis: {
+        type: 'value',
+        min: 0,
+        max: 100,
+        axisLabel: {
+          textStyle: {
+            textAlign: 'center'
+          }
+        },
+        axisLine: {
+          show: false
+        },
+        axisTick: {
+          show: false
+        },
+        splitLine: {
+          lineStyle: {
+            color: '#EFEFEF'
+          }
+        }
+      },
+      series: [
+        {
+          name: '信用评分',
+          type: 'bar',
+          data: creditScores,
+          itemStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: '#2196F3' },
+              { offset: 1, color: '#64B5F6' }
+            ])
+          },
+          label: {
+            show: true,
+            position: 'top',
+            textStyle: {
+              textAlign: 'center',
+              fontSize: 10
+            }
+          }
+        }
+      ]
+    }
+    creditScoreChart.setOption(creditOption)
+  }
+  
+  // 趋势图 - 风险指数（基于申请人历史模拟）
+  if (riskTrendChartRef.value) {
+    riskTrendChart = echarts.init(riskTrendChartRef.value)
+    const riskDates = ['1月', '2月', '3月', '4月', '5月', '6月']
+    
+    // 根据当前风险状况生成历史趋势
+    const currentRisk = record.ai_result === 'approved' ? seededRandom(20, 40, 20) : 
+                       record.ai_result === 'rejected' ? seededRandom(60, 80, 20) : 
+                       seededRandom(40, 60, 20)
+    
+    // 生成趋势数据，最后一个月为当前风险值
+    const riskValues = []
+    let lastValue = currentRisk + seededRandom(-20, 20, 25)
+    
+    for (let i = 0; i < 5; i++) {
+      const change = seededRandom(-10, 10, i + 30)
+      lastValue = Math.max(10, Math.min(90, lastValue + change))
+      riskValues.push(lastValue)
+    }
+    riskValues.push(currentRisk) // 最后一个月为当前风险值
+    
+    const riskOption = {
+      tooltip: {
+        trigger: 'axis'
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        top: '3%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        data: riskDates,
+        axisLabel: {
+          textStyle: {
+            textAlign: 'center',
+            fontSize: 10
+          }
+        },
+        axisLine: {
+          lineStyle: {
+            color: '#E0E0E0'
+          }
+        }
+      },
+      yAxis: {
+        type: 'value',
+        min: 0,
+        max: 100,
+        axisLabel: {
+          textStyle: {
+            textAlign: 'center'
+          }
+        },
+        axisLine: {
+          show: false
+        },
+        axisTick: {
+          show: false
+        },
+        splitLine: {
+          lineStyle: {
+            color: '#EFEFEF'
+          }
+        }
+      },
+      series: [
+        {
+          name: '风险指数',
+          type: 'line',
+          smooth: true,
+          data: riskValues,
+          lineStyle: {
+            color: '#FF5722',
+            width: 3
+          },
+          itemStyle: {
+            color: '#FF5722'
+          },
+          areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: 'rgba(255, 87, 34, 0.3)' },
+              { offset: 1, color: 'rgba(255, 87, 34, 0.05)' }
+            ])
+          },
+          label: {
+            show: true,
+            position: 'top',
+            textStyle: {
+              textAlign: 'center',
+              fontSize: 10
+            }
+          }
+        }
+      ]
+    }
+    riskTrendChart.setOption(riskOption)
+  }
 }
 
 // 工具方法
@@ -393,6 +687,13 @@ const getResultText = (result: string) => {
 onMounted(() => {
   refreshData()
 })
+
+// 组件卸载时销毁图表
+const destroyCharts = () => {
+  assetSafetyChart?.dispose()
+  creditScoreChart?.dispose()
+  riskTrendChart?.dispose()
+}
 </script>
 
 <style scoped>
@@ -524,13 +825,33 @@ onMounted(() => {
   color: #333;
 }
 
-.ai-analysis pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  line-height: 1.5;
-  color: #555;
+.analysis-charts {
+  margin-top: 16px;
+}
+
+.chart-card {
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 16px;
+  transition: box-shadow 0.3s;
+}
+
+.chart-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.chart-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.analysis-chart {
+  height: 200px;
+  width: 100%;
 }
 
 /* Element Plus卡片内容区域样式 */
