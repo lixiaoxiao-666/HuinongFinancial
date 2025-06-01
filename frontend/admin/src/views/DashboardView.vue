@@ -380,6 +380,41 @@
                   </div>
                 </div>
               </div>
+              
+              <!-- 效率指标展示 -->
+              <div class="efficiency-metrics-row">
+                <div class="efficiency-metric-card">
+                  <div class="metric-header">
+                    <div class="metric-icon ai-icon">
+                      <el-icon><Cpu /></el-icon>
+                    </div>
+                    <div class="metric-info">
+                      <div class="metric-title">AI处理效率</div>
+                      <div class="metric-trend positive">
+                        <el-icon><TrendCharts /></el-icon>
+                        <span>+2.3%</span>
+                      </div>
+                    </div>
+                    <div class="metric-value-large">{{ dashboardData.stats?.ai_efficiency || 85 }}%</div>
+                  </div>
+                </div>
+                <div class="efficiency-metric-card">
+                  <div class="metric-header">
+                    <div class="metric-icon human-icon">
+                      <el-icon><User /></el-icon>
+                    </div>
+                    <div class="metric-info">
+                      <div class="metric-title">人工审核效率</div>
+                      <div class="metric-trend positive">
+                        <el-icon><TrendCharts /></el-icon>
+                        <span>+1.8%</span>
+                      </div>
+                    </div>
+                    <div class="metric-value-large">92.1%</div>
+                  </div>
+                </div>
+              </div>
+              
               <div class="comparison-chart-container">
                 <div ref="comparisonChartRef" class="comparison-chart"></div>
               </div>
@@ -443,122 +478,100 @@
           </div>
         </el-card>
 
-        <!-- AI控制面板 -->
-        <el-card class="section-card ai-control-card" shadow="never">
+        <!-- 综合数据看板 -->
+        <el-card class="section-card data-dashboard-card" shadow="never">
           <template #header>
             <div class="card-header">
               <span>
-                <el-icon><Cpu /></el-icon>
-                AI控制面板
+                <el-icon><Monitor /></el-icon>
+                综合数据看板
               </span>
+              <div class="dashboard-controls">
+                <el-radio-group v-model="dashboardPeriod" @change="updateDashboardData" size="small">
+                  <el-radio-button value="today">今日</el-radio-button>
+                  <el-radio-button value="week">本周</el-radio-button>
+                  <el-radio-button value="month">本月</el-radio-button>
+                </el-radio-group>
+              </div>
             </div>
           </template>
           
-          <div class="ai-control-panel">
-            <div class="ai-status-card">
-              <div class="ai-status-header">
-                <div class="ai-status-indicator active"></div>
-                <div class="ai-status-info">
-                  <div class="ai-status-title">AI审批引擎</div>
-                  <div class="ai-status-desc">正在工作</div>
-                </div>
-                <el-switch
-                  v-model="aiEnabled"
-                  @change="handleAIToggle"
-                  :disabled="true"
-                  size="large"
-                />
-              </div>
-            </div>
-            
-            <div class="ai-metrics">
-              <div class="ai-metric-item">
-                <div class="metric-icon">
-                  <el-icon><Lightning /></el-icon>
-                </div>
-                <div class="metric-content">
-                  <div class="metric-value">{{ dashboardData.stats?.ai_efficiency || 85 }}%</div>
-                  <div class="metric-label">处理效率</div>
+          <div class="data-dashboard-panel">
+            <!-- 实时数据流 -->
+            <div class="realtime-data">
+              <div class="realtime-header">
+                <h4>实时数据流</h4>
+                <div class="realtime-status">
+                  <div class="status-dot active"></div>
+                  <span>实时更新</span>
                 </div>
               </div>
-              <div class="ai-metric-item">
-                <div class="metric-icon">
-                  <el-icon><Aim /></el-icon>
+              <div class="realtime-items">
+                <div class="realtime-item">
+                  <div class="item-time">{{ currentTime }}</div>
+                  <div class="item-content">
+                    <div class="item-type success">审批通过</div>
+                    <div class="item-desc">农业补贴申请 #A{{ Math.floor(Math.random() * 10000) }}</div>
+                  </div>
+                  <div class="item-amount">¥12,500</div>
                 </div>
-                <div class="metric-content">
-                  <div class="metric-value">94.2%</div>
-                  <div class="metric-label">准确率</div>
+                <div class="realtime-item">
+                  <div class="item-time">{{ formatTime(new Date(Date.now() - 120000)) }}</div>
+                  <div class="item-content">
+                    <div class="item-type processing">AI处理</div>
+                    <div class="item-desc">设备租赁申请 #R{{ Math.floor(Math.random() * 10000) }}</div>
+                  </div>
+                  <div class="item-amount">¥8,800</div>
                 </div>
-              </div>
-              <div class="ai-metric-item">
-                <div class="metric-icon">
-                  <el-icon><Timer /></el-icon>
-                </div>
-                <div class="metric-content">
-                  <div class="metric-value">1.2s</div>
-                  <div class="metric-label">平均响应</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </el-card>
-        
-        <!-- 数据统计展示 -->
-        <el-card class="section-card data-display-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span>
-                <el-icon><DataAnalysis /></el-icon>
-                数据统计概览
-              </span>
-            </div>
-          </template>
-          
-          <div class="data-display-panel">
-            <div class="data-overview">
-              <div class="data-item">
-                <div class="data-icon">
-                  <el-icon><Files /></el-icon>
-                </div>
-                <div class="data-content">
-                  <div class="data-value">{{ dashboardData.stats?.total_applications || 1234 }}</div>
-                  <div class="data-label">总申请数</div>
-                </div>
-              </div>
-              <div class="data-item">
-                <div class="data-icon">
-                  <el-icon><Clock /></el-icon>
-                </div>
-                <div class="data-content">
-                  <div class="data-value">{{ dashboardData.stats?.pending_review || 89 }}</div>
-                  <div class="data-label">待审批</div>
-                </div>
-              </div>
-              <div class="data-item">
-                <div class="data-icon">
-                  <el-icon><CircleCheck /></el-icon>
-                </div>
-                <div class="data-content">
-                  <div class="data-value">{{ dashboardData.stats?.approved_today || 23 }}</div>
-                  <div class="data-label">今日通过</div>
+                <div class="realtime-item">
+                  <div class="item-time">{{ formatTime(new Date(Date.now() - 300000)) }}</div>
+                  <div class="item-content">
+                    <div class="item-type pending">待审核</div>
+                    <div class="item-desc">金融贷款申请 #L{{ Math.floor(Math.random() * 10000) }}</div>
+                  </div>
+                  <div class="item-amount">¥50,000</div>
                 </div>
               </div>
             </div>
             
-            <div class="progress-section">
-              <div class="progress-item">
-                <div class="progress-label">
-                  <span>审批进度</span>
-                  <span class="progress-value">75%</span>
-                </div>
-                <el-progress :percentage="75" :stroke-width="8" color="#4CAF50" />
+            <!-- 关键指标监控 -->
+            <div class="key-indicators">
+              <div class="indicator-header">
+                <h4>关键指标监控</h4>
+                <el-button size="small" type="primary" @click="refreshIndicators">
+                  <el-icon><Refresh /></el-icon>
+                  刷新
+                </el-button>
               </div>
-              <div class="progress-item">
-                <div class="progress-label">
-                  <span>AI处理率</span>
-                  <span class="progress-value">{{ dashboardData.stats?.ai_efficiency || 85 }}%</span>
+              <div class="indicator-grid">
+                <div class="indicator-item">
+                  <div class="indicator-label">平均处理时间</div>
+                  <div class="indicator-value">2.3小时</div>
+                  <div class="indicator-progress">
+                    <el-progress :percentage="76" :stroke-width="4" color="#4CAF50" :show-text="false" />
+                  </div>
                 </div>
-                <el-progress :percentage="dashboardData.stats?.ai_efficiency || 85" :stroke-width="8" color="#2196F3" />
+                <div class="indicator-item">
+                  <div class="indicator-label">用户满意度</div>
+                  <div class="indicator-value">94.2%</div>
+                  <div class="indicator-progress">
+                    <el-progress :percentage="94" :stroke-width="4" color="#2196F3" :show-text="false" />
+                  </div>
+                </div>
+                <div class="indicator-item">
+                  <div class="indicator-label">系统可用性</div>
+                  <div class="indicator-value">99.8%</div>
+                  <div class="indicator-progress">
+                    <el-progress :percentage="99" :stroke-width="4" color="#FF9800" :show-text="false" />
+                  </div>
+                </div>
+                <div class="indicator-item">
+                  <div class="indicator-label">数据准确率</div>
+                  <div class="indicator-value">98.5%</div>
+                  <div class="indicator-progress">
+                    <el-progress :percentage="98" :stroke-width="4" color="#9C27B0" :show-text="false" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -607,9 +620,9 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const loading = ref(false)
-const aiEnabled = ref(true)
 const trendPeriod = ref('7d')
 const efficiencyPeriod = ref('week')
+const dashboardPeriod = ref('today')
 const currentTime = ref('')
 const currentDate = ref('')
 const cpuUsage = ref(45)
@@ -986,7 +999,6 @@ const fetchDashboardData = async () => {
     loading.value = true
     const data = await getDashboard()
     dashboardData.value = data
-    aiEnabled.value = true // 始终设置为运行中
     
     // 重新初始化图表
     setTimeout(() => {
@@ -997,12 +1009,6 @@ const fetchDashboardData = async () => {
   } finally {
     loading.value = false
   }
-}
-
-const handleAIToggle = async (enabled: boolean) => {
-  // AI功能始终保持运行状态，不允许切换
-  aiEnabled.value = true
-  ElMessage.info('AI审批功能始终保持运行状态')
 }
 
 const handleChartAction = (command: string) => {
@@ -1385,6 +1391,24 @@ const updateEfficiencyCharts = () => {
   initEfficiencyCharts()
 }
 
+// 更新数据看板数据
+const updateDashboardData = () => {
+  // 根据选择的时间周期更新数据
+  fetchDashboardData()
+  ElMessage.success(`已切换到${dashboardPeriod.value === 'today' ? '今日' : dashboardPeriod.value === 'week' ? '本周' : '本月'}数据`)
+}
+
+// 格式化时间
+const formatTime = (date: Date) => {
+  return dayjs(date).format('HH:mm:ss')
+}
+
+// 刷新指标
+const refreshIndicators = () => {
+  ElMessage.success('指标数据已刷新')
+  // 这里可以添加实际的数据刷新逻辑
+}
+
 onMounted(() => {
   // 开始更新时间
   updateTime()
@@ -1745,7 +1769,7 @@ onBeforeUnmount(() => {
 }
 
 .efficiency-charts {
-  margin-bottom: 24px;
+  display: none;
 }
 
 .efficiency-chart-card {
@@ -1838,9 +1862,10 @@ onBeforeUnmount(() => {
 
 .efficiency-comparison {
   margin-top: 24px;
-  padding: 16px;
+  padding: 18px;
   background: #f8f9fa;
   border-radius: 8px;
+  min-height: 477px;
 }
 
 .comparison-header {
@@ -1884,13 +1909,82 @@ onBeforeUnmount(() => {
 }
 
 .comparison-chart-container {
-  height: 200px;
+  height: 420px;
   width: 100%;
 }
 
 .comparison-chart {
   height: 100%;
   width: 100%;
+}
+
+.efficiency-metrics-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.efficiency-metric-card {
+  flex: 1;
+  background: white;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.metric-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.metric-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+}
+
+.metric-icon.ai-icon {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+}
+
+.metric-icon.human-icon {
+  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  color: #333;
+}
+
+.metric-info {
+  flex: 1;
+  margin-left: 12px;
+}
+
+.metric-title {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.metric-trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.metric-trend.positive {
+  color: #28C76F;
+}
+
+.metric-value-large {
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  line-height: 1;
 }
 
 .quick-actions {
@@ -1989,8 +2083,8 @@ onBeforeUnmount(() => {
 
 .quick-actions-card {
   margin-top: -19px;
-  width: calc(100% + 11px);
-  margin-right: -11px;
+  width: calc(100% + 7px);
+  margin-right: -7px;
 }
 
 .quick-actions-card .quick-actions {
@@ -2021,86 +2115,408 @@ onBeforeUnmount(() => {
   min-height: 90px;
 }
 
-.data-display-card {
+/* 综合数据看板样式 */
+.data-dashboard-card {
   margin-top: 20px;
 }
 
-.data-display-panel {
-  padding: 16px 0;
+.data-dashboard-panel {
+  padding: 38px 0;
 }
 
-.data-overview {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.data-item {
-  flex: 1;
+.dashboard-controls {
   display: flex;
   align-items: center;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  gap: 12px;
 }
 
-.data-icon {
+/* 核心业务指标 */
+.business-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.metric-card {
+  background: white;
+  border: 1px solid #ebeef5;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.metric-card.primary {
+  border-left: 4px solid #667eea;
+}
+
+.metric-card.success {
+  border-left: 4px solid #4CAF50;
+}
+
+.metric-card.warning {
+  border-left: 4px solid #FF9800;
+}
+
+.metric-card.info {
+  border-left: 4px solid #2196F3;
+}
+
+.metric-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.metric-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  font-size: 16px;
-}
-
-.data-content {
-  flex: 1;
-  text-align: center;
-}
-
-.data-value {
   font-size: 18px;
+}
+
+.metric-trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+.metric-trend.positive {
+  color: #4CAF50;
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.metric-trend.negative {
+  color: #f44336;
+  background: rgba(244, 67, 54, 0.1);
+}
+
+.metric-content {
+  text-align: left;
+}
+
+.metric-value {
+  font-size: 28px;
   font-weight: 700;
   color: #333;
   line-height: 1;
+  margin-bottom: 8px;
+}
+
+.metric-label {
+  font-size: 16px;
+  color: #666;
   margin-bottom: 4px;
 }
 
-.data-label {
-  color: #666;
+.metric-desc {
   font-size: 12px;
+  color: #999;
 }
 
-.progress-section {
+/* 实时数据流 */
+.realtime-data {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 28px 20px;
+  margin-bottom: 24px;
+  min-height: 280px;
+}
+
+.realtime-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.realtime-header h4 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.realtime-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #666;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e4e7ed;
+}
+
+.status-dot.active {
+  background: #4CAF50;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
+}
+
+.realtime-items {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
-.progress-item {
+.realtime-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
   background: white;
-  padding: 16px;
   border-radius: 8px;
   border: 1px solid #ebeef5;
 }
 
-.progress-label {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
+.item-time {
+  font-size: 12px;
+  color: #999;
+  min-width: 60px;
+}
+
+.item-content {
+  flex: 1;
+  margin-left: 16px;
+}
+
+.item-type {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  display: inline-block;
+}
+
+.item-type.success {
+  color: #4CAF50;
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.item-type.processing {
+  color: #2196F3;
+  background: rgba(33, 150, 243, 0.1);
+}
+
+.item-type.pending {
+  color: #FF9800;
+  background: rgba(255, 152, 0, 0.1);
+}
+
+.item-desc {
   font-size: 14px;
   color: #333;
 }
 
-.progress-value {
+.item-amount {
+  font-size: 16px;
   font-weight: 600;
-  color: #1976D2;
+  color: #4CAF50;
+}
+
+/* 数据分析图表 */
+.dashboard-charts {
+  margin-bottom: 24px;
+}
+
+.chart-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.chart-item {
+  background: white;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.chart-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.mini-chart-container {
+  height: 120px;
+  width: 100%;
+}
+
+.mini-chart {
+  height: 100%;
+  width: 100%;
+}
+
+/* 关键指标监控 */
+.key-indicators {
+  background: white;
+  border: 1px solid #ebeef5;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.indicator-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.indicator-header h4 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.indicator-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.indicator-item {
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.indicator-label {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.indicator-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.indicator-progress {
+  width: 100%;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  
+  .page-title-container {
+    padding: 6px 12px 6px 4px;
+  }
+  
+  .page-title {
+    font-size: 20px;
+  }
+  
+  .page-subtitle {
+    font-size: 12px;
+  }
+  
+  .header-actions {
+    justify-content: space-between;
+  }
+  
+  .time-info {
+    order: -1;
+  }
+  
+  .core-stat-card {
+    height: 80px;
+    padding: 16px;
+  }
+  
+  .stat-icon {
+    width: 36px;
+    height: 36px;
+    margin-right: 12px;
+  }
+  
+  .stat-number {
+    font-size: 20px;
+  }
+  
+  .charts-section .el-col {
+    margin-bottom: 16px;
+  }
+  
+  .ai-metrics {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .ai-metric-item {
+    flex-direction: row;
+    text-align: left;
+  }
+  
+  .metric-icon {
+    margin-right: 12px;
+    margin-bottom: 0;
+  }
+
+  .business-metrics {
+    grid-template-columns: 1fr;
+  }
+  
+  .chart-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .indicator-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .realtime-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .item-content {
+    margin-left: 0;
+  }
 }
 
 .ai-status-card {
@@ -2184,69 +2600,6 @@ onBeforeUnmount(() => {
   color: #666;
   font-size: 12px;
   margin-top: 4px;
-}
-
-/* 移动端适配 */
-@media (max-width: 768px) {
-  .page-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-  }
-  
-  .page-title-container {
-    padding: 6px 12px 6px 4px;
-  }
-  
-  .page-title {
-    font-size: 20px;
-  }
-  
-  .page-subtitle {
-    font-size: 12px;
-  }
-  
-  .header-actions {
-    justify-content: space-between;
-  }
-  
-  .time-info {
-    order: -1;
-  }
-  
-  .core-stat-card {
-    height: 80px;
-    padding: 16px;
-  }
-  
-  .stat-icon {
-    width: 36px;
-    height: 36px;
-    margin-right: 12px;
-  }
-  
-  .stat-number {
-    font-size: 20px;
-  }
-  
-  .charts-section .el-col {
-    margin-bottom: 16px;
-  }
-  
-  .ai-metrics {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .ai-metric-item {
-    flex-direction: row;
-    text-align: left;
-  }
-  
-  .metric-icon {
-    margin-right: 12px;
-    margin-bottom: 0;
-  }
 }
 
 .main-content {
