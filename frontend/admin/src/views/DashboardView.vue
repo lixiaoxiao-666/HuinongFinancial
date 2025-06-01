@@ -168,7 +168,7 @@
         </el-col>
         
         <el-col :xs="24" :sm="24" :md="8" :lg="8">
-          <el-card class="chart-card" shadow="hover">
+          <el-card class="chart-card system-monitor-card" shadow="hover">
             <div class="chart-header">
               <div class="chart-title">
                 <el-icon><Monitor /></el-icon>
@@ -225,7 +225,7 @@
       <!-- 左侧列 -->
       <el-col :xs="24" :sm="24" :md="16" :lg="16" :xl="16">
         <!-- 待办事项 -->
-        <el-card class="section-card" shadow="never">
+        <el-card class="section-card todo-section" shadow="never">
           <template #header>
             <div class="card-header">
               <span>
@@ -391,7 +391,7 @@
       <!-- 右侧列 -->
       <el-col :xs="24" :sm="24" :md="8" :lg="8" :xl="8">
         <!-- 快捷操作 -->
-        <el-card class="section-card" shadow="never">
+        <el-card class="section-card quick-actions-card" shadow="never">
           <template #header>
             <div class="card-header">
               <span>
@@ -444,7 +444,7 @@
         </el-card>
 
         <!-- AI控制面板 -->
-        <el-card class="section-card" shadow="never">
+        <el-card class="section-card ai-control-card" shadow="never">
           <template #header>
             <div class="card-header">
               <span>
@@ -503,38 +503,62 @@
           </div>
         </el-card>
         
-        <!-- 最近活动 -->
-        <el-card class="section-card" shadow="never">
+        <!-- 数据统计展示 -->
+        <el-card class="section-card data-display-card" shadow="never">
           <template #header>
             <div class="card-header">
               <span>
-                <el-icon><Document /></el-icon>
-                最近活动记录
+                <el-icon><DataAnalysis /></el-icon>
+                数据统计概览
               </span>
-              <el-button text @click="goToPage('/logs')">查看更多</el-button>
             </div>
           </template>
           
-          <div class="activity-list">
-            <div
-              v-for="(activity, index) in recentActivities.slice(0, 8)"
-              :key="index"
-              class="activity-item"
-            >
-              <div class="activity-time">{{ formatTime(activity.timestamp) }}</div>
-              <div class="activity-content">
-                <div class="activity-details">
-                  <div class="activity-action">{{ activity.activity_type }}</div>
-                  <div class="activity-target">{{ activity.description }}</div>
+          <div class="data-display-panel">
+            <div class="data-overview">
+              <div class="data-item">
+                <div class="data-icon">
+                  <el-icon><Files /></el-icon>
                 </div>
-                <div class="activity-result">
-                  <el-tag
-                    size="small"
-                    :type="getActivityTagType(activity.activity_type)"
-                  >
-                    {{ activity.operator }}
-                  </el-tag>
+                <div class="data-content">
+                  <div class="data-value">{{ dashboardData.stats?.total_applications || 1234 }}</div>
+                  <div class="data-label">总申请数</div>
                 </div>
+              </div>
+              <div class="data-item">
+                <div class="data-icon">
+                  <el-icon><Clock /></el-icon>
+                </div>
+                <div class="data-content">
+                  <div class="data-value">{{ dashboardData.stats?.pending_review || 89 }}</div>
+                  <div class="data-label">待审批</div>
+                </div>
+              </div>
+              <div class="data-item">
+                <div class="data-icon">
+                  <el-icon><CircleCheck /></el-icon>
+                </div>
+                <div class="data-content">
+                  <div class="data-value">{{ dashboardData.stats?.approved_today || 23 }}</div>
+                  <div class="data-label">今日通过</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="progress-section">
+              <div class="progress-item">
+                <div class="progress-label">
+                  <span>审批进度</span>
+                  <span class="progress-value">75%</span>
+                </div>
+                <el-progress :percentage="75" :stroke-width="8" color="#4CAF50" />
+              </div>
+              <div class="progress-item">
+                <div class="progress-label">
+                  <span>AI处理率</span>
+                  <span class="progress-value">{{ dashboardData.stats?.ai_efficiency || 85 }}%</span>
+                </div>
+                <el-progress :percentage="dashboardData.stats?.ai_efficiency || 85" :stroke-width="8" color="#2196F3" />
               </div>
             </div>
           </div>
@@ -647,7 +671,6 @@ const getApprovedTrend = () => {
 
 // 计算属性
 const pendingTasks = computed(() => dashboardData.value.pending_tasks || [])
-const recentActivities = computed(() => dashboardData.value.recent_activities || [])
 const hasPermission = computed(() => authStore.hasPermission)
 
 // 初始化图表
@@ -1115,20 +1138,6 @@ const formatRelativeTime = (datetime: string) => {
   } else {
     const days = now.diff(time, 'day')
     return `${days}天前`
-  }
-}
-
-const formatTime = (time: string) => {
-  return dayjs(time).format('HH:mm')
-}
-
-const getActivityTagType = (activityType: string) => {
-  switch (activityType) {
-    case '审批通过': return 'success'
-    case '审批拒绝': return 'danger'
-    case '申请提交': return 'info'
-    case '系统更新': return 'warning'
-    default: return 'info'
   }
 }
 
@@ -1613,6 +1622,26 @@ onBeforeUnmount(() => {
   padding: 16px;
 }
 
+.system-monitor-card {
+  max-height: calc(100% - 38px);
+}
+
+.system-monitor-card .system-status {
+  padding: 8px 16px;
+}
+
+.system-monitor-card .status-item {
+  padding: 8px 0;
+}
+
+.system-monitor-card .system-metrics {
+  margin-top: 8px;
+}
+
+.system-monitor-card .metric-item {
+  margin-bottom: 8px;
+}
+
 .status-item {
   display: flex;
   align-items: center;
@@ -1953,6 +1982,127 @@ onBeforeUnmount(() => {
   padding: 16px 0;
 }
 
+.quick-actions-card,
+.ai-control-card {
+  margin-top: 0;
+}
+
+.quick-actions-card {
+  margin-top: -19px;
+  width: calc(100% + 11px);
+  margin-right: -11px;
+}
+
+.quick-actions-card .quick-actions {
+  min-height: 269px;
+}
+
+.quick-actions-card .quick-action-item {
+  padding: 20px 12px;
+  min-height: 69px;
+}
+
+.ai-control-card {
+  margin-top: 0;
+}
+
+.ai-control-card .ai-control-panel {
+  padding: 20px 0;
+  min-height: 200px;
+}
+
+.ai-control-card .ai-status-card {
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.ai-control-card .ai-metric-item {
+  padding: 16px;
+  min-height: 90px;
+}
+
+.data-display-card {
+  margin-top: 20px;
+}
+
+.data-display-panel {
+  padding: 16px 0;
+}
+
+.data-overview {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.data-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  gap: 12px;
+}
+
+.data-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 16px;
+}
+
+.data-content {
+  flex: 1;
+  text-align: center;
+}
+
+.data-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.data-label {
+  color: #666;
+  font-size: 12px;
+}
+
+.progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.progress-item {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #ebeef5;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #333;
+}
+
+.progress-value {
+  font-weight: 600;
+  color: #1976D2;
+}
+
 .ai-status-card {
   padding: 16px;
   background: #f8f9fa;
@@ -2115,6 +2265,10 @@ onBeforeUnmount(() => {
   border: 1px solid #ebeef5;
 }
 
+.todo-section {
+  margin-top: -19px;
+}
+
 .card-header {
   display: flex;
   align-items: center;
@@ -2217,58 +2371,6 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 
-.activity-list {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.activity-item {
-  display: flex;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f2f5;
-}
-
-.activity-item:last-child {
-  border-bottom: none;
-}
-
-.activity-time {
-  color: #999;
-  font-size: 12px;
-  white-space: nowrap;
-  min-width: 40px;
-  flex-shrink: 0;
-}
-
-.activity-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.activity-details {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 8px;
-}
-
-.activity-action {
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 4px;
-}
-
-.activity-target {
-  color: #666;
-  font-size: 13px;
-  word-break: break-all;
-}
-
-.activity-result {
-  display: flex;
-  justify-content: flex-end;
-}
-
 /* 移动端适配补充 */
 @media (max-width: 768px) {
   .task-content {
@@ -2279,10 +2381,6 @@ onBeforeUnmount(() => {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
-  }
-  
-  .activity-content {
-    margin-right: 8px;
   }
 }
 
