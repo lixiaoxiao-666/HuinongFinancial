@@ -497,77 +497,6 @@
           </template>
           
           <div class="data-dashboard-panel">
-            <!-- 核心业务指标 -->
-            <div class="business-metrics">
-              <div class="metric-card primary">
-                <div class="metric-header">
-                  <div class="metric-icon">
-                    <el-icon><Files /></el-icon>
-                </div>
-                  <div class="metric-trend positive">
-                    <el-icon><TrendCharts /></el-icon>
-                    <span>+15.2%</span>
-                  </div>
-                </div>
-                <div class="metric-content">
-                  <div class="metric-value">{{ dashboardData.stats?.total_applications || 1234 }}</div>
-                  <div class="metric-label">总申请量</div>
-                  <div class="metric-desc">较上期增长</div>
-                </div>
-              </div>
-              
-              <div class="metric-card success">
-                <div class="metric-header">
-                  <div class="metric-icon">
-                    <el-icon><CircleCheck /></el-icon>
-                  </div>
-                  <div class="metric-trend positive">
-                    <el-icon><TrendCharts /></el-icon>
-                    <span>+8.7%</span>
-                  </div>
-                </div>
-                <div class="metric-content">
-                  <div class="metric-value">{{ Math.floor((dashboardData.stats?.total_applications || 1234) * 0.72) }}</div>
-                  <div class="metric-label">审批通过</div>
-                  <div class="metric-desc">通过率 72%</div>
-                </div>
-              </div>
-              
-              <div class="metric-card warning">
-                <div class="metric-header">
-                  <div class="metric-icon">
-                    <el-icon><Clock /></el-icon>
-                  </div>
-                  <div class="metric-trend negative">
-                    <el-icon><TrendCharts /></el-icon>
-                    <span>-3.2%</span>
-                  </div>
-                </div>
-                <div class="metric-content">
-                  <div class="metric-value">{{ dashboardData.stats?.pending_review || 89 }}</div>
-                  <div class="metric-label">待处理</div>
-                  <div class="metric-desc">处理中减少</div>
-                </div>
-              </div>
-              
-              <div class="metric-card info">
-                <div class="metric-header">
-                  <div class="metric-icon">
-                    <el-icon><Cpu /></el-icon>
-                  </div>
-                  <div class="metric-trend positive">
-                    <el-icon><TrendCharts /></el-icon>
-                    <span>+2.1%</span>
-                  </div>
-                </div>
-                <div class="metric-content">
-                  <div class="metric-value">{{ dashboardData.stats?.ai_efficiency || 85 }}%</div>
-                  <div class="metric-label">AI效率</div>
-                  <div class="metric-desc">智能处理率</div>
-                </div>
-              </div>
-            </div>
-            
             <!-- 实时数据流 -->
             <div class="realtime-data">
               <div class="realtime-header">
@@ -601,30 +530,6 @@
                     <div class="item-desc">金融贷款申请 #L{{ Math.floor(Math.random() * 10000) }}</div>
                   </div>
                   <div class="item-amount">¥50,000</div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- 数据分析图表 -->
-            <div class="dashboard-charts">
-              <div class="chart-row">
-                <div class="chart-item">
-                  <div class="chart-title">
-                    <span>业务分布</span>
-                    <el-tag size="small" type="info">饼图</el-tag>
-                  </div>
-                  <div class="mini-chart-container">
-                    <div ref="businessDistributionChartRef" class="mini-chart"></div>
-                  </div>
-                </div>
-                <div class="chart-item">
-                  <div class="chart-title">
-                    <span>处理速度</span>
-                    <el-tag size="small" type="success">趋势</el-tag>
-                  </div>
-                  <div class="mini-chart-container">
-                    <div ref="processingSpeedChartRef" class="mini-chart"></div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -742,8 +647,6 @@ const doughnutChartRef = ref<HTMLElement | null>(null)
 const aiEfficiencyChartRef = ref<HTMLElement | null>(null)
 const humanEfficiencyChartRef = ref<HTMLElement | null>(null)
 const comparisonChartRef = ref<HTMLElement | null>(null)
-const businessDistributionChartRef = ref<HTMLElement | null>(null)
-const processingSpeedChartRef = ref<HTMLElement | null>(null)
 
 // 图表实例
 let pieChart: echarts.ECharts | null = null
@@ -753,8 +656,6 @@ let doughnutChart: echarts.ECharts | null = null
 let aiEfficiencyChart: echarts.ECharts | null = null
 let humanEfficiencyChart: echarts.ECharts | null = null
 let comparisonChart: echarts.ECharts | null = null
-let businessDistributionChart: echarts.ECharts | null = null
-let processingSpeedChart: echarts.ECharts | null = null
 
 // 更新时间显示
 const updateTime = () => {
@@ -1090,8 +991,6 @@ const resizeCharts = () => {
   aiEfficiencyChart?.resize()
   humanEfficiencyChart?.resize()
   comparisonChart?.resize()
-  businessDistributionChart?.resize()
-  processingSpeedChart?.resize()
 }
 
 // 方法
@@ -1510,92 +1409,6 @@ const refreshIndicators = () => {
   // 这里可以添加实际的数据刷新逻辑
 }
 
-// 初始化数据看板图表
-const initDashboardCharts = () => {
-  // 业务分布图表
-  if (businessDistributionChartRef.value) {
-    businessDistributionChart = echarts.init(businessDistributionChartRef.value)
-    const option = {
-      tooltip: {
-        trigger: 'item',
-        formatter: '{b}: {c} ({d}%)'
-      },
-      series: [
-        {
-          type: 'pie',
-          radius: ['40%', '70%'],
-          avoidLabelOverlap: false,
-          label: {
-            show: false
-          },
-          emphasis: {
-            label: {
-              show: false
-            }
-          },
-          labelLine: {
-            show: false
-          },
-          data: [
-            { value: 35, name: '农业补贴', itemStyle: { color: '#4CAF50' } },
-            { value: 28, name: '金融贷款', itemStyle: { color: '#2196F3' } },
-            { value: 22, name: '设备租赁', itemStyle: { color: '#FF9800' } },
-            { value: 15, name: '技术支持', itemStyle: { color: '#9C27B0' } }
-          ]
-        }
-      ]
-    }
-    businessDistributionChart.setOption(option)
-  }
-  
-  // 处理速度图表
-  if (processingSpeedChartRef.value) {
-    processingSpeedChart = echarts.init(processingSpeedChartRef.value)
-    const option = {
-      tooltip: {
-        trigger: 'axis'
-      },
-      grid: {
-        left: '5%',
-        right: '5%',
-        bottom: '10%',
-        top: '10%',
-        containLabel: true
-      },
-      xAxis: {
-        type: 'category',
-        data: ['09:00', '12:00', '15:00', '18:00', '21:00'],
-        axisLine: { show: false },
-        axisTick: { show: false },
-        axisLabel: { show: false }
-      },
-      yAxis: {
-        type: 'value',
-        show: false
-      },
-      series: [
-        {
-          type: 'line',
-          data: [120, 132, 101, 134, 90],
-          smooth: true,
-          symbol: 'none',
-          lineStyle: {
-            width: 2,
-            color: '#4CAF50'
-          },
-          areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(76, 175, 80, 0.3)' },
-              { offset: 1, color: 'rgba(76, 175, 80, 0.05)' }
-            ])
-          }
-        }
-      ]
-    }
-    processingSpeedChart.setOption(option)
-  }
-}
-
 onMounted(() => {
   // 开始更新时间
   updateTime()
@@ -1606,7 +1419,6 @@ onMounted(() => {
   setTimeout(() => {
     initCharts()
     initEfficiencyCharts()
-    initDashboardCharts()
     window.addEventListener('resize', resizeCharts)
   }, 200)
 })
@@ -1620,8 +1432,6 @@ onBeforeUnmount(() => {
   aiEfficiencyChart?.dispose()
   humanEfficiencyChart?.dispose()
   comparisonChart?.dispose()
-  businessDistributionChart?.dispose()
-  processingSpeedChart?.dispose()
 })
 </script>
 
@@ -2052,10 +1862,10 @@ onBeforeUnmount(() => {
 
 .efficiency-comparison {
   margin-top: 24px;
-  padding: 24px;
+  padding: 18px;
   background: #f8f9fa;
   border-radius: 8px;
-  min-height: 500px;
+  min-height: 477px;
 }
 
 .comparison-header {
@@ -2311,7 +2121,7 @@ onBeforeUnmount(() => {
 }
 
 .data-dashboard-panel {
-  padding: 20px 0;
+  padding: 38px 0;
 }
 
 .dashboard-controls {
@@ -2424,8 +2234,9 @@ onBeforeUnmount(() => {
 .realtime-data {
   background: #f8f9fa;
   border-radius: 12px;
-  padding: 20px;
+  padding: 28px 20px;
   margin-bottom: 24px;
+  min-height: 280px;
 }
 
 .realtime-header {
