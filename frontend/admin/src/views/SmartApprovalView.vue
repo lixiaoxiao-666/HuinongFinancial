@@ -174,20 +174,20 @@
             <el-row :gutter="20">
               <el-col :span="8">
                 <div class="chart-card">
-                  <div class="chart-title">申请人资产安全</div>
-                  <div ref="assetSafetyChartRef" class="analysis-chart"></div>
+                  <div class="chart-title">个人信用值</div>
+                  <div ref="creditValueChartRef" class="analysis-chart"></div>
                 </div>
               </el-col>
               <el-col :span="8">
                 <div class="chart-card">
-                  <div class="chart-title">用户信用度</div>
-                  <div ref="creditScoreChartRef" class="analysis-chart"></div>
+                  <div class="chart-title">资产信息</div>
+                  <div ref="assetInfoChartRef" class="analysis-chart"></div>
                 </div>
               </el-col>
               <el-col :span="8">
                 <div class="chart-card">
-                  <div class="chart-title">风险指数趋势</div>
-                  <div ref="riskTrendChartRef" class="analysis-chart"></div>
+                  <div class="chart-title">守约记录</div>
+                  <div ref="complianceRecordChartRef" class="analysis-chart"></div>
                 </div>
               </el-col>
             </el-row>
@@ -232,14 +232,14 @@ const detailDialogVisible = ref(false)
 const selectedRecord = ref<SmartApprovalRecord | null>(null)
 
 // 图表DOM引用
-const assetSafetyChartRef = ref<HTMLElement | null>(null)
-const creditScoreChartRef = ref<HTMLElement | null>(null)
-const riskTrendChartRef = ref<HTMLElement | null>(null)
+const assetInfoChartRef = ref<HTMLElement | null>(null)
+const creditValueChartRef = ref<HTMLElement | null>(null)
+const complianceRecordChartRef = ref<HTMLElement | null>(null)
 
 // 图表实例
-let assetSafetyChart: echarts.ECharts | null = null
-let creditScoreChart: echarts.ECharts | null = null
-let riskTrendChart: echarts.ECharts | null = null
+let assetInfoChart: echarts.ECharts | null = null
+let creditValueChart: echarts.ECharts | null = null
+let complianceRecordChart: echarts.ECharts | null = null
 
 // 统计数据
 const stats = reactive({
@@ -405,78 +405,101 @@ const initAnalysisCharts = () => {
     return Math.floor((x - Math.floor(x)) * (max - min + 1)) + min
   }
   
-  // 饼状图 - 申请人资产安全（基于申请金额和AI置信度）
-  if (assetSafetyChartRef.value) {
-    assetSafetyChart = echarts.init(assetSafetyChartRef.value)
+  // 仪表盘 - 个人信用值（基于申请人信息生成）
+  if (creditValueChartRef.value) {
+    creditValueChart = echarts.init(creditValueChartRef.value)
     
-    // 根据申请金额和AI置信度调整资产安全分布
-    const baseRisk = record.amount > 300000 ? 15 : record.amount > 100000 ? 10 : 5
-    const confidenceAdjust = record.ai_confidence > 80 ? -5 : record.ai_confidence < 70 ? 10 : 0
+    // 根据AI审批结果生成个人信用值
+    const baseScore = record.ai_result === 'approved' ? 750 : record.ai_result === 'rejected' ? 550 : 650
+    const creditValue = Math.max(350, Math.min(850, baseScore + seededRandom(-50, 50, 10)))
     
-    const highRisk = Math.max(5, Math.min(25, baseRisk + confidenceAdjust + seededRandom(-5, 5, 1)))
-    const mediumRisk = seededRandom(15, 35, 2)
-    const safeAsset = 100 - highRisk - mediumRisk
-    
-    const assetData = [
-      { value: safeAsset, name: '安全资产', itemStyle: { color: '#4CAF50' } },
-      { value: mediumRisk, name: '中等风险', itemStyle: { color: '#FF9800' } },
-      { value: highRisk, name: '高风险资产', itemStyle: { color: '#F44336' } }
-    ]
-    
-    const assetOption = {
+    const creditOption = {
       tooltip: {
-        trigger: 'item',
-        formatter: '{b}: {c}% ({d}%)'
+        formatter: '个人信用值: {c}'
       },
       series: [
         {
-          name: '资产安全',
-          type: 'pie',
-          radius: ['40%', '70%'],
-          avoidLabelOverlap: false,
-          label: {
-            show: true,
-            position: 'outside',
-            formatter: '{b}\n{c}%',
-            textStyle: {
-              textAlign: 'center',
-              fontSize: 12
+          name: '个人信用值',
+          type: 'gauge',
+          min: 350,
+          max: 850,
+          splitNumber: 5,
+          radius: '80%',
+          axisLine: {
+            lineStyle: {
+              width: 15,
+              color: [
+                [0.3, '#F44336'],
+                [0.7, '#FF9800'],
+                [1, '#4CAF50']
+              ]
             }
           },
-          emphasis: {
-            label: {
-              show: true,
-              fontSize: 14,
-              fontWeight: 'bold',
-              textStyle: {
-                textAlign: 'center'
-              }
+          pointer: {
+            itemStyle: {
+              color: 'auto'
             }
           },
-          data: assetData
+          axisTick: {
+            distance: -15,
+            length: 8,
+            lineStyle: {
+              color: '#fff',
+              width: 2
+            }
+          },
+          splitLine: {
+            distance: -15,
+            length: 15,
+            lineStyle: {
+              color: '#fff',
+              width: 4
+            }
+          },
+          axisLabel: {
+            color: 'auto',
+            distance: 25,
+            fontSize: 10
+          },
+          detail: {
+            valueAnimation: true,
+            formatter: '{value}',
+            color: 'auto',
+            fontSize: 20,
+            offsetCenter: [0, '70%']
+          },
+          data: [
+            {
+              value: creditValue,
+              name: '信用值'
+            }
+          ]
         }
       ]
     }
-    assetSafetyChart.setOption(assetOption)
+    creditValueChart.setOption(creditOption)
   }
   
-  // 柱状图 - 用户信用度（基于申请人信息生成）
-  if (creditScoreChartRef.value) {
-    creditScoreChart = echarts.init(creditScoreChartRef.value)
-    const creditCategories = ['还款记录', '信用历史', '负债比率', '收入稳定性', '资产状况']
+  // 柱状图 - 资产信息（房产、理财产品、社保、公积金）
+  if (assetInfoChartRef.value) {
+    assetInfoChart = echarts.init(assetInfoChartRef.value)
     
-    // 根据AI审批结果和置信度生成信用评分
-    const baseScore = record.ai_result === 'approved' ? 85 : record.ai_result === 'rejected' ? 65 : 75
-    const creditScores = creditCategories.map((_, index) => {
-      const variation = seededRandom(-15, 15, index + 10)
-      return Math.max(50, Math.min(100, baseScore + variation))
+    // 生成资产信息数据
+    const assetCategories = ['房产', '理财产品', '社保', '公积金']
+    const assetValues = assetCategories.map((_, index) => {
+      const baseValue = record.ai_result === 'approved' ? 50000 : record.ai_result === 'rejected' ? 20000 : 35000
+      const value = Math.max(0, baseValue + seededRandom(-20000, 30000, index + 50))
+      return Math.floor(value)
     })
     
-    const creditOption = {
+    const assetOption = {
       tooltip: {
         trigger: 'axis',
         axisPointer: {
           type: 'shadow'
+        },
+        formatter: function(params: any) {
+          return `${params[0].name}: ¥${params[0].value.toLocaleString()}`
         }
       },
       grid: {
@@ -488,11 +511,10 @@ const initAnalysisCharts = () => {
       },
       xAxis: {
         type: 'category',
-        data: creditCategories,
+        data: assetCategories,
         axisLabel: {
           interval: 0,
-          rotate: 45,
-          fontSize: 10,
+          fontSize: 11,
           textStyle: {
             textAlign: 'center'
           }
@@ -506,10 +528,12 @@ const initAnalysisCharts = () => {
       yAxis: {
         type: 'value',
         min: 0,
-        max: 100,
         axisLabel: {
           textStyle: {
             textAlign: 'center'
+          },
+          formatter: function(value: number) {
+            return (value / 10000).toFixed(0) + '万'
           }
         },
         axisLine: {
@@ -526,13 +550,13 @@ const initAnalysisCharts = () => {
       },
       series: [
         {
-          name: '信用评分',
+          name: '资产价值',
           type: 'bar',
-          data: creditScores,
+          data: assetValues,
           itemStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: '#2196F3' },
-              { offset: 1, color: '#64B5F6' }
+              { offset: 0, color: '#4CAF50' },
+              { offset: 1, color: '#81C784' }
             ])
           },
           label: {
@@ -541,113 +565,90 @@ const initAnalysisCharts = () => {
             textStyle: {
               textAlign: 'center',
               fontSize: 10
+            },
+            formatter: function(params: any) {
+              return (params.value / 10000).toFixed(1) + '万'
             }
           }
         }
       ]
     }
-    creditScoreChart.setOption(creditOption)
+    assetInfoChart.setOption(assetOption)
   }
   
-  // 趋势图 - 风险指数（基于申请人历史模拟）
-  if (riskTrendChartRef.value) {
-    riskTrendChart = echarts.init(riskTrendChartRef.value)
-    const riskDates = ['1月', '2月', '3月', '4月', '5月', '6月']
+  // 雷达图 - 守约记录（先用后付、免押租车、免押租物、先乘后付、先借后还）
+  if (complianceRecordChartRef.value) {
+    complianceRecordChart = echarts.init(complianceRecordChartRef.value)
     
-    // 根据当前风险状况生成历史趋势
-    const currentRisk = record.ai_result === 'approved' ? seededRandom(20, 40, 20) : 
-                       record.ai_result === 'rejected' ? seededRandom(60, 80, 20) : 
-                       seededRandom(40, 60, 20)
+    const complianceCategories = ['先用后付', '免押租车', '免押租物', '先乘后付', '先借后还']
     
-    // 生成趋势数据，最后一个月为当前风险值
-    const riskValues = []
-    let lastValue = currentRisk + seededRandom(-20, 20, 25)
+    // 根据AI审批结果生成守约记录评分
+    const baseScore = record.ai_result === 'approved' ? 85 : record.ai_result === 'rejected' ? 60 : 75
+    const complianceScores = complianceCategories.map((_, index) => {
+      const variation = seededRandom(-15, 15, index + 100)
+      return Math.max(40, Math.min(100, baseScore + variation))
+    })
     
-    for (let i = 0; i < 5; i++) {
-      const change = seededRandom(-10, 10, i + 30)
-      lastValue = Math.max(10, Math.min(90, lastValue + change))
-      riskValues.push(lastValue)
-    }
-    riskValues.push(currentRisk) // 最后一个月为当前风险值
-    
-    const riskOption = {
+    const complianceOption = {
       tooltip: {
-        trigger: 'axis'
+        trigger: 'item'
       },
-      grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '3%',
-        top: '3%',
-        containLabel: true
-      },
-      xAxis: {
-        type: 'category',
-        data: riskDates,
-        axisLabel: {
-          textStyle: {
-            textAlign: 'center',
-            fontSize: 10
-          }
-        },
-        axisLine: {
-          lineStyle: {
-            color: '#E0E0E0'
-          }
-        }
-      },
-      yAxis: {
-        type: 'value',
-        min: 0,
-        max: 100,
-        axisLabel: {
-          textStyle: {
-            textAlign: 'center'
-          }
-        },
-        axisLine: {
-          show: false
-        },
-        axisTick: {
-          show: false
+      radar: {
+        indicator: complianceCategories.map(name => ({
+          name: name,
+          max: 100,
+          min: 0
+        })),
+        radius: '70%',
+        splitNumber: 4,
+        axisName: {
+          fontSize: 11,
+          color: '#333'
         },
         splitLine: {
           lineStyle: {
-            color: '#EFEFEF'
+            color: '#E0E0E0'
+          }
+        },
+        splitArea: {
+          show: true,
+          areaStyle: {
+            color: ['rgba(76, 175, 80, 0.1)', 'rgba(76, 175, 80, 0.05)']
           }
         }
       },
       series: [
         {
-          name: '风险指数',
-          type: 'line',
-          smooth: true,
-          data: riskValues,
-          lineStyle: {
-            color: '#FF5722',
-            width: 3
-          },
-          itemStyle: {
-            color: '#FF5722'
-          },
-          areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(255, 87, 34, 0.3)' },
-              { offset: 1, color: 'rgba(255, 87, 34, 0.05)' }
-            ])
-          },
+          name: '守约记录',
+          type: 'radar',
+          data: [
+            {
+              value: complianceScores,
+              name: '守约评分',
+              itemStyle: {
+                color: '#4CAF50'
+              },
+              areaStyle: {
+                color: 'rgba(76, 175, 80, 0.3)'
+              },
+              lineStyle: {
+                color: '#4CAF50',
+                width: 2
+              }
+            }
+          ],
           label: {
             show: true,
-            position: 'top',
-            textStyle: {
-              textAlign: 'center',
-              fontSize: 10
+            fontSize: 10,
+            color: '#333',
+            formatter: function(params: any) {
+              return params.value
             }
           }
         }
       ]
     }
-    riskTrendChart.setOption(riskOption)
+    complianceRecordChart.setOption(complianceOption)
   }
 }
 
@@ -690,9 +691,9 @@ onMounted(() => {
 
 // 组件卸载时销毁图表
 const destroyCharts = () => {
-  assetSafetyChart?.dispose()
-  creditScoreChart?.dispose()
-  riskTrendChart?.dispose()
+  assetInfoChart?.dispose()
+  creditValueChart?.dispose()
+  complianceRecordChart?.dispose()
 }
 </script>
 
